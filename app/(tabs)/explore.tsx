@@ -96,7 +96,7 @@ export default function ExploreScreen() {
         <View style={styles.sectionHeaderRow}>
           <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
           <TouchableOpacity style={styles.newHabitButton}>
-            <ThemedText style={styles.newHabitButtonText}>+ New Habit</ThemedText>
+            <ThemedText style={styles.newHabitButtonText}>New Habit</ThemedText>
           </TouchableOpacity>
         </View>
         <View>
@@ -184,13 +184,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   newHabitButton: {
-    backgroundColor: '#18181b',
+    backgroundColor: '#e5e5e5',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   newHabitButtonText: {
-    color: '#fff',
+    color: '#18181b',
     fontWeight: '600',
     fontSize: 16,
   },
