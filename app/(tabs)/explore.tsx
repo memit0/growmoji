@@ -1,110 +1,195 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { HabitCard } from '@/components/ui/HabitCard';
+import { ThemedText } from '@/components/ui/ThemedText';
+import { TodoCard } from '@/components/ui/TodoCard';
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const habits = [
+    {
+      id: '1',
+      emoji: '🧘',
+      streak: 7,
+      frequency: 'Daily',
+      completed: true,
+    },
+    {
+      id: '2',
+      emoji: '📚',
+      streak: 3,
+      frequency: 'Daily',
+      completed: false,
+    },
+    {
+      id: '3',
+      emoji: '💪',
+      streak: 5,
+      frequency: 'Mon, Wed, Fri',
+      completed: false,
+    },
+  ];
+
+  const todos = [
+    {
+      id: '1',
+      title: 'Complete project proposal',
+      dueDate: 'Today, 5:00 PM',
+      priority: 'high' as const,
+      completed: false,
+    },
+    {
+      id: '2',
+      title: 'Buy groceries',
+      dueDate: 'Tomorrow, 10:00 AM',
+      priority: 'medium' as const,
+      completed: false,
+    },
+    {
+      id: '3',
+      title: 'Call mom',
+      dueDate: 'Today, 8:00 PM',
+      priority: 'low' as const,
+      completed: true,
+    },
+  ];
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <ScrollView style={styles.bg} contentContainerStyle={styles.container}>
+      <View style={styles.cardSection}>
+        <View style={styles.sectionHeaderRow}>
+          <ThemedText type="title" style={styles.sectionTitle}>Daily Tasks</ThemedText>
+          <ThemedText style={styles.taskCount}>1/3 tasks</ThemedText>
+        </View>
+        <View style={styles.inputRow}>
+          <TextInput
+            placeholder="Add a task for today..."
+            style={styles.input}
+            placeholderTextColor="#9BA1A6"
+          />
+          <TouchableOpacity style={styles.addButton}>
+            <ThemedText style={styles.addButtonText}>Add</ThemedText>
+          </TouchableOpacity>
+        </View>
+        <View>
+          {todos.map((todo) => (
+            <TodoCard
+              key={todo.id}
+              title={todo.title}
+              dueDate={todo.dueDate}
+              priority={todo.priority}
+              completed={todo.completed}
+              onPress={() => {
+                // TODO: Navigate to todo details
+                console.log('Pressed todo:', todo.title);
+              }}
+            />
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.cardSection}>
+        <View style={styles.sectionHeaderRow}>
+          <ThemedText type="title" style={styles.sectionTitle}>Habits</ThemedText>
+          <TouchableOpacity style={styles.newHabitButton}>
+            <ThemedText style={styles.newHabitButtonText}>+ New Habit</ThemedText>
+          </TouchableOpacity>
+        </View>
+        <View>
+          {habits.map((habit) => (
+            <HabitCard
+              key={habit.id}
+              emoji={habit.emoji}
+              streak={habit.streak}
+              frequency={habit.frequency}
+              completed={habit.completed}
+              onPress={() => {
+                // TODO: Navigate to habit details
+                console.log('Pressed habit:', habit.emoji);
+              }}
+            />
+          ))}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  bg: {
+    backgroundColor: '#fafbfc',
   },
-  titleContainer: {
+  container: {
+    paddingVertical: 32,
+    paddingHorizontal: 0,
+  },
+  cardSection: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 24,
+    marginBottom: 32,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#18181b',
+  },
+  taskCount: {
+    fontSize: 14,
+    color: '#9BA1A6',
+    fontWeight: '500',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
     gap: 8,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#f4f4f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ececec',
+    color: '#18181b',
+  },
+  addButton: {
+    backgroundColor: '#e5e5e5',
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#18181b',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  newHabitButton: {
+    backgroundColor: '#18181b',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  newHabitButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });

@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Performance Optimization Guidelines
+
+DON'T IMPLEMENT ANY FEATURES YOU ARE NOT SPECIFICALLY ASKED TO IMPLEMENT!!!
+
+DON'T ADD IMPORTS TO FEATURES YOU HAVEN'T IMPLEMENTED
+
+## General Principles
+- Use React.memo for expensive components
+- Implement virtualized lists for long scrollable content
+- Optimize images and assets for mobile devices
+- Use proper loading states and skeletons
+
+## React Optimizations
+- Avoid unnecessary re-renders with useMemo and useCallback
+- Use proper dependency arrays in useEffect
+- Prefer lazy loading for component code splitting
+- Implement proper list rendering with stable keys
+
+## Example Performance Pattern
+```tsx
+// Optimized list rendering
+import React, { useMemo } from 'react';
+import { FlatList } from 'react-native';
+import { TodoItem } from './TodoItem';
+
+export const TodoList = ({ todos, onToggle, onDelete }) => {
+  // Memoize the render item function to prevent recreating on each render
+  const renderItem = useMemo(() => {
+    return ({ item }) => (
+      <TodoItem
+        id={item.id}
+        title={item.title}
+        completed={item.completed}
+        onToggle={() => onToggle(item.id)}
+        onDelete={() => onDelete(item.id)}
+      />
+    );
+  }, [onToggle, onDelete]);
+
+  // Use a stable key extractor
+  const keyExtractor = (item) => item.id;
+
+  return (
+    <FlatList
+      data={todos}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
+      removeClippedSubviews={true} // Optimize memory for off-screen items
+      initialNumToRender={10}      // Only render what's initially visible
+      maxToRenderPerBatch={5}      // Batch rendering
+      windowSize={5}               // Reduce rendering window
+    />
+  );
+};
+```
+```
