@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -6,9 +7,41 @@ import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
 import { Colors } from '@/constants/Colors';
 
+interface Todo {
+  id: string;
+  title: string;
+  dueDate?: string;
+  priority: 'high' | 'medium' | 'low';
+  completed: boolean;
+}
+
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const [todos, setTodos] = useState<Todo[]>([
+    {
+      id: '1',
+      title: 'Complete project proposal',
+      dueDate: 'Today, 5:00 PM',
+      priority: 'high',
+      completed: false,
+    },
+    {
+      id: '2',
+      title: 'Buy groceries',
+      dueDate: 'Tomorrow, 10:00 AM',
+      priority: 'medium',
+      completed: false,
+    },
+    {
+      id: '3',
+      title: 'Call mom',
+      dueDate: 'Today, 8:00 PM',
+      priority: 'low',
+      completed: true,
+    },
+  ]);
+  const [newTodoTitle, setNewTodoTitle] = useState('');
 
   const habits = [
     {
@@ -34,44 +67,59 @@ export default function ExploreScreen() {
     },
   ];
 
-  const todos = [
-    {
-      id: '1',
-      title: 'Complete project proposal',
-      dueDate: 'Today, 5:00 PM',
-      priority: 'high' as const,
+  const handleAddTodo = () => {
+    if (!newTodoTitle.trim()) return;
+    
+    if (todos.length >= 3) {
+      // TODO: Show a warning message to the user
+      console.log('Maximum number of todos reached (3)');
+      return;
+    }
+
+    const newTodo: Todo = {
+      id: `todo-${Date.now()}`,
+      title: newTodoTitle.trim(),
+      priority: 'medium',
       completed: false,
-    },
-    {
-      id: '2',
-      title: 'Buy groceries',
-      dueDate: 'Tomorrow, 10:00 AM',
-      priority: 'medium' as const,
-      completed: false,
-    },
-    {
-      id: '3',
-      title: 'Call mom',
-      dueDate: 'Today, 8:00 PM',
-      priority: 'low' as const,
-      completed: true,
-    },
-  ];
+    };
+
+    setTodos([...todos, newTodo]);
+    setNewTodoTitle('');
+  };
+
+  const handleDeleteTodo = (id: string) => {
+    setTodos(todos.filter(todo => todo.id !== id));
+  };
+
+  const handleToggleTodo = (id: string) => {
+    setTodos(todos.map(todo => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ));
+  };
+
+  const completedCount = todos.filter(todo => todo.completed).length;
 
   return (
     <ScrollView style={[styles.bg, { backgroundColor: colors.background }]} contentContainerStyle={styles.container}>
       <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
         <View style={styles.sectionHeaderRow}>
           <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
-          <ThemedText style={styles.taskCount}>1/3 tasks</ThemedText>
+          <ThemedText style={styles.taskCount}>{completedCount}/{todos.length} tasks</ThemedText>
         </View>
         <View style={styles.inputRow}>
           <TextInput
             placeholder="Add a task for today..."
             style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
             placeholderTextColor={colors.placeholder}
+            value={newTodoTitle}
+            onChangeText={setNewTodoTitle}
+            onSubmitEditing={handleAddTodo}
+            returnKeyType="done"
           />
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity 
+            style={styles.addButton} 
+            onPress={handleAddTodo}
+          >
             <ThemedText style={styles.addButtonText}>Add</ThemedText>
           </TouchableOpacity>
         </View>
@@ -83,10 +131,8 @@ export default function ExploreScreen() {
               dueDate={todo.dueDate}
               priority={todo.priority}
               completed={todo.completed}
-              onPress={() => {
-                // TODO: Navigate to todo details
-                console.log('Pressed todo:', todo.title);
-              }}
+              onPress={() => handleToggleTodo(todo.id)}
+              onDelete={() => handleDeleteTodo(todo.id)}
             />
           ))}
         </View>
