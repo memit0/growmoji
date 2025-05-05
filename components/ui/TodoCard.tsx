@@ -53,9 +53,9 @@ export function TodoCard({ title, dueDate, priority = 'medium', onPress, complet
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 6,
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 8,
     marginHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: {
@@ -63,8 +63,8 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   content: {
     flexDirection: 'row',
@@ -74,29 +74,31 @@ const styles = StyleSheet.create({
     width: 4,
     height: '100%',
     borderRadius: 2,
-    marginRight: 12,
+    marginRight: 16,
   },
   textContainer: {
     flex: 1,
+    paddingRight: 12,
   },
   title: {
     fontSize: 16,
+    lineHeight: 22,
   },
   completedText: {
     textDecorationLine: 'line-through',
-    opacity: 0.7,
+    opacity: 0.6,
   },
   dueDate: {
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
+    fontWeight: '500',
   },
   completedBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
   },
   completedCheck: {
     color: '#FFFFFF',

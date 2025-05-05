@@ -19,22 +19,24 @@ export function HabitCard({ emoji, streak, frequency, onPress, completed = false
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={styles.emojiContainer}>
+        <View style={[styles.emojiContainer, { backgroundColor: colors.input }]}>
           <ThemedText style={styles.emoji}>{emoji}</ThemedText>
         </View>
-        <View style={styles.streakContainer}>
-          <View style={[styles.streakBadge, { backgroundColor: colors.streak }]}>
-            <ThemedText style={styles.streakText}>🔥 {streak}</ThemedText>
+        <View style={styles.contentContainer}>
+          <View style={styles.streakContainer}>
+            <View style={[styles.streakBadge, { backgroundColor: colors.streak }]}>
+              <ThemedText style={styles.streakText}>🔥 {streak}</ThemedText>
+            </View>
+            <ThemedText style={[styles.frequency, { color: colors.secondary }]}>
+              {frequency}
+            </ThemedText>
           </View>
-          <ThemedText style={[styles.frequency, { color: colors.secondary }]}>
-            {frequency}
-          </ThemedText>
+          {completed && (
+            <View style={[styles.completedBadge, { backgroundColor: colors.completed }]}>
+              <ThemedText style={styles.completedText}>✓</ThemedText>
+            </View>
+          )}
         </View>
-        {completed && (
-          <View style={[styles.completedBadge, { backgroundColor: colors.completed }]}>
-            <ThemedText style={styles.completedText}>✓</ThemedText>
-          </View>
-        )}
       </ThemedView>
     </TouchableOpacity>
   );
@@ -42,7 +44,7 @@ export function HabitCard({ emoji, streak, frequency, onPress, completed = false
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginVertical: 8,
     marginHorizontal: 16,
@@ -52,32 +54,37 @@ const styles = StyleSheet.create({
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 4,
     flexDirection: 'row',
     alignItems: 'center',
   },
   emojiContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   emoji: {
-    fontSize: 24,
+    fontSize: 28,
+  },
+  contentContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   streakContainer: {
     flex: 1,
   },
   streakBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
     alignSelf: 'flex-start',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   streakText: {
     color: '#FFFFFF',
@@ -86,14 +93,15 @@ const styles = StyleSheet.create({
   },
   frequency: {
     fontSize: 14,
+    fontWeight: '500',
   },
   completedBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   completedText: {
     color: '#FFFFFF',

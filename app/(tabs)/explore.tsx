@@ -1,11 +1,15 @@
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { HabitCard } from '@/components/ui/HabitCard';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
+import { Colors } from '@/constants/Colors';
 
 export default function ExploreScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   const habits = [
     {
       id: '1',
@@ -55,17 +59,17 @@ export default function ExploreScreen() {
   ];
 
   return (
-    <ScrollView style={styles.bg} contentContainerStyle={styles.container}>
-      <View style={styles.cardSection}>
+    <ScrollView style={[styles.bg, { backgroundColor: colors.background }]} contentContainerStyle={styles.container}>
+      <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
         <View style={styles.sectionHeaderRow}>
-          <ThemedText type="title" style={styles.sectionTitle}>Daily Tasks</ThemedText>
+          <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
           <ThemedText style={styles.taskCount}>1/3 tasks</ThemedText>
         </View>
         <View style={styles.inputRow}>
           <TextInput
             placeholder="Add a task for today..."
-            style={styles.input}
-            placeholderTextColor="#9BA1A6"
+            style={[styles.input, { backgroundColor: colors.input, borderColor: colors.border, color: colors.text }]}
+            placeholderTextColor={colors.placeholder}
           />
           <TouchableOpacity style={styles.addButton}>
             <ThemedText style={styles.addButtonText}>Add</ThemedText>
@@ -88,9 +92,9 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      <View style={styles.cardSection}>
+      <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
         <View style={styles.sectionHeaderRow}>
-          <ThemedText type="title" style={styles.sectionTitle}>Habits</ThemedText>
+          <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
           <TouchableOpacity style={styles.newHabitButton}>
             <ThemedText style={styles.newHabitButtonText}>+ New Habit</ThemedText>
           </TouchableOpacity>
@@ -117,14 +121,14 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   bg: {
-    backgroundColor: '#fafbfc',
+    // backgroundColor will be set dynamically
   },
   container: {
     paddingVertical: 32,
     paddingHorizontal: 0,
   },
   cardSection: {
-    backgroundColor: '#fff',
+    // backgroundColor will be set dynamically
     borderRadius: 16,
     marginHorizontal: 24,
     marginBottom: 32,
@@ -159,14 +163,12 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: '#f4f4f5',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ececec',
-    color: '#18181b',
+    // backgroundColor, borderColor, color will be set dynamically
   },
   addButton: {
     backgroundColor: '#e5e5e5',
