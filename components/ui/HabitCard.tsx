@@ -37,7 +37,7 @@ export function HabitCard({
         <View style={[
           styles.emojiContainer, 
           { backgroundColor: colors.input },
-          logged && { backgroundColor: colors.primary }
+          logged && styles.loggedContainer
         ]}>
           <ThemedText style={styles.emoji}>{emoji}</ThemedText>
         </View>
@@ -85,6 +85,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+  },
+  loggedContainer: {
+    borderWidth: 3,
+    borderColor: '#4CAF50', // Material Design Green
   },
   emoji: {
     fontSize: 28,
