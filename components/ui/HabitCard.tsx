@@ -9,33 +9,52 @@ interface HabitCardProps {
   streak: number;
   frequency: string;
   onPress?: () => void;
-  completed?: boolean;
+  logged?: boolean;
+  startDate: string;
+  lastLoggedDate?: string;
 }
 
-export function HabitCard({ emoji, streak, frequency, onPress, completed = false }: HabitCardProps) {
+export function HabitCard({ 
+  emoji, 
+  streak, 
+  frequency, 
+  onPress, 
+  logged = false,
+  startDate,
+  lastLoggedDate 
+}: HabitCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  // Calculate if the streak is at risk (missed one day)
+  const isStreakAtRisk = lastLoggedDate ? 
+    new Date().getTime() - new Date(lastLoggedDate).getTime() > 24 * 60 * 60 * 1000 : 
+    false;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={[styles.emojiContainer, { backgroundColor: colors.input }]}>
+        <View style={[
+          styles.emojiContainer, 
+          { backgroundColor: colors.input },
+          logged && { backgroundColor: colors.primary }
+        ]}>
           <ThemedText style={styles.emoji}>{emoji}</ThemedText>
         </View>
         <View style={styles.contentContainer}>
           <View style={styles.streakContainer}>
-            <View style={[styles.streakBadge, { backgroundColor: colors.streak }]}>
-              <ThemedText style={styles.streakText}>🔥 {streak}</ThemedText>
+            <View style={styles.streakBadge}>
+              <ThemedText style={[
+                styles.streakText,
+                { color: isStreakAtRisk ? colors.warning : colors.streak }
+              ]}>
+                {isStreakAtRisk ? '⚠️' : '🔥'} {streak}
+              </ThemedText>
             </View>
             <ThemedText style={[styles.frequency, { color: colors.secondary }]}>
-              {frequency}
+              Started {startDate}
             </ThemedText>
           </View>
-          {completed && (
-            <View style={[styles.completedBadge, { backgroundColor: colors.completed }]}>
-              <ThemedText style={styles.completedText}>✓</ThemedText>
-            </View>
-          )}
         </View>
       </ThemedView>
     </TouchableOpacity>
@@ -80,32 +99,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   streakBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
     alignSelf: 'flex-start',
     marginBottom: 6,
   },
   streakText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
   },
   frequency: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  completedBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  completedText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 }); 

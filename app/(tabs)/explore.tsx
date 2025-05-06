@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, TextInput, TouchableOpacity, View, useColorScheme
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { HabitCard } from '@/components/ui/HabitCard';
+import { HabitModal } from '@/components/ui/HabitModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
 import { Colors } from '@/constants/Colors';
@@ -15,11 +16,24 @@ interface Todo {
   completed: boolean;
 }
 
+interface Habit {
+  id: string;
+  emoji: string;
+  streak: number;
+  frequency: string;
+  logged: boolean;
+  startDate: string;
+  lastLoggedDate?: string;
+  missedDays: number;
+}
+
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const [todos, setTodos] = useState<Todo[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
 
   // Track component lifecycle
   React.useEffect(() => {
@@ -37,30 +51,6 @@ export default function ExploreScreen() {
       todoIds: todos.map(t => t.id)
     });
   }, [todos]);
-
-  const habits = [
-    {
-      id: '1',
-      emoji: '🧘',
-      streak: 7,
-      frequency: 'Daily',
-      completed: true,
-    },
-    {
-      id: '2',
-      emoji: '📚',
-      streak: 3,
-      frequency: 'Daily',
-      completed: false,
-    },
-    {
-      id: '3',
-      emoji: '💪',
-      streak: 5,
-      frequency: 'Mon, Wed, Fri',
-      completed: false,
-    },
-  ];
 
   const handleAddTodo = () => {
     try {
@@ -114,26 +104,92 @@ export default function ExploreScreen() {
   const handleToggleTodo = (id: string) => {
     try {
       console.log('[ExploreScreen] Toggling todo with id:', id);
-      console.log('[ExploreScreen] Current todos before toggle:', todos);
-      setTodos(prevTodos => {
-        const newTodos = prevTodos.map(todo => {
-          if (todo.id === id) {
-            const updatedTodo = { ...todo, completed: !todo.completed };
-            console.log('[ExploreScreen] Toggled todo:', updatedTodo);
-            return updatedTodo;
-          }
-          return todo;
-        });
-        console.log('[ExploreScreen] Todos after toggle:', newTodos);
-        return newTodos;
-      });
+      setTodos(prevTodos =>
+        prevTodos.map(todo =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        )
+      );
     } catch (error) {
       console.error('[ExploreScreen] Error toggling todo:', error);
     }
   };
 
-  const completedCount = todos.filter(todo => todo.completed).length;
-  console.log('[ExploreScreen] Completed todos count:', completedCount);
+  const handleAddHabit = (emoji: string) => {
+    try {
+      console.log('[ExploreScreen] Adding new habit with emoji:', emoji);
+      const today = new Date().toISOString().split('T')[0];
+      const newHabit: Habit = {
+        id: `habit-${Date.now()}`,
+        emoji,
+        streak: 0,
+        frequency: 'Daily',
+        logged: false,
+        startDate: today,
+        lastLoggedDate: today,
+        missedDays: 0,
+      };
+      setHabits(prevHabits => [...prevHabits, newHabit]);
+      setIsHabitModalVisible(false);
+    } catch (error) {
+      console.error('[ExploreScreen] Error adding habit:', error);
+    }
+  };
+
+  const handleHabitLog = (habitId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      setHabits(prevHabits => 
+        prevHabits.map(habit => {
+          if (habit.id === habitId) {
+            const lastLogged = new Date(habit.lastLoggedDate || '');
+            const todayDate = new Date(today);
+            const daysSinceLastLog = Math.floor((todayDate.getTime() - lastLogged.getTime()) / (1000 * 60 * 60 * 24));
+            
+            // If it's the same day, just toggle the logged state
+            if (daysSinceLastLog === 0) {
+              return { ...habit, logged: !habit.logged };
+            }
+            
+            // If it's the next day, increment streak
+            if (daysSinceLastLog === 1) {
+              return {
+                ...habit,
+                logged: true,
+                streak: habit.streak + 1,
+                lastLoggedDate: today,
+                missedDays: 0,
+              };
+            }
+            
+            // If more than one day has passed, increment missed days
+            const newMissedDays = habit.missedDays + daysSinceLastLog - 1;
+            
+            // If missed more than one day, reset streak
+            if (newMissedDays > 1) {
+              return {
+                ...habit,
+                logged: true,
+                streak: 1,
+                lastLoggedDate: today,
+                missedDays: 0,
+              };
+            }
+            
+            // If missed one day, keep streak but increment missed days
+            return {
+              ...habit,
+              logged: true,
+              lastLoggedDate: today,
+              missedDays: newMissedDays,
+            };
+          }
+          return habit;
+        })
+      );
+    } catch (error) {
+      console.error('[ExploreScreen] Error logging habit:', error);
+    }
+  };
 
   // Memoized renderItem for FlatList
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
@@ -189,7 +245,10 @@ export default function ExploreScreen() {
       <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
         <View style={styles.sectionHeaderRow}>
           <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
-          <TouchableOpacity style={styles.newHabitButton}>
+          <TouchableOpacity 
+            style={styles.newHabitButton}
+            onPress={() => setIsHabitModalVisible(true)}
+          >
             <ThemedText style={styles.newHabitButtonText}>New Habit</ThemedText>
           </TouchableOpacity>
         </View>
@@ -200,15 +259,20 @@ export default function ExploreScreen() {
               emoji={habit.emoji}
               streak={habit.streak}
               frequency={habit.frequency}
-              completed={habit.completed}
-              onPress={() => {
-                // TODO: Navigate to habit details
-                console.log('Pressed habit:', habit.emoji);
-              }}
+              logged={habit.logged}
+              onPress={() => handleHabitLog(habit.id)}
+              startDate={habit.startDate}
+              lastLoggedDate={habit.lastLoggedDate}
             />
           ))}
         </View>
       </View>
+
+      <HabitModal
+        visible={isHabitModalVisible}
+        onClose={() => setIsHabitModalVisible(false)}
+        onSave={handleAddHabit}
+      />
     </ScrollView>
   );
 }
@@ -280,14 +344,12 @@ const styles = StyleSheet.create({
   newHabitButton: {
     backgroundColor: '#e5e5e5',
     borderRadius: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   newHabitButtonText: {
     color: '#18181b',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 14,
   },
 });
