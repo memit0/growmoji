@@ -48,7 +48,7 @@ export function HabitCard({
                 styles.streakText,
                 { color: isStreakAtRisk ? colors.warning : colors.streak }
               ]}>
-                {isStreakAtRisk ? '⚠️' : '🔥'} {streak}
+                {isStreakAtRisk ? '⚠️' : '⛓️'} {streak}
               </ThemedText>
             </View>
             <ThemedText style={[styles.frequency, { color: colors.secondary }]}>

@@ -128,9 +128,7 @@ export default function HomeScreen() {
               };
             }
             
-            const newMissedDays = habit.missedDays + daysSinceLastLog - 1;
-            
-            if (newMissedDays > 1) {
+            if (daysSinceLastLog > 2) {
               return {
                 ...habit,
                 logged: true,
@@ -144,7 +142,7 @@ export default function HomeScreen() {
               ...habit,
               logged: true,
               lastLoggedDate: today,
-              missedDays: newMissedDays,
+              missedDays: 0,
             };
           }
           return habit;
