@@ -48,6 +48,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="timer"
+        options={{
+          title: 'Timer',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="timer" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
