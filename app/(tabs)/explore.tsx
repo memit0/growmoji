@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { FlatList, StyleSheet, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
 import { HabitCard } from '@/components/ui/HabitCard';
@@ -18,30 +18,25 @@ interface Todo {
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [todos, setTodos] = useState<Todo[]>([
-    {
-      id: '1',
-      title: 'Complete project proposal',
-      dueDate: 'Today, 5:00 PM',
-      priority: 'high',
-      completed: false,
-    },
-    {
-      id: '2',
-      title: 'Buy groceries',
-      dueDate: 'Tomorrow, 10:00 AM',
-      priority: 'medium',
-      completed: false,
-    },
-    {
-      id: '3',
-      title: 'Call mom',
-      dueDate: 'Today, 8:00 PM',
-      priority: 'low',
-      completed: true,
-    },
-  ]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
+
+  // Track component lifecycle
+  React.useEffect(() => {
+    console.log('[ExploreScreen] Component mounted');
+    return () => {
+      console.log('[ExploreScreen] Component unmounting');
+    };
+  }, []);
+
+  // Track todos state changes
+  React.useEffect(() => {
+    console.log('[ExploreScreen] Todos state changed:', {
+      totalTodos: todos.length,
+      completedTodos: todos.filter(t => t.completed).length,
+      todoIds: todos.map(t => t.id)
+    });
+  }, [todos]);
 
   const habits = [
     {
@@ -68,43 +63,97 @@ export default function ExploreScreen() {
   ];
 
   const handleAddTodo = () => {
-    if (!newTodoTitle.trim()) return;
-    
-    if (todos.length >= 3) {
-      // TODO: Show a warning message to the user
-      console.log('Maximum number of todos reached (3)');
-      return;
+    try {
+      if (!newTodoTitle.trim()) {
+        console.log('[ExploreScreen] Empty todo title, skipping add');
+        return;
+      }
+      
+      if (todos.length >= 3) {
+        console.error('[ExploreScreen] Maximum todos reached, cannot add more');
+        return;
+      }
+
+      // Rotate through priorities based on the number of existing todos
+      const priorities: ('high' | 'medium' | 'low')[] = ['high', 'medium', 'low'];
+      const nextPriority = priorities[todos.length];
+
+      const newTodo: Todo = {
+        id: `todo-${Date.now()}`,
+        title: newTodoTitle.trim(),
+        priority: nextPriority,
+        completed: false,
+      };
+
+      console.log('[ExploreScreen] Adding new todo:', newTodo);
+      setTodos(prevTodos => {
+        const newTodos = [...prevTodos, newTodo];
+        console.log('[ExploreScreen] New todos state:', newTodos);
+        return newTodos;
+      });
+      setNewTodoTitle('');
+    } catch (error) {
+      console.error('[ExploreScreen] Error adding todo:', error);
     }
-
-    const newTodo: Todo = {
-      id: `todo-${Date.now()}`,
-      title: newTodoTitle.trim(),
-      priority: 'medium',
-      completed: false,
-    };
-
-    setTodos([...todos, newTodo]);
-    setNewTodoTitle('');
   };
 
   const handleDeleteTodo = (id: string) => {
-    setTodos(todos.filter(todo => todo.id !== id));
+    try {
+      console.log('[ExploreScreen] Deleting todo with id:', id);
+      console.log('[ExploreScreen] Current todos before deletion:', todos);
+      setTodos(prevTodos => {
+        const newTodos = prevTodos.filter(todo => todo.id !== id);
+        console.log('[ExploreScreen] Todos after deletion:', newTodos);
+        return newTodos;
+      });
+    } catch (error) {
+      console.error('[ExploreScreen] Error deleting todo:', error);
+    }
   };
 
   const handleToggleTodo = (id: string) => {
-    setTodos(todos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
+    try {
+      console.log('[ExploreScreen] Toggling todo with id:', id);
+      console.log('[ExploreScreen] Current todos before toggle:', todos);
+      setTodos(prevTodos => {
+        const newTodos = prevTodos.map(todo => {
+          if (todo.id === id) {
+            const updatedTodo = { ...todo, completed: !todo.completed };
+            console.log('[ExploreScreen] Toggled todo:', updatedTodo);
+            return updatedTodo;
+          }
+          return todo;
+        });
+        console.log('[ExploreScreen] Todos after toggle:', newTodos);
+        return newTodos;
+      });
+    } catch (error) {
+      console.error('[ExploreScreen] Error toggling todo:', error);
+    }
   };
 
   const completedCount = todos.filter(todo => todo.completed).length;
+  console.log('[ExploreScreen] Completed todos count:', completedCount);
+
+  // Memoized renderItem for FlatList
+  const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
+    <TodoCard
+      key={item.id}
+      title={item.title}
+      dueDate={item.dueDate}
+      priority={item.priority}
+      completed={item.completed}
+      onPress={() => handleToggleTodo(item.id)}
+      onDelete={() => handleDeleteTodo(item.id)}
+    />
+  ), [handleToggleTodo, handleDeleteTodo]);
 
   return (
     <ScrollView style={[styles.bg, { backgroundColor: colors.background }]} contentContainerStyle={styles.container}>
       <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
         <View style={styles.sectionHeaderRow}>
           <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
-          <ThemedText style={styles.taskCount}>{completedCount}/{todos.length} tasks</ThemedText>
+          <ThemedText style={styles.taskCount}>{todos.length}/3 tasks</ThemedText>
         </View>
         <View style={styles.inputRow}>
           <TextInput
@@ -124,17 +173,16 @@ export default function ExploreScreen() {
           </TouchableOpacity>
         </View>
         <View>
-          {todos.map((todo) => (
-            <TodoCard
-              key={todo.id}
-              title={todo.title}
-              dueDate={todo.dueDate}
-              priority={todo.priority}
-              completed={todo.completed}
-              onPress={() => handleToggleTodo(todo.id)}
-              onDelete={() => handleDeleteTodo(todo.id)}
-            />
-          ))}
+          <FlatList<Todo>
+            data={todos}
+            renderItem={renderTodoItem}
+            keyExtractor={item => item.id}
+            removeClippedSubviews={true}
+            initialNumToRender={3}
+            maxToRenderPerBatch={3}
+            windowSize={3}
+            scrollEnabled={false}
+          />
         </View>
       </View>
 
