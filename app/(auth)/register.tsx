@@ -12,19 +12,20 @@ import {
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleLogin = () => {
-    // TODO: Implement actual login logic
+  const handleRegister = () => {
+    // TODO: Implement actual registration logic
     router.replace('/(tabs)');
   };
 
   const handleSocialLogin = (provider: 'google' | 'apple') => {
     // TODO: Implement social login logic
-    console.log(`Login with ${provider}`);
+    console.log(`Register with ${provider}`);
   };
 
   const styles = StyleSheet.create({
@@ -115,7 +116,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome Back</Text>
+        <Text style={styles.title}>Create Account</Text>
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -133,8 +134,16 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
         />
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Confirm Password"
+          placeholderTextColor={colors.border}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+        />
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+          <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
@@ -160,9 +169,9 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
+          <Text style={styles.footerText}>Already have an account?</Text>
+          <TouchableOpacity onPress={() => router.push('/login')}>
+            <Text style={styles.footerLink}>Login</Text>
           </TouchableOpacity>
         </View>
       </View>
