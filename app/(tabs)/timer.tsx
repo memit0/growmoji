@@ -1,9 +1,13 @@
 import { PomodoroTimer } from '@/components/ui/PomodoroTimer';
-import { StyleSheet, View } from 'react-native';
+import { Colors } from '@/constants/Colors';
+import { StyleSheet, View, useColorScheme } from 'react-native';
 
 export default function TimerScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <PomodoroTimer onComplete={() => {}} />
     </View>
   );
@@ -12,7 +16,6 @@ export default function TimerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
     justifyContent: 'center',
     alignItems: 'center',
   },
