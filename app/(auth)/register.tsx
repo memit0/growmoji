@@ -1,31 +1,62 @@
+import { useOAuth, useSignUp } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { isLoaded, signUp, setActive } = useSignUp();
+  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
+  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
 
-  const handleRegister = () => {
-    // TODO: Implement actual registration logic
-    router.replace('/(tabs)');
+  const handleRegister = async () => {
+    if (!isLoaded) return;
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
+      return;
+    }
+
+    try {
+      const completeSignUp = await signUp.create({
+        emailAddress: email,
+        password,
+      });
+
+      await setActive({ session: completeSignUp.createdSessionId });
+    } catch (err: any) {
+      Alert.alert("Error", err.errors[0].message);
+    }
   };
 
-  const handleSocialLogin = (provider: 'google' | 'apple') => {
-    // TODO: Implement social login logic
-    console.log(`Register with ${provider}`);
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    try {
+      const startOAuth = provider === 'google' ? startGoogleOAuth : startAppleOAuth;
+      const { createdSessionId, setActive: oAuthSetActive } = await startOAuth();
+      
+      if (createdSessionId && oAuthSetActive) {
+        await oAuthSetActive({ session: createdSessionId });
+      }
+    } catch (err: any) {
+      Alert.alert("Error", "Could not complete social login");
+    }
   };
 
   const styles = StyleSheet.create({
@@ -109,6 +140,10 @@ export default function RegisterScreen() {
       marginLeft: spacing.sm,
     },
   });
+
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
     <KeyboardAvoidingView

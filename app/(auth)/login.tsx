@@ -1,30 +1,58 @@
+import { useOAuth, useSignIn } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
+  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
 
-  const handleLogin = () => {
-    // TODO: Implement actual login logic
-    router.replace('/(tabs)');
+  const handleLogin = async () => {
+    if (!isLoaded) {
+      return;
+    }
+
+    try {
+      const completeSignIn = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      await setActive({ session: completeSignIn.createdSessionId });
+    } catch (err: any) {
+      Alert.alert("Error", err.errors[0].message);
+    }
   };
 
-  const handleSocialLogin = (provider: 'google' | 'apple') => {
-    // TODO: Implement social login logic
-    console.log(`Login with ${provider}`);
+  const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    try {
+      const startOAuth = provider === 'google' ? startGoogleOAuth : startAppleOAuth;
+      const { createdSessionId, setActive: oAuthSetActive } = await startOAuth();
+      
+      if (createdSessionId && oAuthSetActive) {
+        await oAuthSetActive({ session: createdSessionId });
+      }
+    } catch (err: any) {
+      Alert.alert("Error", "Could not complete social login");
+    }
   };
 
   const styles = StyleSheet.create({
@@ -108,6 +136,10 @@ export default function LoginScreen() {
       marginLeft: spacing.sm,
     },
   });
+
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
     <KeyboardAvoidingView
