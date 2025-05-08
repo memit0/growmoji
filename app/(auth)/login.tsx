@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ProfileModal } from '../components/ProfileModal';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
   const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
@@ -135,6 +137,12 @@ export default function LoginScreen() {
       fontSize: typography.fontSize.md,
       marginLeft: spacing.sm,
     },
+    profileButton: {
+      position: 'absolute',
+      top: spacing.lg,
+      right: spacing.lg,
+      zIndex: 1,
+    },
   });
 
   if (!isLoaded) {
@@ -146,6 +154,13 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <TouchableOpacity
+        style={styles.profileButton}
+        onPress={() => setIsProfileModalVisible(true)}
+      >
+        <Ionicons name="person-circle-outline" size={32} color={colors.text} />
+      </TouchableOpacity>
+
       <View style={styles.content}>
         <Text style={styles.title}>Welcome Back</Text>
         <TextInput
@@ -198,6 +213,12 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <ProfileModal
+        isVisible={isProfileModalVisible}
+        onClose={() => setIsProfileModalVisible(false)}
+        onSignOut={() => {}}
+      />
     </KeyboardAvoidingView>
   );
 } 
