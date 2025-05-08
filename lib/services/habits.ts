@@ -163,4 +163,49 @@ export const habitsService = {
 
     return data || [];
   },
+
+  async deleteHabitLog(habitId: string, logDate: string): Promise<void> {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await supabase
+      .from('habit_logs')
+      .delete()
+      .eq('habit_id', habitId)
+      .eq('log_date', logDate);
+
+    if (error) {
+      console.error('Error deleting habit log:', error, { habitId, logDate });
+      throw error;
+    }
+    console.log('[habitsService.deleteHabitLog] Supabase delete SUCCEEDED.', { habitId, logDate });
+  },
+
+  async updateHabitStreakDetails(id: string, updates: { current_streak: number; last_check_date: string | null }): Promise<Habit> {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('User not authenticated');
+
+    // Ensure last_check_date is either a valid date string or null
+    const validUpdates = {
+      ...updates,
+      last_check_date: updates.last_check_date ? updates.last_check_date : null,
+    };
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update(validUpdates)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select('id, user_id, emoji, start_date, current_streak, last_check_date, created_at')
+      .single();
+
+    if (error) {
+      console.error('Error updating habit streak details:', error, { id, updates: validUpdates });
+      throw error;
+    }
+    console.log('[habitsService.updateHabitStreakDetails] Supabase update SUCCEEDED.', data);
+    return data;
+  },
 }; 

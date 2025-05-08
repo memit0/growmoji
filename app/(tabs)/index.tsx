@@ -139,21 +139,71 @@ export default function HomeScreen() {
   };
 
   const handleHabitLog = async (habitId: string) => {
-    if(!user) return;
-    console.log(`[HomeScreen] Attempting to log habit: ${habitId}`);
+    if (!user) return;
     setIsUpdatingItem(true);
+    console.log(`[HomeScreen] handleHabitLog called for habit: ${habitId}`);
+
+    const habitToLog = habits.find(h => h.id === habitId);
+    if (!habitToLog) {
+      console.error('[HomeScreen] Habit not found in local state:', habitId);
+      setIsUpdatingItem(false);
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isLoggedToday = habitToLog.last_check_date ? habitToLog.last_check_date.startsWith(todayStr) : false;
+
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const loggedHabitEntry = await habitsService.logHabitCompletion(habitId, today);
-      
+      if (isLoggedToday) {
+        // Unlog: Delete the log and recalculate streak
+        console.log(`[HomeScreen] Unlogging habit: ${habitId} for date: ${todayStr}`);
+        await habitsService.deleteHabitLog(habitId, todayStr);
+        console.log(`[HomeScreen] Successfully deleted log for habit: ${habitId}`);
+
+        // Recalculate streak
+        const remainingLogs = await habitsService.getHabitLogs(habitId);
+        remainingLogs.sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime()); // Sort ascending
+
+        let newStreak = 0;
+        let newLastCheckDate: string | null = null;
+
+        if (remainingLogs.length > 0) {
+          newLastCheckDate = remainingLogs[remainingLogs.length - 1].log_date;
+          newStreak = 1;
+          for (let i = remainingLogs.length - 2; i >= 0; i--) {
+            const currentDate = new Date(remainingLogs[i+1].log_date);
+            const previousDate = new Date(remainingLogs[i].log_date);
+            const diffTime = currentDate.getTime() - previousDate.getTime();
+            const diffDays = diffTime / (1000 * 3600 * 24);
+            if (diffDays === 1) {
+              newStreak++;
+            } else {
+              break; // Streak broken
+            }
+          }
+        }
+        console.log(`[HomeScreen] Recalculated streak for ${habitId}: ${newStreak}, last_check_date: ${newLastCheckDate}`);
+        await habitsService.updateHabitStreakDetails(habitId, { current_streak: newStreak, last_check_date: newLastCheckDate });
+        console.log(`[HomeScreen] Successfully updated habit streak details for ${habitId}`);
+
+      } else {
+        // Log: Add a new log entry
+        console.log(`[HomeScreen] Logging habit: ${habitId} for date: ${todayStr}`);
+        await habitsService.logHabitCompletion(habitId, todayStr);
+        console.log(`[HomeScreen] Successfully logged habit completion for: ${habitId}`);
+      }
+
+      // Refresh all habits to update UI
       const updatedHabits = await habitsService.getHabits();
       setHabits(updatedHabits);
+      console.log('[HomeScreen] Refreshed habits list.');
 
-      console.log('[HomeScreen] Successfully logged habit and updated list. Log entry:', loggedHabitEntry);
     } catch (error) {
-      console.error('[HomeScreen] Error logging habit:', error);
+      console.error('[HomeScreen] Error in handleHabitLog:', error);
+      // Potentially show a user-facing error message here
     } finally {
       setIsUpdatingItem(false);
+      console.log(`[HomeScreen] handleHabitLog finished for habit: ${habitId}`);
     }
   };
 

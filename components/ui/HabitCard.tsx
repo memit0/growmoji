@@ -11,7 +11,6 @@ interface HabitCardProps {
   streak: number;
   onPress?: () => void;
   onDelete?: (id: string) => void;
-  logged?: boolean;
   startDate: string;
   lastLoggedDate?: string;
 }
@@ -22,13 +21,15 @@ export function HabitCard({
   streak, 
   onPress, 
   onDelete,
-  logged = false,
   startDate,
   lastLoggedDate 
 }: HabitCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const translateX = new Animated.Value(0);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isLoggedToday = lastLoggedDate ? lastLoggedDate.startsWith(todayStr) : false;
 
   // Calculate if the streak is at risk (missed one day)
   const isStreakAtRisk = lastLoggedDate ? 
@@ -73,7 +74,7 @@ export function HabitCard({
             <View style={[
               styles.emojiContainer, 
               { backgroundColor: colors.input },
-              logged && styles.loggedContainer
+              isLoggedToday && styles.loggedContainer
             ]}>
               <ThemedText style={styles.emoji}>{emoji}</ThemedText>
             </View>
