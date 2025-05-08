@@ -7,7 +7,6 @@ import { ThemedView } from './ThemedView';
 interface HabitCardProps {
   emoji: string;
   streak: number;
-  frequency: string;
   onPress?: () => void;
   logged?: boolean;
   startDate: string;
@@ -17,7 +16,6 @@ interface HabitCardProps {
 export function HabitCard({ 
   emoji, 
   streak, 
-  frequency, 
   onPress, 
   logged = false,
   startDate,
@@ -51,7 +49,7 @@ export function HabitCard({
                 {isStreakAtRisk ? '⚠️' : '⛓️'} {streak}
               </ThemedText>
             </View>
-            <ThemedText style={[styles.frequency, { color: colors.secondary }]}>
+            <ThemedText style={[styles.infoText, { color: colors.secondary }]}>
               Started {startDate}
             </ThemedText>
           </View>
@@ -110,7 +108,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  frequency: {
+  infoText: {
     fontSize: 14,
     fontWeight: '500',
   },

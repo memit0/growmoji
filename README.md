@@ -2,6 +2,111 @@
 
 A modern productivity app built with React Native and Expo to help users track and maintain their daily habits and tasks.
 
+##Database schema 
+
+CREATE TABLE habits (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  emoji TEXT NOT NULL,
+  start_date DATE NOT NULL,
+  current_streak INTEGER DEFAULT 0,
+  last_check_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE habit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  habit_id UUID REFERENCES habits(id) ON DELETE CASCADE NOT NULL,
+  log_date DATE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(habit_id, log_date)
+);
+
+CREATE TABLE todos (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  content TEXT NOT NULL,
+  is_completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE timer_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL UNIQUE,
+  work_duration INTEGER DEFAULT 25, -- in minutes
+  break_duration INTEGER DEFAULT 5, -- in minutes
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Habits RLS
+ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
+CREATE POLICY habits_user_access ON habits
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Habit Logs RLS (through parent habit)
+ALTER TABLE habit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY habit_logs_user_access ON habit_logs
+  FOR ALL USING (EXISTS (
+    SELECT 1 FROM habits WHERE habits.id = habit_logs.habit_id AND habits.user_id = auth.uid()
+  ));
+
+-- Todos RLS
+ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY todos_user_access ON todos
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Timer Settings RLS
+ALTER TABLE timer_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY timer_settings_user_access ON timer_settings
+  FOR ALL USING (auth.uid() = user_id);
+
+  CREATE OR REPLACE FUNCTION calculate_streak() 
+RETURNS TRIGGER AS $$
+DECLARE
+  last_log_date DATE;
+  days_since_last INTEGER;
+BEGIN
+  -- Get the date of the previous log for this habit
+  SELECT MAX(log_date) INTO last_log_date 
+  FROM habit_logs 
+  WHERE habit_id = NEW.habit_id AND log_date < NEW.log_date;
+  
+  -- Update the habit streak
+  IF last_log_date IS NULL THEN
+    -- First log for this habit
+    UPDATE habits SET current_streak = 1, last_check_date = NEW.log_date WHERE id = NEW.habit_id;
+  ELSE
+    days_since_last := NEW.log_date - last_log_date;
+    
+    IF days_since_last = 1 THEN
+      -- Consecutive day, increment streak
+      UPDATE habits SET current_streak = current_streak + 1, last_check_date = NEW.log_date WHERE id = NEW.habit_id;
+    ELSIF days_since_last = 2 THEN
+      -- Missed one day, maintain streak but update last check date
+      UPDATE habits SET last_check_date = NEW.log_date WHERE id = NEW.habit_id;
+    ELSE
+      -- Missed multiple days, reset streak
+      UPDATE habits SET current_streak = 1, last_check_date = NEW.log_date WHERE id = NEW.habit_id;
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_habit_streak
+AFTER INSERT ON habit_logs
+FOR EACH ROW EXECUTE FUNCTION calculate_streak();
+
+CREATE INDEX ON habits(user_id);
+CREATE INDEX ON habit_logs(habit_id);
+CREATE INDEX ON habit_logs(log_date);
+CREATE INDEX ON todos(user_id);
+CREATE INDEX ON todos(is_completed);
+
+
 ## Project Structure
 
 ```

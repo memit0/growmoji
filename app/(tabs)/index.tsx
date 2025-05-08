@@ -18,57 +18,64 @@ export default function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  
+  // Refactored loading states
+  const [isScreenLoading, setIsScreenLoading] = useState(false);
+  const [isSubmittingTodo, setIsSubmittingTodo] = useState(false);
+  const [isSubmittingHabit, setIsSubmittingHabit] = useState(false);
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false);
+
   const { user } = useAuth();
 
   const handleAddTodo = async () => {
-    if (!newTodoTitle.trim() || !user) {
-      console.log('[HomeScreen] Empty todo title or no user, skipping add');
+    console.log(`[handleAddTodo] Called. Title: "${newTodoTitle}", isSubmittingTodo: ${isSubmittingTodo}, User: ${!!user}`);
+    if (isSubmittingTodo || !newTodoTitle.trim() || !user) {
+      if (isSubmittingTodo) console.log('[handleAddTodo] Guard: Add todo already in progress. Bailing out.');
+      else console.log(`[handleAddTodo] Guard: Empty title or no user. Title: "${newTodoTitle}", User: ${!!user}. Bailing out.`);
       return;
     }
 
-    setIsLoading(true);
+    console.log('[handleAddTodo] Proceeding: Setting isSubmittingTodo to true.');
+    setIsSubmittingTodo(true);
     try {
-      const priorities: ('high' | 'medium' | 'low')[] = ['high', 'medium', 'low'];
-      const nextPriority = priorities[todos.length % priorities.length] || 'low';
-
-      const newTodoData: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-        title: newTodoTitle.trim(),
-        priority: nextPriority,
-        completed: false,
+      const newTodoData: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'completed_at'> = {
+        content: newTodoTitle.trim(),
+        is_completed: false,
       };
-
+      console.log('[handleAddTodo] Calling todosService.createTodo with:', newTodoData);
       const createdTodo = await todosService.createTodo(newTodoData);
+      console.log('[handleAddTodo] todosService.createTodo SUCCEEDED. Response:', createdTodo);
       setTodos(prevTodos => [...prevTodos, createdTodo]);
       setNewTodoTitle('');
     } catch (error) {
-      console.error('[HomeScreen] Error adding todo:', error);
+      console.error('[handleAddTodo] todosService.createTodo FAILED. Error:', error);
     } finally {
-      setIsLoading(false);
+      console.log('[handleAddTodo] Finally: Setting isSubmittingTodo to false.');
+      setIsSubmittingTodo(false);
     }
   };
 
-  const handleDeleteTodo = async (id: string) => {
+  const handleDeleteTodo = useCallback(async (id: string) => {
     if (!user) return;
-    setIsLoading(true);
+    setIsUpdatingItem(true);
     try {
       await todosService.deleteTodo(id);
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
     } catch (error) {
       console.error('[HomeScreen] Error deleting todo:', error);
     } finally {
-      setIsLoading(false);
+      setIsUpdatingItem(false);
     }
-  };
+  }, [user]);
 
-  const handleToggleTodo = async (id: string) => {
+  const handleToggleTodo = useCallback(async (id: string) => {
     if (!user) return;
     const todoToToggle = todos.find(t => t.id === id);
     if (!todoToToggle) return;
 
-    setIsLoading(true);
+    setIsUpdatingItem(true);
     try {
-      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.completed);
+      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed);
       setTodos(prevTodos =>
         prevTodos.map(todo =>
           todo.id === id ? updatedTodo : todo
@@ -77,46 +84,48 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('[HomeScreen] Error toggling todo:', error);
     } finally {
-      setIsLoading(false);
+      setIsUpdatingItem(false);
     }
-  };
+  }, [user, todos]);
 
   interface HabitModalData {
     title: string;
     emoji: string;
-    frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
     start_date: string;
   }
 
   const handleAddHabit = async (emoji: string) => {
-    if (!user || !emoji) {
-       console.log('[HomeScreen] No emoji or no user, skipping add habit');
+    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, User: ${!!user}`);
+    if (isSubmittingHabit || !user || !emoji) {
+       if (isSubmittingHabit) console.log('[handleAddHabit] Guard: Add habit already in progress. Bailing out.');
+       else console.log(`[handleAddHabit] Guard: No emoji or no user. Emoji: "${emoji}", User: ${!!user}. Bailing out.`);
       return;
     }
-    setIsLoading(true);
+    console.log('[handleAddHabit] Proceeding: Setting isSubmittingHabit to true.');
+    setIsSubmittingHabit(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const newHabitDetails: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'current_streak' | 'longest_streak'> = {
-        title: `New Habit ${emoji}`,
+      const newHabitDetails: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'> = {
         emoji: emoji,
-        frequency: 'daily',
         start_date: today,
       };
-      
+      console.log('[handleAddHabit] Calling habitsService.createHabit with:', newHabitDetails);
       const createdHabit = await habitsService.createHabit(newHabitDetails);
+      console.log('[handleAddHabit] habitsService.createHabit SUCCEEDED. Response:', createdHabit);
       setHabits(prevHabits => [...prevHabits, createdHabit]);
       setIsHabitModalVisible(false);
     } catch (error) {
-      console.error('[HomeScreen] Error adding habit:', error);
+      console.error('[handleAddHabit] habitsService.createHabit FAILED. Error:', error);
     } finally {
-      setIsLoading(false);
+      console.log('[handleAddHabit] Finally: Setting isSubmittingHabit to false.');
+      setIsSubmittingHabit(false);
     }
   };
 
   const handleHabitLog = async (habitId: string) => {
     if(!user) return;
     console.log(`[HomeScreen] Attempting to log habit: ${habitId}`);
-    setIsLoading(true);
+    setIsUpdatingItem(true);
     try {
       const today = new Date().toISOString().split('T')[0];
       const loggedHabitEntry = await habitsService.logHabitCompletion(habitId, today);
@@ -128,17 +137,17 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('[HomeScreen] Error logging habit:', error);
     } finally {
-      setIsLoading(false);
+      setIsUpdatingItem(false);
     }
   };
 
   useEffect(() => {
     if (user) {
-      setIsLoading(true);
+      setIsScreenLoading(true);
       Promise.all([
         todosService.getTodos().then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
         habitsService.getHabits().then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
-      ]).finally(() => setIsLoading(false));
+      ]).finally(() => setIsScreenLoading(false));
     } else {
       setTodos([]);
       setHabits([]);
@@ -147,15 +156,12 @@ export default function HomeScreen() {
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
-      key={item.id}
-      title={item.title}
-      dueDate={item.due_date}
-      priority={item.priority}
-      completed={item.completed}
+      title={item.content}
+      completed={item.is_completed}
       onPress={() => handleToggleTodo(item.id)}
       onDelete={() => handleDeleteTodo(item.id)}
     />
-  ), [handleToggleTodo, handleDeleteTodo, todos]);
+  ), [handleToggleTodo, handleDeleteTodo]);
 
   return (
     <ScrollView style={[styles.bg, { backgroundColor: colors.background }]} contentContainerStyle={styles.container}>
@@ -209,9 +215,8 @@ export default function HomeScreen() {
           {habits.map((habit: Habit) => (
             <HabitCard
               key={habit.id}
-              emoji={habit.emoji || ''}
+              emoji={habit.emoji}
               streak={habit.current_streak}
-              frequency={habit.frequency}
               onPress={() => handleHabitLog(habit.id)}
               startDate={habit.start_date}
             />
