@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -7,25 +7,9 @@ import { HabitModal } from '@/components/ui/HabitModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
 import { Colors } from '@/constants/Colors';
-
-interface Todo {
-  id: string;
-  title: string;
-  dueDate?: string;
-  priority: 'high' | 'medium' | 'low';
-  completed: boolean;
-}
-
-interface Habit {
-  id: string;
-  emoji: string;
-  streak: number;
-  frequency: string;
-  logged: boolean;
-  startDate: string;
-  lastLoggedDate?: string;
-  missedDays: number;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { Habit, habitsService } from '@/lib/services/habits';
+import { Todo, todosService } from '@/lib/services/todos';
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
@@ -34,136 +18,144 @@ export default function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
-  const handleAddTodo = () => {
+  const handleAddTodo = async () => {
+    if (!newTodoTitle.trim() || !user) {
+      console.log('[HomeScreen] Empty todo title or no user, skipping add');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      if (!newTodoTitle.trim()) {
-        console.log('[HomeScreen] Empty todo title, skipping add');
-        return;
-      }
-      
-      if (todos.length >= 3) {
-        console.error('[HomeScreen] Maximum todos reached, cannot add more');
-        return;
-      }
-
       const priorities: ('high' | 'medium' | 'low')[] = ['high', 'medium', 'low'];
-      const nextPriority = priorities[todos.length];
+      const nextPriority = priorities[todos.length % priorities.length] || 'low';
 
-      const newTodo: Todo = {
-        id: `todo-${Date.now()}`,
+      const newTodoData: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
         title: newTodoTitle.trim(),
         priority: nextPriority,
         completed: false,
       };
 
-      setTodos(prevTodos => [...prevTodos, newTodo]);
+      const createdTodo = await todosService.createTodo(newTodoData);
+      setTodos(prevTodos => [...prevTodos, createdTodo]);
       setNewTodoTitle('');
     } catch (error) {
       console.error('[HomeScreen] Error adding todo:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDeleteTodo = (id: string) => {
+  const handleDeleteTodo = async (id: string) => {
+    if (!user) return;
+    setIsLoading(true);
     try {
+      await todosService.deleteTodo(id);
       setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
     } catch (error) {
       console.error('[HomeScreen] Error deleting todo:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleToggleTodo = (id: string) => {
+  const handleToggleTodo = async (id: string) => {
+    if (!user) return;
+    const todoToToggle = todos.find(t => t.id === id);
+    if (!todoToToggle) return;
+
+    setIsLoading(true);
     try {
+      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.completed);
       setTodos(prevTodos =>
         prevTodos.map(todo =>
-          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+          todo.id === id ? updatedTodo : todo
         )
       );
     } catch (error) {
       console.error('[HomeScreen] Error toggling todo:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleAddHabit = (emoji: string) => {
+  interface HabitModalData {
+    title: string;
+    emoji: string;
+    frequency: 'daily' | 'weekly' | 'monthly' | 'custom';
+    start_date: string;
+  }
+
+  const handleAddHabit = async (emoji: string) => {
+    if (!user || !emoji) {
+       console.log('[HomeScreen] No emoji or no user, skipping add habit');
+      return;
+    }
+    setIsLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      const newHabit: Habit = {
-        id: `habit-${Date.now()}`,
-        emoji,
-        streak: 0,
-        frequency: 'Daily',
-        logged: false,
-        startDate: today,
-        lastLoggedDate: today,
-        missedDays: 0,
+      const newHabitDetails: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'current_streak' | 'longest_streak'> = {
+        title: `New Habit ${emoji}`,
+        emoji: emoji,
+        frequency: 'daily',
+        start_date: today,
       };
-      setHabits(prevHabits => [...prevHabits, newHabit]);
+      
+      const createdHabit = await habitsService.createHabit(newHabitDetails);
+      setHabits(prevHabits => [...prevHabits, createdHabit]);
       setIsHabitModalVisible(false);
     } catch (error) {
       console.error('[HomeScreen] Error adding habit:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleHabitLog = (habitId: string) => {
+  const handleHabitLog = async (habitId: string) => {
+    if(!user) return;
+    console.log(`[HomeScreen] Attempting to log habit: ${habitId}`);
+    setIsLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-      setHabits(prevHabits => 
-        prevHabits.map(habit => {
-          if (habit.id === habitId) {
-            const lastLogged = new Date(habit.lastLoggedDate || '');
-            const todayDate = new Date(today);
-            const daysSinceLastLog = Math.floor((todayDate.getTime() - lastLogged.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if (daysSinceLastLog === 0) {
-              return { ...habit, logged: !habit.logged };
-            }
-            
-            if (daysSinceLastLog === 1) {
-              return {
-                ...habit,
-                logged: true,
-                streak: habit.streak + 1,
-                lastLoggedDate: today,
-                missedDays: 0,
-              };
-            }
-            
-            if (daysSinceLastLog > 2) {
-              return {
-                ...habit,
-                logged: true,
-                streak: 1,
-                lastLoggedDate: today,
-                missedDays: 0,
-              };
-            }
-            
-            return {
-              ...habit,
-              logged: true,
-              lastLoggedDate: today,
-              missedDays: 0,
-            };
-          }
-          return habit;
-        })
-      );
+      const loggedHabitEntry = await habitsService.logHabitCompletion(habitId, today);
+      
+      const updatedHabits = await habitsService.getHabits();
+      setHabits(updatedHabits);
+
+      console.log('[HomeScreen] Successfully logged habit and updated list. Log entry:', loggedHabitEntry);
     } catch (error) {
       console.error('[HomeScreen] Error logging habit:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      setIsLoading(true);
+      Promise.all([
+        todosService.getTodos().then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
+        habitsService.getHabits().then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
+      ]).finally(() => setIsLoading(false));
+    } else {
+      setTodos([]);
+      setHabits([]);
+    }
+  }, [user]);
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
       key={item.id}
       title={item.title}
-      dueDate={item.dueDate}
+      dueDate={item.due_date}
       priority={item.priority}
       completed={item.completed}
       onPress={() => handleToggleTodo(item.id)}
       onDelete={() => handleDeleteTodo(item.id)}
     />
-  ), [handleToggleTodo, handleDeleteTodo]);
+  ), [handleToggleTodo, handleDeleteTodo, todos]);
 
   return (
     <ScrollView style={[styles.bg, { backgroundColor: colors.background }]} contentContainerStyle={styles.container}>
@@ -214,16 +206,14 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         <View>
-          {habits.map((habit) => (
+          {habits.map((habit: Habit) => (
             <HabitCard
               key={habit.id}
-              emoji={habit.emoji}
-              streak={habit.streak}
+              emoji={habit.emoji || ''}
+              streak={habit.current_streak}
               frequency={habit.frequency}
-              logged={habit.logged}
               onPress={() => handleHabitLog(habit.id)}
-              startDate={habit.startDate}
-              lastLoggedDate={habit.lastLoggedDate}
+              startDate={habit.start_date}
             />
           ))}
         </View>
@@ -232,7 +222,7 @@ export default function HomeScreen() {
       <HabitModal
         visible={isHabitModalVisible}
         onClose={() => setIsHabitModalVisible(false)}
-        onSave={handleAddHabit}
+        onSave={(emoji) => handleAddHabit(emoji)}
       />
     </ScrollView>
   );

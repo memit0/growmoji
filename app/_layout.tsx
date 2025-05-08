@@ -1,49 +1,34 @@
-import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
-
-// Token cache
-const tokenCache = {
-  async getToken(key: string) {
-    try {
-      return SecureStore.getItemAsync(key);
-    } catch (err) {
-      return null;
-    }
-  },
-  async saveToken(key: string, value: string) {
-    try {
-      return SecureStore.setItemAsync(key, value);
-    } catch (err) {
-      return;
-    }
-  },
-};
 
 // Initial route component
 function InitialLayout() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (loading) return;
 
     const inTabsGroup = segments[0] === '(tabs)';
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (isSignedIn && !inTabsGroup) {
+    if (session && !inTabsGroup) {
       router.replace('/(tabs)');
-    } else if (!isSignedIn && !inAuthGroup) {
+    } else if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
-  }, [isSignedIn]);
+  }, [session, loading, segments, router]);
 
   const colorScheme = useColorScheme();
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <Stack
@@ -75,15 +60,12 @@ function InitialLayout() {
 
 export default function RootLayout() {
   return (
-    <ClerkProvider
-      publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      tokenCache={tokenCache}
-    >
+    <AuthProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider>
           <InitialLayout />
         </ThemeProvider>
       </GestureHandlerRootView>
-    </ClerkProvider>
+    </AuthProvider>
   );
 }

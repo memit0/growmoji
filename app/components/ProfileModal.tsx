@@ -1,24 +1,29 @@
-import { useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface ProfileModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSignOut: () => void;
 }
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose, onSignOut }) => {
+export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const { user } = useUser();
+  const { user, signOut, loading } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    onClose();
+  };
 
   const styles = StyleSheet.create({
     modalOverlay: {
@@ -97,6 +102,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose, 
       fontSize: typography.fontSize.sm,
       color: colors.text,
     },
+    signOutButton: {
+      opacity: loading ? 0.7 : 1,
+    }
   });
 
   return (
@@ -129,30 +137,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose, 
                 <Ionicons name="person" size={30} color={colors.text} />
               </View>
               <Text style={styles.userName}>
-                {user.fullName || user.firstName || user.emailAddresses[0]?.emailAddress || 'User'}
+                {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
               </Text>
               <Text style={styles.userEmail}>
-                {user.emailAddresses[0]?.emailAddress}
+                {user.email}
               </Text>
             </View>
           )}
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Navigate", "Go to Edit Profile")}>
             <Ionicons name="person-outline" size={24} color={colors.text} />
             <Text style={styles.menuItemText}>Edit Profile</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Navigate", "Go to Settings")}>
             <Ionicons name="settings-outline" size={24} color={colors.text} />
             <Text style={styles.menuItemText}>Settings</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.menuItem, styles.lastMenuItem]}
-            onPress={onSignOut}
+            style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton]}
+            onPress={handleSignOut}
+            disabled={loading}
           >
             <Ionicons name="log-out-outline" size={24} color={colors.text} />
-            <Text style={styles.menuItemText}>Sign Out</Text>
+            <Text style={styles.menuItemText}>{loading ? 'Signing Out...' : 'Sign Out'}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>

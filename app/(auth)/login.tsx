@@ -1,6 +1,5 @@
-import { useOAuth, useSignIn } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
@@ -14,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { supabase } from '../../lib/supabase';
 import { ProfileModal } from '../components/ProfileModal';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -22,39 +22,40 @@ export default function LoginScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
-  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
 
   const handleLogin = async () => {
-    if (!isLoaded) {
-      return;
-    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
 
-    try {
-      const completeSignIn = await signIn.create({
-        identifier: email,
-        password,
-      });
-
-      await setActive({ session: completeSignIn.createdSessionId });
-    } catch (err: any) {
-      Alert.alert("Error", err.errors[0].message);
+    if (error) {
+      Alert.alert("Login Error", error.message);
     }
+    // Navigation is handled by the effect in _layout.tsx
+    setLoading(false);
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    try {
-      const startOAuth = provider === 'google' ? startGoogleOAuth : startAppleOAuth;
-      const { createdSessionId, setActive: oAuthSetActive } = await startOAuth();
-      
-      if (createdSessionId && oAuthSetActive) {
-        await oAuthSetActive({ session: createdSessionId });
-      }
-    } catch (err: any) {
-      Alert.alert("Error", "Could not complete social login");
-    }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        // For native apps, you might need to specify a redirectTo URL
+        // if your OAuth flow requires it, or handle deep linking.
+        // redirectTo: 'YOUR_APP_DEEP_LINK_CALLBACK_URL' 
+        // For Expo Go, WebBrowser.maybeCompleteAuthSession() should handle it.
+      },
+    });
+
+    if (error) {
+      Alert.alert(`Error with ${provider} login`, error.message);
+    } 
+    // if (data.url) { WebBrowser.openAuthSessionAsync(data.url) } // Might be needed for some flows
+    setLoading(false);
   };
 
   const styles = StyleSheet.create({
@@ -88,6 +89,7 @@ export default function LoginScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
+      opacity: loading ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -131,6 +133,7 @@ export default function LoginScreen() {
       borderRadius: borderRadius.md,
       padding: spacing.md,
       marginBottom: spacing.md,
+      opacity: loading ? 0.7 : 1,
     },
     socialButtonText: {
       color: colors.text,
@@ -144,10 +147,6 @@ export default function LoginScreen() {
       zIndex: 1,
     },
   });
-
-  if (!isLoaded) {
-    return null;
-  }
 
   return (
     <KeyboardAvoidingView
@@ -171,6 +170,7 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -179,9 +179,10 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!loading}
         />
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'Login'}</Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
@@ -193,6 +194,7 @@ export default function LoginScreen() {
         <TouchableOpacity 
           style={styles.socialButton}
           onPress={() => handleSocialLogin('google')}
+          disabled={loading}
         >
           <Ionicons name="logo-google" size={24} color={colors.text} />
           <Text style={styles.socialButtonText}>Continue with Google</Text>
@@ -201,6 +203,7 @@ export default function LoginScreen() {
         <TouchableOpacity 
           style={styles.socialButton}
           onPress={() => handleSocialLogin('apple')}
+          disabled={loading}
         >
           <Ionicons name="logo-apple" size={24} color={colors.text} />
           <Text style={styles.socialButtonText}>Continue with Apple</Text>
@@ -208,16 +211,17 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={() => router.push('/register')}>
-            <Text style={styles.footerLink}>Sign Up</Text>
-          </TouchableOpacity>
+          <Link href="/register" asChild>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Sign Up</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
       </View>
 
       <ProfileModal
         isVisible={isProfileModalVisible}
         onClose={() => setIsProfileModalVisible(false)}
-        onSignOut={() => {}}
       />
     </KeyboardAvoidingView>
   );

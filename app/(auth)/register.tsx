@@ -1,19 +1,19 @@
-import { useOAuth, useSignUp } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { supabase } from '../../lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -22,41 +22,43 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: "oauth_google" });
-  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: "oauth_apple" });
+  const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!isLoaded) return;
-
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
     }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    });
 
-    try {
-      const completeSignUp = await signUp.create({
-        emailAddress: email,
-        password,
-      });
-
-      await setActive({ session: completeSignUp.createdSessionId });
-    } catch (err: any) {
-      Alert.alert("Error", err.errors[0].message);
+    if (error) {
+      Alert.alert("Registration Error", error.message);
+    } else if (data.session) {
+      // User is signed in, navigation handled by _layout.tsx
+    } else if (data.user && !data.session) {
+      Alert.alert("Registration Successful", "Please check your email to confirm your registration.");
+      router.replace('/login');
     }
+    setLoading(false);
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    try {
-      const startOAuth = provider === 'google' ? startGoogleOAuth : startAppleOAuth;
-      const { createdSessionId, setActive: oAuthSetActive } = await startOAuth();
-      
-      if (createdSessionId && oAuthSetActive) {
-        await oAuthSetActive({ session: createdSessionId });
-      }
-    } catch (err: any) {
-      Alert.alert("Error", "Could not complete social login");
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provider,
+      options: {
+        // redirectTo: 'YOUR_APP_DEEP_LINK_CALLBACK_URL' // For native builds
+      },
+    });
+
+    if (error) {
+      Alert.alert(`Error with ${provider} login`, error.message);
     }
+    setLoading(false);
   };
 
   const styles = StyleSheet.create({
@@ -90,6 +92,7 @@ export default function RegisterScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
+      opacity: loading ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -133,6 +136,7 @@ export default function RegisterScreen() {
       borderRadius: borderRadius.md,
       padding: spacing.md,
       marginBottom: spacing.md,
+      opacity: loading ? 0.7 : 1,
     },
     socialButtonText: {
       color: colors.text,
@@ -140,10 +144,6 @@ export default function RegisterScreen() {
       marginLeft: spacing.sm,
     },
   });
-
-  if (!isLoaded) {
-    return null;
-  }
 
   return (
     <KeyboardAvoidingView
@@ -160,6 +160,7 @@ export default function RegisterScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -168,6 +169,7 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!loading}
         />
         <TextInput
           style={styles.input}
@@ -176,9 +178,10 @@ export default function RegisterScreen() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          editable={!loading}
         />
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Sign Up</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Creating Account...' : 'Sign Up'}</Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
@@ -187,17 +190,19 @@ export default function RegisterScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.socialButton}
           onPress={() => handleSocialLogin('google')}
+          disabled={loading}
         >
           <Ionicons name="logo-google" size={24} color={colors.text} />
           <Text style={styles.socialButtonText}>Continue with Google</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.socialButton}
           onPress={() => handleSocialLogin('apple')}
+          disabled={loading}
         >
           <Ionicons name="logo-apple" size={24} color={colors.text} />
           <Text style={styles.socialButtonText}>Continue with Apple</Text>
@@ -205,9 +210,11 @@ export default function RegisterScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account?</Text>
-          <TouchableOpacity onPress={() => router.push('/login')}>
-            <Text style={styles.footerLink}>Login</Text>
-          </TouchableOpacity>
+          <Link href="/login" asChild>
+            <TouchableOpacity>
+              <Text style={styles.footerLink}>Login</Text>
+            </TouchableOpacity>
+          </Link>
         </View>
       </View>
     </KeyboardAvoidingView>

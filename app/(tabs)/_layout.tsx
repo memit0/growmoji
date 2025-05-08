@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,12 +8,6 @@ import { ProfileModal } from '../components/ProfileModal';
 export default function TabsLayout() {
   const { colors } = useTheme();
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
-  const { signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    await signOut();
-    setIsProfileModalVisible(false);
-  };
 
   return (
     <>
@@ -45,7 +38,7 @@ export default function TabsLayout() {
           options={{
             title: 'Habits & Todos',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="list" size={size} color={color} />
+              <Ionicons name="list-outline" size={size} color={color} />
             ),
           }}
         />
@@ -54,7 +47,7 @@ export default function TabsLayout() {
           options={{
             title: 'Timer',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="timer" size={size} color={color} />
+              <Ionicons name="timer-outline" size={size} color={color} />
             ),
           }}
         />
@@ -63,7 +56,7 @@ export default function TabsLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+              <Ionicons name="person-outline" size={size} color={color} />
             ),
           }}
         />
@@ -71,7 +64,6 @@ export default function TabsLayout() {
       <ProfileModal
         isVisible={isProfileModalVisible}
         onClose={() => setIsProfileModalVisible(false)}
-        onSignOut={handleSignOut}
       />
     </>
   );
