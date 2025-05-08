@@ -1,61 +1,101 @@
 import { Colors } from '@/constants/Colors';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
 interface HabitCardProps {
+  id: string;
   emoji: string;
   streak: number;
   onPress?: () => void;
+  onDelete?: (id: string) => void;
   logged?: boolean;
   startDate: string;
   lastLoggedDate?: string;
 }
 
 export function HabitCard({ 
+  id,
   emoji, 
   streak, 
   onPress, 
+  onDelete,
   logged = false,
   startDate,
   lastLoggedDate 
 }: HabitCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const translateX = new Animated.Value(0);
 
   // Calculate if the streak is at risk (missed one day)
   const isStreakAtRisk = lastLoggedDate ? 
     new Date().getTime() - new Date(lastLoggedDate).getTime() > 24 * 60 * 60 * 1000 : 
     false;
 
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: translateX } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      const { translationX } = event.nativeEvent;
+      if (translationX > 100) {
+        Animated.timing(translateX, {
+          toValue: 500,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          onDelete?.(id);
+          translateX.setValue(0);
+        });
+      } else {
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  };
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
-        <View style={[
-          styles.emojiContainer, 
-          { backgroundColor: colors.input },
-          logged && styles.loggedContainer
-        ]}>
-          <ThemedText style={styles.emoji}>{emoji}</ThemedText>
-        </View>
-        <View style={styles.contentContainer}>
-          <View style={styles.streakContainer}>
-            <View style={styles.streakBadge}>
-              <ThemedText style={[
-                styles.streakText,
-                { color: isStreakAtRisk ? colors.warning : colors.streak }
-              ]}>
-                {isStreakAtRisk ? '⚠️' : '⛓️'} {streak}
-              </ThemedText>
+    <PanGestureHandler
+      onGestureEvent={onGestureEvent}
+      onHandlerStateChange={onHandlerStateChange}
+      activeOffsetX={[-20, 20]}
+    >
+      <Animated.View style={{ transform: [{ translateX }] }}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+          <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
+            <View style={[
+              styles.emojiContainer, 
+              { backgroundColor: colors.input },
+              logged && styles.loggedContainer
+            ]}>
+              <ThemedText style={styles.emoji}>{emoji}</ThemedText>
             </View>
-            <ThemedText style={[styles.infoText, { color: colors.secondary }]}>
-              Started {startDate}
-            </ThemedText>
-          </View>
-        </View>
-      </ThemedView>
-    </TouchableOpacity>
+            <View style={styles.contentContainer}>
+              <View style={styles.streakContainer}>
+                <View style={styles.streakBadge}>
+                  <ThemedText style={[
+                    styles.streakText,
+                    { color: isStreakAtRisk ? colors.warning : colors.streak }
+                  ]}>
+                    {isStreakAtRisk ? '⚠️' : '⛓️'} {streak}
+                  </ThemedText>
+                </View>
+                <ThemedText style={[styles.infoText, { color: colors.secondary }]}>
+                  Started {startDate}
+                </ThemedText>
+              </View>
+            </View>
+          </ThemedView>
+        </TouchableOpacity>
+      </Animated.View>
+    </PanGestureHandler>
   );
 }
 

@@ -68,6 +68,22 @@ export default function HomeScreen() {
     }
   }, [user]);
 
+  const handleDeleteHabit = useCallback(async (id: string) => {
+    if (!user) return;
+    console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
+    // Consider adding a specific loading state for deleting a habit if needed
+    // setIsUpdatingItem(true); 
+    try {
+      await habitsService.deleteHabit(id);
+      setHabits(prevHabits => prevHabits.filter(habit => habit.id !== id));
+      console.log(`[HomeScreen] Successfully deleted habit: ${id}`);
+    } catch (error) {
+      console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
+    } finally {
+      // setIsUpdatingItem(false);
+    }
+  }, [user]);
+
   const handleToggleTodo = useCallback(async (id: string) => {
     if (!user) return;
     const todoToToggle = todos.find(t => t.id === id);
@@ -215,10 +231,13 @@ export default function HomeScreen() {
           {habits.map((habit: Habit) => (
             <HabitCard
               key={habit.id}
+              id={habit.id}
               emoji={habit.emoji}
               streak={habit.current_streak}
               onPress={() => handleHabitLog(habit.id)}
+              onDelete={handleDeleteHabit}
               startDate={habit.start_date}
+              lastLoggedDate={habit.last_check_date === null ? undefined : habit.last_check_date}
             />
           ))}
         </View>
