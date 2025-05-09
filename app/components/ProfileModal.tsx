@@ -1,20 +1,20 @@
-import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
-    useColorScheme
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme
 } from 'react-native';
 
 interface ProfileModalProps {
@@ -26,11 +26,14 @@ type AppearanceMode = 'system' | 'light' | 'dark';
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
   const { colors, spacing, typography, borderRadius, theme, toggleTheme } = useTheme();
-  const { user, signOut, loading } = useAuth();
+  const { signOut } = useClerkAuth();
+  const { user, isLoaded } = useUser();
   const { notificationsEnabled, toggleNotifications, soundEnabled, toggleSound } = useNotifications();
   const [showSettings, setShowSettings] = useState(false);
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('system');
   const systemColorScheme = useColorScheme();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     loadAppearanceSettings();
@@ -61,6 +64,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     }
   };
 
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out with Clerk:", error);
+      Alert.alert("Sign Out Error", "Could not sign out. Please try again.");
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account",
@@ -68,14 +83,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       [
         {
           text: "Cancel",
-          style: "cancel"
+          style: "cancel",
+          onPress: () => console.log("Account deletion cancelled"),
         },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            // TODO: Implement account deletion
-            Alert.alert("Coming Soon", "Account deletion will be available in a future update.");
+          onPress: async () => {
+            if (!user) {
+              Alert.alert("Error", "User not found. Cannot delete account.");
+              return;
+            }
+            setIsDeletingAccount(true);
+            try {
+              await user.delete();
+              // Successfully deleted. Clerk should handle sign out and state updates.
+              // onClose(); // Close the modal if needed, or rely on Clerk's redirection/state change
+              Alert.alert("Account Deleted", "Your account has been successfully deleted.");
+              // It's good practice to call signOut explicitly if destroy() doesn't handle it,
+              // or if you want to ensure the local session is cleared immediately.
+              // await signOut(); // This might be redundant if destroy() handles it.
+            } catch (error) {
+              console.error("Error deleting account with Clerk:", error);
+              Alert.alert("Deletion Error", "Could not delete your account. Please try again or contact support.");
+            } finally {
+              setIsDeletingAccount(false);
+            }
           }
         }
       ]
@@ -178,7 +211,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       color: colors.text,
     },
     signOutButton: {
-      opacity: loading ? 0.7 : 1,
+      opacity: isSigningOut ? 0.7 : 1,
     },
     section: {
       padding: spacing.lg,
@@ -211,6 +244,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       padding: spacing.lg,
       borderRadius: borderRadius.md,
       backgroundColor: 'rgba(255, 59, 48, 0.1)',
+      opacity: isDeletingAccount ? 0.7 : 1,
     },
     dangerTitle: {
       fontSize: typography.fontSize.lg,
@@ -293,10 +327,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
               <Ionicons name="person" size={30} color={colors.text} />
             </View>
             <Text style={styles.userName}>
-              {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+              {user?.fullName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User'}
             </Text>
             <Text style={styles.userEmail}>
-              {user.email}
+              {user?.primaryEmailAddress?.emailAddress}
             </Text>
           </View>
         )}
@@ -310,12 +344,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton]}
-          onPress={signOut}
-          disabled={loading}
+          style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton, { opacity: isSigningOut ? 0.7 : 1 }]}
+          onPress={handleSignOut}
+          disabled={isSigningOut || !isLoaded}
         >
           <Ionicons name="log-out-outline" size={24} color={colors.text} />
-          <Text style={styles.menuItemText}>{loading ? 'Signing Out...' : 'Sign Out'}</Text>
+          <Text style={styles.menuItemText}>{isSigningOut ? 'Signing Out...' : 'Sign Out'}</Text>
         </TouchableOpacity>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -419,8 +453,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           <TouchableOpacity 
             style={styles.dangerButton}
             onPress={handleDeleteAccount}
+            disabled={isDeletingAccount || !isLoaded}
           >
-            <Text style={styles.dangerButtonText}>Delete Account</Text>
+            <Text style={styles.dangerButtonText}>{isDeletingAccount ? 'Deleting...' : 'Delete Account'}</Text>
           </TouchableOpacity>
         </View>
 

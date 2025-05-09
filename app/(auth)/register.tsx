@@ -1,108 +1,108 @@
-import { Ionicons } from '@expo/vector-icons';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import { Link, router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { useOAuth, useSignUp } from '@clerk/clerk-expo';
+import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
-import { supabase } from '../../lib/supabase';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const [email, setEmail] = useState('');
+  const { isLoaded, signUp, setActive } = useSignUp();
+  const router = useRouter();
+
+  const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState('');
 
-  const handleRegister = async () => {
+  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
+
+  const onSignUpPress = async () => {
+    if (!isLoaded) {
+      return;
+    }
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
     }
-    setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    });
 
-    if (error) {
-      Alert.alert("Registration Error", error.message);
-    } else if (data.session) {
-      // User is signed in, navigation handled by _layout.tsx
-    } else if (data.user && !data.session) {
-      Alert.alert("Registration Successful", "Please check your email to confirm your registration.");
-      router.replace('/login');
+    try {
+      await signUp.create({
+        emailAddress,
+        password,
+      });
+
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+      setPendingVerification(true);
+    } catch (err: any) {
+      console.error("Clerk SignUp Error:", JSON.stringify(err, null, 2));
+      const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage 
+                         ? err.errors[0].longMessage 
+                         : "An unexpected error occurred during sign up. Please try again.";
+      Alert.alert("Registration Error", errorMessage);
     }
-    setLoading(false);
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'apple') => {
-    setLoading(true);
+  const handleSocialSignUp = React.useCallback(async (strategy: 'oauth_google' | 'oauth_apple') => {
+    if (!isLoaded) {
+      return;
+    }
+
+    const oauthFlowFunction = strategy === 'oauth_google' ? startGoogleOAuthFlow : startAppleOAuthFlow;
+
     try {
-      if (provider === 'apple') {
-        console.log('[Apple Sign-In] Attempting AppleAuthentication.signInAsync in register.tsx');
-        const credential = await AppleAuthentication.signInAsync({
-          requestedScopes: [
-            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-            AppleAuthentication.AppleAuthenticationScope.EMAIL,
-          ],
-        });
-        console.log('[Apple Sign-In] signInAsync successful in register.tsx. Credential:', credential);
-        if (credential.identityToken) {
-          console.log('[Apple Sign-In] Got identityToken in register.tsx. Calling supabase.auth.signInWithIdToken.');
-          const { error: signInError, data: signInData } = await supabase.auth.signInWithIdToken({
-            provider: 'apple',
-            token: credential.identityToken,
-          });
-          console.log('[Apple Sign-In] Supabase signInWithIdToken response in register.tsx. Error:', signInError, 'Data:', signInData);
-          if (signInError) {
-            Alert.alert('Error with Apple Sign-In', signInError.message);
-            console.error('[Apple Sign-In] Supabase signInWithIdToken error in register.tsx:', signInError);
-          }
-          // Navigation handled by _layout.tsx if successful
-        } else {
-          Alert.alert('Error with Apple Sign-In', 'No identity token received from Apple.');
-          console.error('[Apple Sign-In] No identity token received from Apple in register.tsx.', credential);
-        }
-      } else { // For Google or other OAuth providers
-        const redirectTo = 'habittracker://callback'; // Define it once
-        const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: provider,
-          options: {
-            redirectTo: redirectTo
-          },
-        });
-        if (data && data.url) {
-          console.log('[Social Login] Supabase returned a URL for Google (register):', data.url);
-          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-          console.log('[Social Login] WebBrowser.openAuthSessionAsync result (register):', result);
-        }
-        if (error) {
-          Alert.alert(`Error with ${provider} login`, error.message);
-        }
-      }
-    } catch (e: any) {
-      if (e.code === 'ERR_REQUEST_CANCELED') {
-        // Handle user cancellation
-        console.log('[Apple Sign-In] User cancelled Apple Sign-In during registration.');
+      const { createdSessionId, setActive: setOAuthActive, signUp: oauthSignUp, signIn: oauthSignIn } = await oauthFlowFunction();
+
+      if (createdSessionId && setOAuthActive) {
+        await setOAuthActive({ session: createdSessionId });
+        router.replace('/');
       } else {
-        Alert.alert('Login Error', 'An unexpected error occurred during social login.');
-        console.error('[Social Login] Unexpected error in handleSocialLogin (register):', e);
-        console.error('[Social Login] Full error object (register):', JSON.stringify(e, null, 2));
+        console.warn("OAuth flow did not complete fully or did not create/activate a session directly.", { oauthSignUp, oauthSignIn });
+        Alert.alert(
+          "OAuth Action Needed",
+          "The sign-up/sign-in process may require additional steps or information. Please try email/password or check your details."
+        );
       }
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      console.error(`OAuth error (${strategy}):`, JSON.stringify(err, null, 2));
+      const errorMessage = err.errors?.[0]?.longMessage || err.message || "An unexpected error occurred during social sign-up.";
+      Alert.alert("Registration Error", errorMessage);
+    }
+  }, [isLoaded, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
+
+  const onVerifyPress = async () => {
+    if (!isLoaded) {
+      return;
+    }
+
+    try {
+      const completeSignUp = await signUp.attemptEmailAddressVerification({
+        code,
+      });
+      if (completeSignUp.status === 'complete') {
+        await setActive({ session: completeSignUp.createdSessionId });
+        router.replace('/');
+      } else {
+        console.error(JSON.stringify(completeSignUp, null, 2));
+        Alert.alert("Verification Error", "Could not complete verification. Please check the code and try again.");
+      }
+    } catch (err: any) {
+      console.error("Clerk Verification Error:", JSON.stringify(err, null, 2));
+       const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage 
+                         ? err.errors[0].longMessage 
+                         : "An unexpected error occurred during verification. Please try again.";
+      Alert.alert("Verification Error", errorMessage);
     }
   };
 
@@ -137,7 +137,7 @@ export default function RegisterScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
-      opacity: loading ? 0.7 : 1,
+      opacity: !isLoaded ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -158,35 +158,38 @@ export default function RegisterScreen() {
       marginLeft: spacing.xs,
       fontSize: typography.fontSize.sm,
     },
-    divider: {
+    socialLoginContainer: {
+      marginTop: spacing.lg, 
+      marginBottom: spacing.md,
+    },
+    socialLoginSeparator: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginVertical: spacing.xl,
+      marginVertical: spacing.lg, 
     },
-    dividerLine: {
+    separatorLine: {
       flex: 1,
       height: 1,
       backgroundColor: colors.border,
     },
-    dividerText: {
-      color: colors.text,
-      marginHorizontal: spacing.md,
+    separatorText: {
+      color: colors.border, 
+      marginHorizontal: spacing.sm,
       fontSize: typography.fontSize.sm,
     },
     socialButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
       backgroundColor: colors.card,
       borderRadius: borderRadius.md,
       padding: spacing.md,
-      marginBottom: spacing.md,
-      opacity: loading ? 0.7 : 1,
+      alignItems: 'center',
+      marginTop: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.primary,
     },
     socialButtonText: {
-      color: colors.text,
+      color: colors.primary,
       fontSize: typography.fontSize.md,
-      marginLeft: spacing.sm,
+      fontWeight: 'bold',
     },
   });
 
@@ -196,71 +199,93 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>Create Account</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.border}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.border}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          placeholderTextColor={colors.border}
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Creating Account...' : 'Sign Up'}</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TouchableOpacity
-          style={styles.socialButton}
-          onPress={() => handleSocialLogin('google')}
-          disabled={loading}
-        >
-          <Ionicons name="logo-google" size={24} color={colors.text} />
-          <Text style={styles.socialButtonText}>Continue with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.socialButton}
-          onPress={() => handleSocialLogin('apple')}
-          disabled={loading}
-        >
-          <Ionicons name="logo-apple" size={24} color={colors.text} />
-          <Text style={styles.socialButtonText}>Continue with Apple</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
-          <Link href="/login" asChild>
-            <TouchableOpacity>
-              <Text style={styles.footerLink}>Login</Text>
+        {!pendingVerification && (
+          <>
+            <Text style={styles.title}>Create Account</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.border}
+              value={emailAddress}
+              onChangeText={setEmailAddress}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={isLoaded}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.border}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={isLoaded}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              placeholderTextColor={colors.border}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              editable={isLoaded}
+            />
+            <TouchableOpacity style={styles.button} onPress={onSignUpPress} disabled={!isLoaded}>
+              <Text style={styles.buttonText}>{!isLoaded ? 'Loading...' : 'Create Account'}</Text>
             </TouchableOpacity>
-          </Link>
-        </View>
+
+            <View style={styles.socialLoginContainer}>
+              <View style={styles.socialLoginSeparator}>
+                <View style={styles.separatorLine} />
+                <Text style={styles.separatorText}>Or sign up with</Text>
+                <View style={styles.separatorLine} />
+              </View>
+
+              <TouchableOpacity 
+                onPress={() => handleSocialSignUp('oauth_google')} 
+                style={styles.socialButton} 
+                disabled={!isLoaded}
+              >
+                <Text style={styles.socialButtonText}>Sign Up with Google</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => handleSocialSignUp('oauth_apple')} 
+                style={styles.socialButton} 
+                disabled={!isLoaded}
+              >
+                <Text style={styles.socialButtonText}>Sign Up with Apple</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <Link href="/login" asChild>
+                <TouchableOpacity>
+                  <Text style={styles.footerLink}>Login</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </>
+        )}
+
+        {pendingVerification && (
+          <>
+            <Text style={styles.title}>Verify Your Email</Text>
+            <TextInput
+              value={code}
+              style={styles.input}
+              placeholder="Verification Code"
+              placeholderTextColor={colors.border}
+              onChangeText={(code) => setCode(code)}
+              keyboardType="number-pad"
+              editable={isLoaded}
+            />
+            <TouchableOpacity style={styles.button} onPress={onVerifyPress} disabled={!isLoaded}>
+              <Text style={styles.buttonText}>{!isLoaded ? 'Loading...' : 'Verify Email'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </KeyboardAvoidingView>
   );

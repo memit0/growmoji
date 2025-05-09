@@ -1,3 +1,4 @@
+import { Clerk } from '@clerk/clerk-expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
@@ -19,6 +20,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Corrected Supabase client initialization
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
@@ -26,9 +28,32 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
+
+  async accessToken() { // Placed at the root of the options object
+    try {
+      const session = Clerk.session;
+      console.log('[SupabaseClient] Clerk.session:', session?.id);
+      if (!session) {
+        console.error('[SupabaseClient] No active Clerk session found when trying to get token.');
+        return null;
+      }
+      const token = await session.getToken();
+      console.log('[SupabaseClient] Token from Clerk:', token ? token.substring(0, 20) + '...' : 'No token retrieved');
+      
+      if (!token) {
+        console.error('[SupabaseClient] Clerk session.getToken() returned null or undefined.');
+        return null;
+      }
+      return token;
+    } catch (error) {
+      console.error("[SupabaseClient] Error getting Clerk token for Supabase:", error);
+      return null;
+    }
+  },
 });
 
-// Test connection
+// Test connection - REMOVING THIS BLOCK as supabase.auth.getSession() is not available when accessToken is configured
+/*
 supabase.auth.getSession().then(({ data, error }) => {
   if (error) {
     debugLog('Supabase', 'Connection Test Error', error);
@@ -39,6 +64,7 @@ supabase.auth.getSession().then(({ data, error }) => {
     });
   }
 });
+*/
 
 // Add query debug listener
 supabase.channel('custom-all-channel')

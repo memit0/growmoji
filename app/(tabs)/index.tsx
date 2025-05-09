@@ -7,10 +7,10 @@ import { HabitCard } from '@/components/ui/HabitCard';
 import { HabitModal } from '@/components/ui/HabitModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
-import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
+import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -25,13 +25,13 @@ export default function HomeScreen() {
   const [isSubmittingHabit, setIsSubmittingHabit] = useState(false);
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
 
-  const { user } = useAuth();
+  const { isSignedIn, userId } = useClerkAuth();
 
   const handleAddTodo = async () => {
-    console.log(`[handleAddTodo] Called. Title: "${newTodoTitle}", isSubmittingTodo: ${isSubmittingTodo}, User: ${!!user}`);
-    if (isSubmittingTodo || !newTodoTitle.trim() || !user) {
+    console.log(`[handleAddTodo] Called. Title: "${newTodoTitle}", isSubmittingTodo: ${isSubmittingTodo}, isSignedIn: ${isSignedIn}, userId: ${userId}`);
+    if (isSubmittingTodo || !newTodoTitle.trim() || !isSignedIn) {
       if (isSubmittingTodo) console.log('[handleAddTodo] Guard: Add todo already in progress. Bailing out.');
-      else console.log(`[handleAddTodo] Guard: Empty title or no user. Title: "${newTodoTitle}", User: ${!!user}. Bailing out.`);
+      else console.log(`[handleAddTodo] Guard: Empty title or not signed in. Title: "${newTodoTitle}", isSignedIn: ${isSignedIn}. Bailing out.`);
       return;
     }
 
@@ -56,7 +56,7 @@ export default function HomeScreen() {
   };
 
   const handleDeleteTodo = useCallback(async (id: string) => {
-    if (!user) return;
+    if (!isSignedIn) return;
     setIsUpdatingItem(true);
     try {
       await todosService.deleteTodo(id);
@@ -66,10 +66,10 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user]);
+  }, [isSignedIn]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
-    if (!user) return;
+    if (!isSignedIn) return;
     console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
     try {
       await habitsService.deleteHabit(id);
@@ -78,10 +78,10 @@ export default function HomeScreen() {
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [user]);
+  }, [isSignedIn]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
-    if (!user) return;
+    if (!isSignedIn) return;
     const todoToToggle = todos.find(t => t.id === id);
     if (!todoToToggle) return;
 
@@ -98,7 +98,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user, todos]);
+  }, [isSignedIn, todos]);
 
   interface HabitModalData {
     title: string;
@@ -107,10 +107,10 @@ export default function HomeScreen() {
   }
 
   const handleAddHabit = async (emoji: string) => {
-    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, User: ${!!user}`);
-    if (isSubmittingHabit || !user || !emoji) {
+    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, isSignedIn: ${isSignedIn}`);
+    if (isSubmittingHabit || !emoji || !isSignedIn) {
        if (isSubmittingHabit) console.log('[handleAddHabit] Guard: Add habit already in progress. Bailing out.');
-       else console.log(`[handleAddHabit] Guard: No emoji or no user. Emoji: "${emoji}", User: ${!!user}. Bailing out.`);
+       else console.log(`[handleAddHabit] Guard: No emoji or not signed in. Emoji: "${emoji}", isSignedIn: ${isSignedIn}. Bailing out.`);
       return;
     }
     console.log('[handleAddHabit] Proceeding: Setting isSubmittingHabit to true.');
@@ -135,7 +135,7 @@ export default function HomeScreen() {
   };
 
   const handleHabitLog = async (habitId: string) => {
-    if (!user) return;
+    if (!isSignedIn) return;
     setIsUpdatingItem(true);
     console.log(`[HomeScreen] handleHabitLog called for habit: ${habitId}`);
 
@@ -203,7 +203,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (isSignedIn) {
       setIsScreenLoading(true);
       Promise.all([
         todosService.getTodos().then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
@@ -213,7 +213,7 @@ export default function HomeScreen() {
       setTodos([]);
       setHabits([]);
     }
-  }, [user]);
+  }, [isSignedIn]);
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
