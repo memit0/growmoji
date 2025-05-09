@@ -1,6 +1,6 @@
-import { Colors } from '@/constants/Colors';
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -9,8 +9,7 @@ interface PomodoroTimerProps {
 }
 
 export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   
   const [workDuration, setWorkDuration] = useState(25); // minutes
   const [breakDuration, setBreakDuration] = useState(5); // minutes
@@ -80,7 +79,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.card }]}>
       <View style={styles.timerContainer}>
-        <ThemedText type="defaultSemiBold" style={styles.timerText}>
+        <ThemedText type="defaultSemiBold" style={[styles.timerText, { color: colors.text }]}>
           {formatTime(timeLeft)}
         </ThemedText>
         <ThemedText style={[styles.statusText, { color: colors.secondary }]}>

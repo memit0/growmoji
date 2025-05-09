@@ -1,7 +1,7 @@
-import { Colors } from '@/constants/Colors';
 import React from 'react';
-import { Animated, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -24,8 +24,7 @@ export function HabitCard({
   startDate,
   lastLoggedDate 
 }: HabitCardProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   const translateX = new Animated.Value(0);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -73,7 +72,7 @@ export function HabitCard({
           <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
             <View style={[
               styles.emojiContainer, 
-              { backgroundColor: colors.input },
+              { backgroundColor: colors.background },
               isLoggedToday && styles.loggedContainer
             ]}>
               <ThemedText style={styles.emoji}>{emoji}</ThemedText>
@@ -83,7 +82,7 @@ export function HabitCard({
                 <View style={styles.streakBadge}>
                   <ThemedText style={[
                     styles.streakText,
-                    { color: isStreakAtRisk ? colors.warning : colors.streak }
+                    { color: isStreakAtRisk ? colors.warning : colors.primary }
                   ]}>
                     {isStreakAtRisk ? '⚠️' : '⛓️'} {streak}
                   </ThemedText>
@@ -127,7 +126,7 @@ const styles = StyleSheet.create({
   },
   loggedContainer: {
     borderWidth: 3,
-    borderColor: '#4CAF50', // Material Design Green
+    borderColor: '#4CAF50', // Keep the green color for completed habits
   },
   emoji: {
     fontSize: 28,

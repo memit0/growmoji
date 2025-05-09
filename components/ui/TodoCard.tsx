@@ -1,7 +1,7 @@
-import { Colors } from '@/constants/Colors';
 import React from 'react';
-import { Animated, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Animated, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -15,8 +15,7 @@ interface TodoCardProps {
 }
 
 export function TodoCard({ title, dueDate, priority = 'medium', onPress, onDelete, completed = false }: TodoCardProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   const translateX = new Animated.Value(0);
 
   const priorityColors = {
@@ -97,7 +96,11 @@ export function TodoCard({ title, dueDate, priority = 'medium', onPress, onDelet
               <View style={styles.textContainer}>
                 <ThemedText 
                   type="defaultSemiBold" 
-                  style={[styles.title, completed && styles.completedText]}
+                  style={[
+                    styles.title, 
+                    { color: colors.text },
+                    completed && styles.completedText
+                  ]}
                 >
                   {title}
                 </ThemedText>

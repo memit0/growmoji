@@ -1,6 +1,6 @@
-import { Colors } from '@/constants/Colors';
 import React, { useState } from 'react';
-import { Modal, StyleSheet, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -16,8 +16,7 @@ const COMMON_EMOJIS = [
 ];
 
 export function HabitModal({ visible, onClose, onSave }: HabitModalProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
   const handleEmojiSelect = (emoji: string) => {
@@ -64,16 +63,19 @@ export function HabitModal({ visible, onClose, onSave }: HabitModalProps) {
             ))}
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              { backgroundColor: selectedEmoji ? colors.primary : colors.border }
-            ]}
-            onPress={handleSave}
-            disabled={!selectedEmoji}
-          >
-            <ThemedText style={styles.saveButtonText}>Create Habit</ThemedText>
-          </TouchableOpacity>
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: colors.primary },
+                !selectedEmoji && styles.buttonDisabled
+              ]}
+              onPress={handleSave}
+              disabled={!selectedEmoji}
+            >
+              <ThemedText style={styles.buttonText}>Create Habit</ThemedText>
+            </TouchableOpacity>
+          </View>
         </ThemedView>
       </View>
     </Modal>
@@ -83,29 +85,20 @@ export function HabitModal({ visible, onClose, onSave }: HabitModalProps) {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
+    justifyContent: 'flex-end',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   modalContent: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    minHeight: '50%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   closeButton: {
     padding: 8,
@@ -116,32 +109,37 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 24,
-    opacity: 0.8,
+    marginBottom: 20,
   },
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   emojiButton: {
-    width: '22%',
+    width: '23%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   emoji: {
-    fontSize: 24,
+    fontSize: 32,
   },
-  saveButton: {
+  buttonContainer: {
+    marginTop: 'auto',
+  },
+  button: {
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
-  saveButtonText: {
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',

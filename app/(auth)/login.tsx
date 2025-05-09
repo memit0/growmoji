@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Link } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
@@ -14,7 +15,6 @@ import {
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { ProfileModal } from '../components/ProfileModal';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,7 +23,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -40,22 +39,75 @@ export default function LoginScreen() {
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
+    console.log(`[Social Login] Attempting ${provider} login`);
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provider,
-      options: {
-        // For native apps, you might need to specify a redirectTo URL
-        // if your OAuth flow requires it, or handle deep linking.
-        // redirectTo: 'YOUR_APP_DEEP_LINK_CALLBACK_URL' 
-        // For Expo Go, WebBrowser.maybeCompleteAuthSession() should handle it.
-      },
-    });
+    console.log('[Social Login] setLoading(true)');
+    try {
+      if (provider === 'apple') {
+        console.log('[Apple Sign-In] Attempting AppleAuthentication.signInAsync in login.tsx');
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+        console.log('[Apple Sign-In] signInAsync successful in login.tsx. Credential:', credential);
+        if (credential.identityToken) {
+          console.log('[Apple Sign-In] Got identityToken in login.tsx. Calling supabase.auth.signInWithIdToken.');
+          const { error: signInError, data: signInData } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: credential.identityToken,
+          });
+          console.log('[Apple Sign-In] Supabase signInWithIdToken response in login.tsx. Error:', signInError, 'Data:', signInData);
+          if (signInError) {
+            Alert.alert('Error with Apple Sign-In', signInError.message);
+            console.error('[Apple Sign-In] Supabase signInWithIdToken error in login.tsx:', signInError.message);
+          }
+          // Navigation handled by _layout.tsx
+        } else {
+          Alert.alert('Error with Apple Sign-In', 'No identity token received from Apple.');
+          console.error('[Apple Sign-In] No identity token received from Apple in login.tsx.', credential);
+        }
+      } else { // For Google or other OAuth providers
+        console.log('[Social Login] Calling supabase.auth.signInWithOAuth...');
+        const redirectTo = 'habittracker://callback'; // Define it once
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: redirectTo
+          },
+        });
 
-    if (error) {
-      Alert.alert(`Error with ${provider} login`, error.message);
-    } 
-    // if (data.url) { WebBrowser.openAuthSessionAsync(data.url) } // Might be needed for some flows
-    setLoading(false);
+        console.log('[Social Login] signInWithOAuth response:');
+        console.log('[Social Login] Data:', data);
+        console.log('[Social Login] Error:', error);
+
+        if (error) {
+          Alert.alert(`Error with ${provider} login`, error.message);
+          console.error(`[Social Login] ${provider} login error:`, error.message);
+        }
+        if (data && data.url) {
+          console.log('[Social Login] Supabase returned a URL for Google:', data.url);
+          // Explicitly pass the redirect URI to openAuthSessionAsync
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+          console.log('[Social Login] WebBrowser.openAuthSessionAsync result:', result);
+          // Supabase's onAuthStateChange listener should handle the session
+          // once the app receives the redirect with the token/code.
+        }
+      }
+    } catch (e: any) {
+      if (e.code === 'ERR_REQUEST_CANCELED') {
+        console.log('[Apple Sign-In] User cancelled Apple Sign-In.');
+        // Handle user cancellation (e.g., do nothing or show a message)
+      } else {
+        console.error('[Social Login] Unexpected error in handleSocialLogin:', e);
+        console.error('[Social Login] Full error object (login):', JSON.stringify(e, null, 2));
+        Alert.alert('Login Error', 'An unexpected error occurred during social login.');
+      }
+    } finally {
+      setLoading(false);
+      console.log('[Social Login] setLoading(false)');
+    }
   };
 
   const styles = StyleSheet.create({
@@ -140,12 +192,6 @@ export default function LoginScreen() {
       fontSize: typography.fontSize.md,
       marginLeft: spacing.sm,
     },
-    profileButton: {
-      position: 'absolute',
-      top: spacing.lg,
-      right: spacing.lg,
-      zIndex: 1,
-    },
   });
 
   return (
@@ -153,13 +199,6 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TouchableOpacity
-        style={styles.profileButton}
-        onPress={() => setIsProfileModalVisible(true)}
-      >
-        <Ionicons name="person-circle-outline" size={32} color={colors.text} />
-      </TouchableOpacity>
-
       <View style={styles.content}>
         <Text style={styles.title}>Welcome Back</Text>
         <TextInput
@@ -218,11 +257,6 @@ export default function LoginScreen() {
           </Link>
         </View>
       </View>
-
-      <ProfileModal
-        isVisible={isProfileModalVisible}
-        onClose={() => setIsProfileModalVisible(false)}
-      />
     </KeyboardAvoidingView>
   );
 } 

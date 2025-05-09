@@ -1,9 +1,14 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { NotificationsProvider } from '../contexts/NotificationsContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
+
+// Call this at the root of your app to handle redirect URLs
+WebBrowser.maybeCompleteAuthSession();
 
 // Initial route component
 function InitialLayout() {
@@ -63,7 +68,9 @@ export default function RootLayout() {
     <AuthProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider>
-          <InitialLayout />
+          <NotificationsProvider>
+            <InitialLayout />
+          </NotificationsProvider>
         </ThemeProvider>
       </GestureHandlerRootView>
     </AuthProvider>

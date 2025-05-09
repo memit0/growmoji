@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Link, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
@@ -48,17 +49,61 @@ export default function RegisterScreen() {
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provider,
-      options: {
-        // redirectTo: 'YOUR_APP_DEEP_LINK_CALLBACK_URL' // For native builds
-      },
-    });
-
-    if (error) {
-      Alert.alert(`Error with ${provider} login`, error.message);
+    try {
+      if (provider === 'apple') {
+        console.log('[Apple Sign-In] Attempting AppleAuthentication.signInAsync in register.tsx');
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+        });
+        console.log('[Apple Sign-In] signInAsync successful in register.tsx. Credential:', credential);
+        if (credential.identityToken) {
+          console.log('[Apple Sign-In] Got identityToken in register.tsx. Calling supabase.auth.signInWithIdToken.');
+          const { error: signInError, data: signInData } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: credential.identityToken,
+          });
+          console.log('[Apple Sign-In] Supabase signInWithIdToken response in register.tsx. Error:', signInError, 'Data:', signInData);
+          if (signInError) {
+            Alert.alert('Error with Apple Sign-In', signInError.message);
+            console.error('[Apple Sign-In] Supabase signInWithIdToken error in register.tsx:', signInError);
+          }
+          // Navigation handled by _layout.tsx if successful
+        } else {
+          Alert.alert('Error with Apple Sign-In', 'No identity token received from Apple.');
+          console.error('[Apple Sign-In] No identity token received from Apple in register.tsx.', credential);
+        }
+      } else { // For Google or other OAuth providers
+        const redirectTo = 'habittracker://callback'; // Define it once
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider,
+          options: {
+            redirectTo: redirectTo
+          },
+        });
+        if (data && data.url) {
+          console.log('[Social Login] Supabase returned a URL for Google (register):', data.url);
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+          console.log('[Social Login] WebBrowser.openAuthSessionAsync result (register):', result);
+        }
+        if (error) {
+          Alert.alert(`Error with ${provider} login`, error.message);
+        }
+      }
+    } catch (e: any) {
+      if (e.code === 'ERR_REQUEST_CANCELED') {
+        // Handle user cancellation
+        console.log('[Apple Sign-In] User cancelled Apple Sign-In during registration.');
+      } else {
+        Alert.alert('Login Error', 'An unexpected error occurred during social login.');
+        console.error('[Social Login] Unexpected error in handleSocialLogin (register):', e);
+        console.error('[Social Login] Full error object (register):', JSON.stringify(e, null, 2));
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const styles = StyleSheet.create({

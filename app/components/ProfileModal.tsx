@@ -1,37 +1,102 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+    useColorScheme
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
 
 interface ProfileModalProps {
   isVisible: boolean;
   onClose: () => void;
 }
 
-export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
-  const { colors, spacing, typography, borderRadius } = useTheme();
-  const { user, signOut, loading } = useAuth();
+type AppearanceMode = 'system' | 'light' | 'dark';
 
-  const handleSignOut = async () => {
-    await signOut();
-    onClose();
+export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
+  const { colors, spacing, typography, borderRadius, theme, toggleTheme } = useTheme();
+  const { user, signOut, loading } = useAuth();
+  const { notificationsEnabled, toggleNotifications, soundEnabled, toggleSound } = useNotifications();
+  const [showSettings, setShowSettings] = useState(false);
+  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('system');
+  const systemColorScheme = useColorScheme();
+
+  useEffect(() => {
+    loadAppearanceSettings();
+  }, []);
+
+  const loadAppearanceSettings = async () => {
+    try {
+      const savedMode = await AsyncStorage.getItem('appearanceMode');
+      if (savedMode) {
+        setAppearanceMode(savedMode as AppearanceMode);
+      }
+    } catch (error) {
+      console.error('Error loading appearance settings:', error);
+    }
+  };
+
+  const handleAppearanceChange = async (mode: AppearanceMode) => {
+    setAppearanceMode(mode);
+    await AsyncStorage.setItem('appearanceMode', mode);
+    
+    // Apply the theme based on the selected mode
+    if (mode === 'system') {
+      if (theme !== systemColorScheme && systemColorScheme) {
+        toggleTheme();
+      }
+    } else if (theme !== mode) {
+      toggleTheme();
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            // TODO: Implement account deletion
+            Alert.alert("Coming Soon", "Account deletion will be available in a future update.");
+          }
+        }
+      ]
+    );
+  };
+
+  const handleContactPress = () => {
+    Linking.openURL('https://x.com/mebattll');
   };
 
   const styles = StyleSheet.create({
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'flex-start',
     },
     modalContent: {
+      flex: 1,
+      backgroundColor: colors.background,
+      marginTop: 60,
+    },
+    profileContent: {
       backgroundColor: colors.card,
       marginTop: 60,
       marginHorizontal: spacing.md,
@@ -52,6 +117,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     },
     header: {
       flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    profileHeader: {
+      flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: spacing.lg,
@@ -60,6 +132,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       fontSize: typography.fontSize.xl,
       fontWeight: 'bold',
       color: colors.text,
+    },
+    backButton: {
+      marginRight: spacing.md,
     },
     closeButton: {
       padding: spacing.sm,
@@ -104,67 +179,264 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     },
     signOutButton: {
       opacity: loading ? 0.7 : 1,
-    }
+    },
+    section: {
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sectionTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      marginBottom: spacing.md,
+      color: colors.text,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    settingLabel: {
+      fontSize: typography.fontSize.md,
+      color: colors.text,
+    },
+    settingDescription: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondary,
+      marginTop: spacing.xs,
+    },
+    dangerZone: {
+      marginTop: spacing.xl,
+      padding: spacing.lg,
+      borderRadius: borderRadius.md,
+      backgroundColor: 'rgba(255, 59, 48, 0.1)',
+    },
+    dangerTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      color: '#FF3B30',
+      marginBottom: spacing.md,
+    },
+    dangerButton: {
+      backgroundColor: '#FF3B30',
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      alignItems: 'center',
+    },
+    dangerButtonText: {
+      color: '#FFFFFF',
+      fontSize: typography.fontSize.md,
+      fontWeight: '600',
+    },
+    linkButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+    },
+    linkText: {
+      fontSize: typography.fontSize.md,
+      color: colors.primary,
+      marginLeft: spacing.sm,
+    },
+    radioGroup: {
+      marginTop: spacing.sm,
+    },
+    radioOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+    },
+    radioLabel: {
+      fontSize: typography.fontSize.md,
+      color: colors.text,
+      marginLeft: spacing.sm,
+    },
+    radioButton: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    radioButtonInner: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: colors.primary,
+    },
   });
+
+  const renderProfileContent = () => (
+    <TouchableOpacity
+      style={styles.modalOverlay}
+      activeOpacity={1}
+      onPress={onClose}
+    >
+      <TouchableOpacity
+        activeOpacity={1}
+        style={styles.profileContent}
+        onPress={e => e.stopPropagation()}
+      >
+        <View style={styles.profileHeader}>
+          <Text style={styles.title}>Profile</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        {user && (
+          <View style={styles.userInfoContainer}>
+            <View style={styles.userImage}>
+              <Ionicons name="person" size={30} color={colors.text} />
+            </View>
+            <Text style={styles.userName}>
+              {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
+            </Text>
+            <Text style={styles.userEmail}>
+              {user.email}
+            </Text>
+          </View>
+        )}
+
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => setShowSettings(true)}
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.text} />
+          <Text style={styles.menuItemText}>Settings</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton]}
+          onPress={signOut}
+          disabled={loading}
+        >
+          <Ionicons name="log-out-outline" size={24} color={colors.text} />
+          <Text style={styles.menuItemText}>{loading ? 'Signing Out...' : 'Sign Out'}</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const renderSettingsContent = () => (
+    <View style={styles.modalContent}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setShowSettings(false)} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Settings</Text>
+      </View>
+
+      <ScrollView>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.radioGroup}>
+            {(['system', 'light', 'dark'] as AppearanceMode[]).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={styles.radioOption}
+                onPress={() => handleAppearanceChange(mode)}
+              >
+                <View style={styles.radioButton}>
+                  {appearanceMode === mode && <View style={styles.radioButtonInner} />}
+                </View>
+                <Text style={styles.radioLabel}>
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notifications</Text>
+          <View style={styles.settingRow}>
+            <View>
+              <Text style={styles.settingLabel}>Push Notifications</Text>
+              <Text style={styles.settingDescription}>
+                Receive reminders for tasks and habits
+              </Text>
+            </View>
+            <Switch
+              value={notificationsEnabled}
+              onValueChange={toggleNotifications}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sound</Text>
+          <View style={styles.settingRow}>
+            <View>
+              <Text style={styles.settingLabel}>Sound Effects</Text>
+              <Text style={styles.settingDescription}>
+                Play sounds for timer and task completion
+              </Text>
+            </View>
+            <Switch
+              value={soundEnabled}
+              onValueChange={toggleSound}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Legal</Text>
+          <TouchableOpacity 
+            style={styles.linkButton}
+            onPress={() => Linking.openURL('https://example.com/terms')}
+          >
+            <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+            <Text style={styles.linkText}>Terms and Conditions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.linkButton}
+            onPress={() => Linking.openURL('https://example.com/privacy')}
+          >
+            <Ionicons name="shield-outline" size={24} color={colors.primary} />
+            <Text style={styles.linkText}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contact & Feedback</Text>
+          <TouchableOpacity 
+            style={styles.linkButton}
+            onPress={handleContactPress}
+          >
+            <Ionicons name="logo-twitter" size={24} color={colors.primary} />
+            <Text style={styles.linkText}>@mebattll</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerTitle}>Danger Zone</Text>
+          <TouchableOpacity 
+            style={styles.dangerButton}
+            onPress={handleDeleteAccount}
+          >
+            <Text style={styles.dangerButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: spacing.xl * 2 }} />
+      </ScrollView>
+    </View>
+  );
 
   return (
     <Modal
       visible={isVisible}
       transparent
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={styles.modalContent}
-          onPress={e => e.stopPropagation()}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Profile</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {user && (
-            <View style={styles.userInfoContainer}>
-              <View style={styles.userImage}>
-                <Ionicons name="person" size={30} color={colors.text} />
-              </View>
-              <Text style={styles.userName}>
-                {user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'}
-              </Text>
-              <Text style={styles.userEmail}>
-                {user.email}
-              </Text>
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Navigate", "Go to Edit Profile")}>
-            <Ionicons name="person-outline" size={24} color={colors.text} />
-            <Text style={styles.menuItemText}>Edit Profile</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert("Navigate", "Go to Settings")}>
-            <Ionicons name="settings-outline" size={24} color={colors.text} />
-            <Text style={styles.menuItemText}>Settings</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton]}
-            onPress={handleSignOut}
-            disabled={loading}
-          >
-            <Ionicons name="log-out-outline" size={24} color={colors.text} />
-            <Text style={styles.menuItemText}>{loading ? 'Signing Out...' : 'Sign Out'}</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </TouchableOpacity>
+      {showSettings ? renderSettingsContent() : renderProfileContent()}
     </Modal>
   );
 }; 

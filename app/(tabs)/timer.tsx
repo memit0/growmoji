@@ -1,10 +1,9 @@
 import { PomodoroTimer } from '@/components/ui/PomodoroTimer';
-import { Colors } from '@/constants/Colors';
-import { StyleSheet, View, useColorScheme } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TimerScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { colors } = useTheme();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

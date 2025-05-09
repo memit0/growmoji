@@ -18,14 +18,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.yourcompany.habittracker'
+    bundleIdentifier: 'com.mebattll.habittracker'
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff'
     },
-    package: 'com.yourcompany.habittracker'
+    package: 'com.mebattll.habittracker'
   },
   web: {
     favicon: './assets/favicon.png'
@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     eas: {
-      projectId: 'your-project-id'
+      projectId: 'habittracker'
     }
   },
   plugins: [

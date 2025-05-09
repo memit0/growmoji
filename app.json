@@ -2,9 +2,10 @@
   "expo": {
     "name": "Habit Tracker",
     "slug": "habittracker",
+    "scheme": "habittracker",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,7 +16,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mebattll.habittracker"
     },
     "android": {
       "adaptiveIcon": {
