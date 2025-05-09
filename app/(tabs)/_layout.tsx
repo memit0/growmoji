@@ -13,7 +13,8 @@ export default function TabsLayout() {
     <>
       <Tabs
         screenOptions={{
-          headerShown: false,
+          headerTitle: '',
+          headerShadowVisible: false,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.text,
           tabBarStyle: {
@@ -38,6 +39,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Habits & Todos',
+            headerTitle: '',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="list-outline" size={size} color={color} />
             ),
@@ -47,6 +49,7 @@ export default function TabsLayout() {
           name="timer"
           options={{
             title: 'Timer',
+            headerTitle: '',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="timer-outline" size={size} color={color} />
             ),
@@ -56,6 +59,7 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: 'Profile',
+            headerTitle: '',
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person-outline" size={size} color={color} />
             ),

@@ -225,7 +225,7 @@ export default function HomeScreen() {
   ), [handleToggleTodo, handleDeleteTodo]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={[styles.bg]} contentContainerStyle={styles.container}>
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
           <View style={styles.sectionHeaderRow}>
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    paddingTop: 16, // Reduced from 32 since SafeAreaView will handle the top spacing
+    paddingTop: 32, // Reduced from 32 since SafeAreaView will handle the top spacing
     paddingBottom: 32,
     paddingHorizontal: 0,
   },
