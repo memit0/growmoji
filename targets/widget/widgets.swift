@@ -30,21 +30,16 @@ struct HabitTrackerEntry: TimelineEntry {
     let tasks: [WidgetTask]
     let relevance: TimelineEntryRelevance?
 
-    static func placeholder() -> HabitTrackerEntry {
-        HabitTrackerEntry(date: Date(), configuration: DisplayWidgetIntent(), 
-                          habits: [
-                            WidgetHabit(emoji: "🧘", streak: 5, isLoggedToday: 1),
-                            WidgetHabit(emoji: "📚", streak: 3, isLoggedToday: 0)
-                          ],
-                          tasks: [
-                            WidgetTask(title: "Finish report", is_completed: 0),
-                            WidgetTask(title: "Grocery shopping", is_completed: 1)
-                          ],
+    static func placeholder(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
+        // Now returns empty data for a cleaner placeholder
+        HabitTrackerEntry(date: Date(), configuration: configuration,
+                          habits: [], 
+                          tasks: [],
                           relevance: nil)
     }
 
-    static func empty() -> HabitTrackerEntry {
-        HabitTrackerEntry(date: Date(), configuration: DisplayWidgetIntent(), habits: [], tasks: [], relevance: nil)
+    static func empty(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
+        HabitTrackerEntry(date: Date(), configuration: configuration, habits: [], tasks: [], relevance: nil)
     }
 }
 
@@ -57,40 +52,69 @@ struct HabitTrackerTimelineProvider: AppIntentTimelineProvider {
     private let userDefaultsKey = "widgetData"
 
     func placeholder(in context: Context) -> Entry {
-        .placeholder()
+        // Using print for debug logs in widget extension
+        print("[HabitTrackerWidget] Providing placeholder entry.")
+        return .placeholder()
     }
 
     func snapshot(for configuration: Intent, in context: Context) async -> Entry {
-        fetchData() ?? .placeholder()
+        print("[HabitTrackerWidget] Providing snapshot entry.")
+        return fetchData(configuration: configuration) ?? .placeholder()
     }
 
     func timeline(for configuration: Intent, in context: Context) async -> Timeline<Entry> {
-        let entry = fetchData() ?? .empty()
-        // Refresh every hour, or sooner if app signals update
+        print("[HabitTrackerWidget] Providing timeline.")
+        guard let entry = fetchData(configuration: configuration) else {
+            print("[HabitTrackerWidget] FetchData returned nil for timeline, using empty entry.")
+            let nextUpdateDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date())! // Retry sooner if data failed
+            return Timeline(entries: [Entry.empty(configuration: configuration)], policy: .after(nextUpdateDate))
+        }
+        
+        print("[HabitTrackerWidget] Successfully fetched data for timeline. Habits: \(entry.habits.count), Tasks: \(entry.tasks.count)")
         let nextUpdateDate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
         return Timeline(entries: [entry], policy: .after(nextUpdateDate))
     }
     
-    private func fetchData() -> HabitTrackerEntry? {
+    private func fetchData(configuration: Intent) -> HabitTrackerEntry? {
+        print("[HabitTrackerWidget] Attempting to fetch data. App Group: \(appGroupId), Key: \(userDefaultsKey)")
         guard let userDefaults = UserDefaults(suiteName: appGroupId) else {
+            print("[HabitTrackerWidget] FAILED to initialize UserDefaults with suite name: \(appGroupId)")
             return nil
         }
+        print("[HabitTrackerWidget] Successfully initialized UserDefaults.")
 
         guard let savedData = userDefaults.object(forKey: userDefaultsKey) as? Data else {
-             // Return empty state if no data, rather than placeholder, for a real timeline
-            return HabitTrackerEntry(date: Date(), configuration: DisplayWidgetIntent(), habits: [], tasks: [], relevance: nil)
+            print("[HabitTrackerWidget] FAILED to retrieve data as Data type for key '\(userDefaultsKey)'. Data might be missing or not Data type.")
+            // Check if *any* object exists for the key to help diagnose
+            if let anyObject = userDefaults.object(forKey: userDefaultsKey) {
+                print("[HabitTrackerWidget] Found object for key '\(userDefaultsKey)' but it's not Data. Type: \(type(of: anyObject))")
+            } else {
+                print("[HabitTrackerWidget] No object found for key '\(userDefaultsKey)'.")
+            }
+            return HabitTrackerEntry.empty(configuration: configuration) // Return empty but valid entry
+        }
+        print("[HabitTrackerWidget] Successfully retrieved data as Data type for key '\(userDefaultsKey)'. Data size: \(savedData.count) bytes.")
+        
+        // Attempt to print the raw string if it's UTF-8, for debugging
+        if let rawString = String(data: savedData, encoding: .utf8) {
+            print("[HabitTrackerWidget] Raw data string (UTF-8): \(rawString)")
+        } else {
+            print("[HabitTrackerWidget] Raw data is not a valid UTF-8 string.")
         }
 
         let decoder = JSONDecoder()
-        if let loadedWidgetData = try? decoder.decode(WidgetData.self, from: savedData) {
+        do {
+            let loadedWidgetData = try decoder.decode(WidgetData.self, from: savedData)
+            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count)")
             return HabitTrackerEntry(date: Date(), 
-                                     configuration: DisplayWidgetIntent(), 
+                                     configuration: configuration, 
                                      habits: Array(loadedWidgetData.habits.prefix(3)), 
                                      tasks: Array(loadedWidgetData.tasks.prefix(3)),
                                      relevance: nil)
-        } else {
-            // Data might be malformed, return empty
-             return HabitTrackerEntry(date: Date(), configuration: DisplayWidgetIntent(), habits: [], tasks: [], relevance: nil)
+        } catch {
+            print("[HabitTrackerWidget] FAILED to decode WidgetData from savedData. Error: \(error.localizedDescription)")
+            print("[HabitTrackerWidget] Decoding error details: \(error)") // Print full error
+            return HabitTrackerEntry.empty(configuration: configuration) // Return empty but valid entry on decoding error
         }
     }
 }
