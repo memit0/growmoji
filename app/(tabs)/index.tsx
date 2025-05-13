@@ -10,6 +10,7 @@ import { TodoCard } from '@/components/ui/TodoCard';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
+import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 
 export default function HomeScreen() {
@@ -45,7 +46,11 @@ export default function HomeScreen() {
       console.log('[handleAddTodo] Calling todosService.createTodo with:', newTodoData);
       const createdTodo = await todosService.createTodo(newTodoData);
       console.log('[handleAddTodo] todosService.createTodo SUCCEEDED. Response:', createdTodo);
-      setTodos(prevTodos => [...prevTodos, createdTodo]);
+      setTodos(prevTodos => {
+        const newTodos = [...prevTodos, createdTodo];
+        updateWidgetData(newTodos, habits);
+        return newTodos;
+      });
       setNewTodoTitle('');
     } catch (error) {
       console.error('[handleAddTodo] todosService.createTodo FAILED. Error:', error);
@@ -60,25 +65,33 @@ export default function HomeScreen() {
     setIsUpdatingItem(true);
     try {
       await todosService.deleteTodo(id);
-      setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+      setTodos(prevTodos => {
+        const newTodos = prevTodos.filter(todo => todo.id !== id);
+        updateWidgetData(newTodos, habits);
+        return newTodos;
+      });
     } catch (error) {
       console.error('[HomeScreen] Error deleting todo:', error);
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, habits]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
     if (!isSignedIn) return;
     console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
     try {
       await habitsService.deleteHabit(id);
-      setHabits(prevHabits => prevHabits.filter(habit => habit.id !== id));
+      setHabits(prevHabits => {
+        const newHabits = prevHabits.filter(habit => habit.id !== id);
+        updateWidgetData(todos, newHabits);
+        return newHabits;
+      });
       console.log(`[HomeScreen] Successfully deleted habit: ${id}`);
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, todos]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
     if (!isSignedIn) return;
@@ -88,17 +101,19 @@ export default function HomeScreen() {
     setIsUpdatingItem(true);
     try {
       const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed);
-      setTodos(prevTodos =>
-        prevTodos.map(todo =>
+      setTodos(prevTodos => {
+        const newTodos = prevTodos.map(todo =>
           todo.id === id ? updatedTodo : todo
-        )
-      );
+        );
+        updateWidgetData(newTodos, habits);
+        return newTodos;
+      });
     } catch (error) {
       console.error('[HomeScreen] Error toggling todo:', error);
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn, todos]);
+  }, [isSignedIn, todos, habits]);
 
   interface HabitModalData {
     title: string;
@@ -124,7 +139,11 @@ export default function HomeScreen() {
       console.log('[handleAddHabit] Calling habitsService.createHabit with:', newHabitDetails);
       const createdHabit = await habitsService.createHabit(newHabitDetails);
       console.log('[handleAddHabit] habitsService.createHabit SUCCEEDED. Response:', createdHabit);
-      setHabits(prevHabits => [...prevHabits, createdHabit]);
+      setHabits(prevHabits => {
+        const newHabits = [...prevHabits, createdHabit];
+        updateWidgetData(todos, newHabits);
+        return newHabits;
+      });
       setIsHabitModalVisible(false);
     } catch (error) {
       console.error('[handleAddHabit] habitsService.createHabit FAILED. Error:', error);
@@ -190,8 +209,9 @@ export default function HomeScreen() {
       }
 
       // Refresh all habits to update UI
-      const updatedHabits = await habitsService.getHabits();
-      setHabits(updatedHabits);
+      const refreshedHabits = await habitsService.getHabits();
+      setHabits(refreshedHabits);
+      updateWidgetData(todos, refreshedHabits);
       console.log('[HomeScreen] Refreshed habits list.');
 
     } catch (error) {
@@ -208,12 +228,31 @@ export default function HomeScreen() {
       Promise.all([
         todosService.getTodos().then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
         habitsService.getHabits().then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
-      ]).finally(() => setIsScreenLoading(false));
+      ])
+      .then(([fetchedTodos, fetchedHabits]) => {
+        // This part needs adjustment as Promise.all with .then for each promise won't return values like this directly.
+        // We'll use the state values that will be set by the individual .then clauses.
+      })
+      .finally(() => {
+        setIsScreenLoading(false);
+        // Call updateWidgetData here AFTER state has been updated by the fetches
+        // However, direct access to the state immediately after set State can be tricky.
+        // It's better to call it inside the individual .then blocks or in a separate useEffect watching todos and habits
+      });
     } else {
       setTodos([]);
       setHabits([]);
+      clearWidgetData(); // Clear widget data on sign out
     }
   }, [isSignedIn]);
+
+  // New useEffect to update widget data when todos or habits change from any source (initial fetch, add, delete, etc.)
+  useEffect(() => {
+    if (isSignedIn) {
+      console.log('[HomeScreen] Detected change in todos or habits, updating widget data.');
+      updateWidgetData(todos, habits);
+    }
+  }, [todos, habits, isSignedIn]); // Watch todos, habits, and isSignedIn status
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard

@@ -1,15 +1,8 @@
-//
-//  HabitTrackerWidgetsLiveActivity.swift
-//  HabitTrackerWidgets
-//
-//  Created by Mehmet Battal on 11/05/2025.
-//
-
 import ActivityKit
 import WidgetKit
 import SwiftUI
 
-struct HabitTrackerWidgetsAttributes: ActivityAttributes {
+struct WidgetAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
         // Dynamic stateful properties about your activity go here!
         var emoji: String
@@ -19,9 +12,9 @@ struct HabitTrackerWidgetsAttributes: ActivityAttributes {
     var name: String
 }
 
-struct HabitTrackerWidgetsLiveActivity: Widget {
+struct WidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: HabitTrackerWidgetsAttributes.self) { context in
+        ActivityConfiguration(for: WidgetAttributes.self) { context in
             // Lock screen/banner UI goes here
             VStack {
                 Text("Hello \(context.state.emoji)")
@@ -50,31 +43,31 @@ struct HabitTrackerWidgetsLiveActivity: Widget {
             } minimal: {
                 Text(context.state.emoji)
             }
-            .widgetURL(URL(string: "http://www.apple.com"))
+            .widgetURL(URL(string: "https://www.expo.dev"))
             .keylineTint(Color.red)
         }
     }
 }
 
-extension HabitTrackerWidgetsAttributes {
-    fileprivate static var preview: HabitTrackerWidgetsAttributes {
-        HabitTrackerWidgetsAttributes(name: "World")
+extension WidgetAttributes {
+    fileprivate static var preview: WidgetAttributes {
+        WidgetAttributes(name: "World")
     }
 }
 
-extension HabitTrackerWidgetsAttributes.ContentState {
-    fileprivate static var smiley: HabitTrackerWidgetsAttributes.ContentState {
-        HabitTrackerWidgetsAttributes.ContentState(emoji: "😀")
+extension WidgetAttributes.ContentState {
+    fileprivate static var smiley: WidgetAttributes.ContentState {
+        WidgetAttributes.ContentState(emoji: "😀")
      }
      
-     fileprivate static var starEyes: HabitTrackerWidgetsAttributes.ContentState {
-         HabitTrackerWidgetsAttributes.ContentState(emoji: "🤩")
+     fileprivate static var starEyes: WidgetAttributes.ContentState {
+         WidgetAttributes.ContentState(emoji: "🤩")
      }
 }
 
-#Preview("Notification", as: .content, using: HabitTrackerWidgetsAttributes.preview) {
-   HabitTrackerWidgetsLiveActivity()
+#Preview("Notification", as: .content, using: WidgetAttributes.preview) {
+   WidgetLiveActivity()
 } contentStates: {
-    HabitTrackerWidgetsAttributes.ContentState.smiley
-    HabitTrackerWidgetsAttributes.ContentState.starEyes
+    WidgetAttributes.ContentState.smiley
+    WidgetAttributes.ContentState.starEyes
 }

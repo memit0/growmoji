@@ -1,16 +1,9 @@
-//
-//  HabitTrackerWidgetsControl.swift
-//  HabitTrackerWidgets
-//
-//  Created by Mehmet Battal on 11/05/2025.
-//
-
 import AppIntents
 import SwiftUI
 import WidgetKit
 
-struct HabitTrackerWidgetsControl: ControlWidget {
-    static let kind: String = "com.mebattll.habittracker.HabitTrackerWidgets"
+struct widgetControl: ControlWidget {
+    static let kind: String = "com.developer.example.widget"
 
     var body: some ControlWidgetConfiguration {
         AppIntentControlConfiguration(
@@ -30,7 +23,7 @@ struct HabitTrackerWidgetsControl: ControlWidget {
     }
 }
 
-extension HabitTrackerWidgetsControl {
+extension widgetControl {
     struct Value {
         var isRunning: Bool
         var name: String
@@ -38,12 +31,12 @@ extension HabitTrackerWidgetsControl {
 
     struct Provider: AppIntentControlValueProvider {
         func previewValue(configuration: TimerConfiguration) -> Value {
-            HabitTrackerWidgetsControl.Value(isRunning: false, name: configuration.timerName)
+            widgetControl.Value(isRunning: false, name: configuration.timerName)
         }
 
         func currentValue(configuration: TimerConfiguration) async throws -> Value {
             let isRunning = true // Check if the timer is running
-            return HabitTrackerWidgetsControl.Value(isRunning: isRunning, name: configuration.timerName)
+            return widgetControl.Value(isRunning: isRunning, name: configuration.timerName)
         }
     }
 }
