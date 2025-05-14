@@ -4,12 +4,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SettingsPageProps {
@@ -19,7 +19,6 @@ interface SettingsPageProps {
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ isVisible, onClose }) => {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [darkMode, setDarkMode] = React.useState(false);
   const [soundEnabled, setSoundEnabled] = React.useState(true);
 
@@ -111,25 +110,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ isVisible, onClose }
                 <Switch
                   value={darkMode}
                   onValueChange={setDarkMode}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                />
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>Notifications</ThemedText>
-              <View style={styles.settingRow}>
-                <View>
-                  <ThemedText style={styles.settingLabel}>
-                    Push Notifications
-                  </ThemedText>
-                  <ThemedText style={styles.settingDescription}>
-                    Receive reminders for tasks and habits
-                  </ThemedText>
-                </View>
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={setNotificationsEnabled}
                   trackColor={{ false: colors.border, true: colors.primary }}
                 />
               </View>

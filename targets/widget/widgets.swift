@@ -18,6 +18,7 @@ struct WidgetTask: Decodable, Identifiable {
 struct WidgetData: Decodable {
     var tasks: [WidgetTask]
     var habits: [WidgetHabit]
+    var appTheme: String? // Added to receive theme from app
     // var totalTasks: Int? // Can be used if needed
     // var activeHabits: Int? // Can be used if needed
 }
@@ -28,6 +29,7 @@ struct HabitTrackerEntry: TimelineEntry {
     let configuration: DisplayWidgetIntent // Use the new intent
     let habits: [WidgetHabit]
     let tasks: [WidgetTask]
+    let appTheme: String? // Added to store the app's theme
     let relevance: TimelineEntryRelevance?
 
     static func placeholder(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
@@ -35,11 +37,12 @@ struct HabitTrackerEntry: TimelineEntry {
         HabitTrackerEntry(date: Date(), configuration: configuration,
                           habits: [], 
                           tasks: [],
+                          appTheme: nil, // Default appTheme
                           relevance: nil)
     }
 
     static func empty(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
-        HabitTrackerEntry(date: Date(), configuration: configuration, habits: [], tasks: [], relevance: nil)
+        HabitTrackerEntry(date: Date(), configuration: configuration, habits: [], tasks: [], appTheme: nil, relevance: nil)
     }
 }
 
@@ -105,11 +108,12 @@ struct HabitTrackerTimelineProvider: AppIntentTimelineProvider {
         let decoder = JSONDecoder()
         do {
             let loadedWidgetData = try decoder.decode(WidgetData.self, from: savedData)
-            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count)")
+            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count), AppTheme: \(loadedWidgetData.appTheme ?? "nil")")
             return HabitTrackerEntry(date: Date(), 
                                      configuration: configuration, 
                                      habits: Array(loadedWidgetData.habits.prefix(3)), 
                                      tasks: Array(loadedWidgetData.tasks.prefix(3)),
+                                     appTheme: loadedWidgetData.appTheme, // Pass decoded appTheme
                                      relevance: nil)
         } catch {
             print("[HabitTrackerWidget] FAILED to decode WidgetData from savedData. Error: \(error.localizedDescription)")
@@ -166,15 +170,27 @@ struct TaskRowView: View {
 struct HabitTrackerWidgetEntryView : View {
     var entry: HabitTrackerTimelineProvider.Entry
     @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var systemColorScheme // For fallback
+
+    // Determine effective color scheme based on app's preference
+    var effectiveColorScheme: ColorScheme {
+        if entry.appTheme == "dark" {
+            return .dark
+        } else if entry.appTheme == "light" {
+            return .light
+        } else {
+            return systemColorScheme // Fallback to system
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if family == .systemSmall {
-                SmallWidgetView(habits: entry.habits)
+                SmallWidgetView(habits: entry.habits, appSpecifiedColorScheme: effectiveColorScheme)
             } else if family == .systemMedium {
-                MediumWidgetView(tasks: entry.tasks)
+                MediumWidgetView(tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
             } else {
-                LargeWidgetView(habits: entry.habits, tasks: entry.tasks)
+                LargeWidgetView(habits: entry.habits, tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
             }
         }
         .padding()
@@ -183,11 +199,14 @@ struct HabitTrackerWidgetEntryView : View {
 
 struct SmallWidgetView: View {
     var habits: [WidgetHabit]
+    var appSpecifiedColorScheme: ColorScheme // New parameter to accept determined color scheme
+    // @Environment(\.colorScheme) var colorScheme // Replaced by appSpecifiedColorScheme for relevant parts
+
     var body: some View {
         VStack(alignment: .leading) {
             Text("Habits")
                 .font(.headline)
-                .foregroundColor(.blue)
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .blue) // Use passed scheme
             if habits.isEmpty {
                 Text("No habits to show. Add some in the app!")
                     .font(.caption)
@@ -204,11 +223,14 @@ struct SmallWidgetView: View {
 
 struct MediumWidgetView: View {
     var tasks: [WidgetTask]
+    var appSpecifiedColorScheme: ColorScheme // New parameter
+    // @Environment(\.colorScheme) var colorScheme // Replaced
+
     var body: some View {
         VStack(alignment: .leading) {
             Text("Tasks")
                 .font(.headline)
-                .foregroundColor(.purple)
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .purple) // Use passed scheme
             if tasks.isEmpty {
                 Text("No tasks for today. Great job or add more!")
                     .font(.caption)
@@ -226,17 +248,20 @@ struct MediumWidgetView: View {
 struct LargeWidgetView: View {
     var habits: [WidgetHabit]
     var tasks: [WidgetTask]
+    var appSpecifiedColorScheme: ColorScheme // New parameter
+    // @Environment(\.colorScheme) var colorScheme // Replaced
 
     var body: some View {
         VStack(alignment: .leading) {
             Text("Overview")
                 .font(.title2).bold()
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .white) // Use passed scheme
             
             Divider()
             
             Text("Habits")
                 .font(.headline)
-                .foregroundColor(.blue)
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .blue) // Use passed scheme
                 .padding(.top, 5)
             if habits.isEmpty {
                 Text("No habits to show.").font(.caption).foregroundColor(.gray)
@@ -250,7 +275,7 @@ struct LargeWidgetView: View {
             
             Text("Tasks")
                 .font(.headline)
-                .foregroundColor(.purple)
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .purple) // Use passed scheme
             if tasks.isEmpty {
                 Text("No tasks for today.").font(.caption).foregroundColor(.gray)
             } else {
@@ -264,13 +289,33 @@ struct LargeWidgetView: View {
 }
 
 // MARK: - Widget Definition
+struct WidgetContentWrapper: View {
+    var entry: HabitTrackerTimelineProvider.Entry
+    @Environment(\.colorScheme) var systemColorScheme // Fallback system color scheme
+
+    // Computed property for the color scheme
+    private var determinedColorScheme: ColorScheme {
+        if entry.appTheme == "dark" {
+            return .dark
+        } else if entry.appTheme == "light" {
+            return .light
+        } else {
+            return systemColorScheme // Fallback to system's current color scheme
+        }
+    }
+
+    var body: some View {
+        HabitTrackerWidgetEntryView(entry: entry)
+            .containerBackground(determinedColorScheme == .light ? .white : .black, for: .widget)
+    }
+}
+
 struct HabitTrackerDisplayWidget: Widget {
     let kind: String = "HabitTrackerDisplayWidget" // Unique kind
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, intent: DisplayWidgetIntent.self, provider: HabitTrackerTimelineProvider()) { entry in
-            HabitTrackerWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+            WidgetContentWrapper(entry: entry)
         }
         .configurationDisplayName("Habit & Task Tracker")
         .description("Track your habits and tasks at a glance.")

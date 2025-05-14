@@ -1,4 +1,3 @@
-import { useNotifications } from '@/contexts/NotificationsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +9,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -24,11 +22,70 @@ interface ProfileModalProps {
 
 type AppearanceMode = 'system' | 'light' | 'dark';
 
+const APP_GROUP_ID = "group.com.mebattll.habittracker.widget";
+const WIDGET_DATA_KEY = "widgetData";
+
+// Helper function to update widget data in UserDefaults
+// This function assumes you have native methods (e.g., via NativeWidgetBridge or libraries)
+const updateWidgetThemePreference = async (newAppTheme: 'light' | 'dark') => {
+  try {
+    // 1. Get current widgetData string from UserDefaults
+    // Replace with actual call to your native module/library
+    // const existingDataString = await MyWidgetBridge.getWidgetData(APP_GROUP_ID, WIDGET_DATA_KEY);
+    // Example with react-native-default-preference:
+    // const existingDataString = await DefaultPreference.get(WIDGET_DATA_KEY, APP_GROUP_ID);
+
+    let currentWidgetData: any = { tasks: [], habits: [] }; // Default structure
+
+    // For demonstration, we'll simulate fetching. In a real app, use your actual native call.
+    // This is a placeholder for fetching.
+    const existingDataString = null; // Placeholder: replace with actual native call result.
+                                     // If using react-native-default-preference, handle its promise.
+
+    if (existingDataString) {
+      try {
+        currentWidgetData = JSON.parse(existingDataString);
+      } catch (e) {
+        console.warn("ProfileModal: Could not parse existing widget data, will overwrite with new theme and default data.", e);
+        currentWidgetData = { tasks: [], habits: [] }; // Fallback
+      }
+    }
+
+    // 2. Update the appTheme
+    const updatedWidgetData = {
+      ...currentWidgetData,
+      appTheme: newAppTheme,
+      // Ensure tasks and habits are preserved or set to empty arrays if not present
+      tasks: currentWidgetData.tasks || [],
+      habits: currentWidgetData.habits || [],
+    };
+
+    // 3. Serialize updated object
+    const newDataString = JSON.stringify(updatedWidgetData);
+
+    // 4. Write back to UserDefaults
+    // Replace with actual call to your native module/library
+    // await MyWidgetBridge.setWidgetData(APP_GROUP_ID, WIDGET_DATA_KEY, newDataString);
+    // Example with react-native-default-preference:
+    // await DefaultPreference.set(WIDGET_DATA_KEY, newDataString, APP_GROUP_ID);
+    console.log("ProfileModal: Simulating writing to UserDefaults:", newDataString); // Placeholder
+
+    // 5. Notify the widget to reload
+    // Replace with actual call to your native module/library
+    // await MyWidgetBridge.reloadAllWidgets();
+    // Example with react-native-widgetkit:
+    // WidgetKit.reloadAllTimelines();
+    console.log("ProfileModal: Simulating widget reload all timelines."); // Placeholder
+
+  } catch (error) {
+    console.error("ProfileModal: Failed to update widget theme preference:", error);
+  }
+};
+
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
   const { colors, spacing, typography, borderRadius, theme, toggleTheme } = useTheme();
   const { signOut } = useClerkAuth();
   const { user, isLoaded } = useUser();
-  const { notificationsEnabled, toggleNotifications, soundEnabled, toggleSound } = useNotifications();
   const [showSettings, setShowSettings] = useState(false);
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('system');
   const systemColorScheme = useColorScheme();
@@ -39,29 +96,54 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     loadAppearanceSettings();
   }, []);
 
+  useEffect(() => {
+    // Determine the target theme based on appearanceMode and systemColorScheme
+    let targetThemeMode: 'light' | 'dark' | null = null;
+
+    if (appearanceMode === 'system') {
+      targetThemeMode = systemColorScheme === undefined ? null : systemColorScheme;
+    } else {
+      targetThemeMode = appearanceMode; // 'light' or 'dark'
+    }
+
+    // If a target theme is determined and it's different from the current app theme, toggle
+    if (targetThemeMode && theme !== targetThemeMode) {
+      toggleTheme();
+    }
+
+    // Update widget theme preference whenever the effective theme changes
+    if (targetThemeMode) { // targetThemeMode will be 'light' or 'dark'
+      updateWidgetThemePreference(targetThemeMode);
+    }
+  }, [appearanceMode, systemColorScheme, theme, toggleTheme]);
+
   const loadAppearanceSettings = async () => {
     try {
       const savedMode = await AsyncStorage.getItem('appearanceMode');
       if (savedMode) {
-        setAppearanceMode(savedMode as AppearanceMode);
+        setAppearanceMode(savedMode as AppearanceMode); // This will trigger the theme-sync useEffect
       }
+      // If no savedMode, the initial useState('system') for appearanceMode will be used,
+      // and the theme-sync useEffect will apply it based on systemColorScheme.
     } catch (error) {
       console.error('Error loading appearance settings:', error);
     }
   };
 
   const handleAppearanceChange = async (mode: AppearanceMode) => {
-    setAppearanceMode(mode);
-    await AsyncStorage.setItem('appearanceMode', mode);
-    
-    // Apply the theme based on the selected mode
+    setAppearanceMode(mode); // Update state for app UI
+    await AsyncStorage.setItem('appearanceMode', mode); // Save for app persistence
+
+    // Determine the theme to send to the widget
+    let themeForWidget: 'light' | 'dark';
     if (mode === 'system') {
-      if (theme !== systemColorScheme && systemColorScheme) {
-        toggleTheme();
-      }
-    } else if (theme !== mode) {
-      toggleTheme();
+      // systemColorScheme can be null, if so, default to 'light' for the widget
+      themeForWidget = systemColorScheme === 'dark' ? 'dark' : 'light';
+    } else {
+      themeForWidget = mode; // 'light' or 'dark'
     }
+    // Update the widget's theme preference
+    await updateWidgetThemePreference(themeForWidget);
   };
 
   const handleSignOut = async () => {
@@ -386,41 +468,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>Push Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive reminders for tasks and habits
-              </Text>
-            </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={toggleNotifications}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sound</Text>
-          <View style={styles.settingRow}>
-            <View>
-              <Text style={styles.settingLabel}>Sound Effects</Text>
-              <Text style={styles.settingDescription}>
-                Play sounds for timer and task completion
-              </Text>
-            </View>
-            <Switch
-              value={soundEnabled}
-              onValueChange={toggleSound}
-              trackColor={{ false: colors.border, true: colors.primary }}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
+          <TouchableOpacity 
+            style={styles.linkButton}
+            onPress={() => Linking.openURL('https://example.com/website')}
+          >
+            <Ionicons name="globe-outline" size={24} color={colors.primary} />
+            <Text style={styles.linkText}>Visit Website</Text>
+          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://example.com/terms')}
