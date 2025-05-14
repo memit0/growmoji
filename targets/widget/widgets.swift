@@ -153,15 +153,18 @@ struct HabitRowView: View {
 
 struct TaskRowView: View {
     var task: WidgetTask
+    var appSpecifiedColorScheme: ColorScheme // Added: to correctly set text color
 
     var body: some View {
         HStack {
             Image(systemName: task.is_completed == 1 ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(task.is_completed == 1 ? .green : .gray)
+                .foregroundColor(task.is_completed == 1 ? .green : .gray) // Kept original logic for icon
             Text(task.title)
                 .font(.subheadline)
                 .strikethrough(task.is_completed == 1, color: .gray)
-                .foregroundColor(task.is_completed == 1 ? .gray : .primary)
+                .foregroundColor(
+                    task.is_completed == 1 ? .gray : (appSpecifiedColorScheme == .light ? .black : .white)
+                ) // Updated: Dynamic color based on scheme
             Spacer()
         }
     }
@@ -237,7 +240,7 @@ struct MediumWidgetView: View {
                     .foregroundColor(.gray)
             } else {
                 ForEach(tasks) { task in
-                    TaskRowView(task: task)
+                    TaskRowView(task: task, appSpecifiedColorScheme: appSpecifiedColorScheme) // Updated: Pass scheme
                 }
             }
             Spacer()
@@ -280,7 +283,7 @@ struct LargeWidgetView: View {
                 Text("No tasks for today.").font(.caption).foregroundColor(.gray)
             } else {
                 ForEach(tasks) { task in
-                    TaskRowView(task: task)
+                    TaskRowView(task: task, appSpecifiedColorScheme: appSpecifiedColorScheme) // Updated: Pass scheme
                 }
             }
             Spacer()
