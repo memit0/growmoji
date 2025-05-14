@@ -1,12 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { borderRadius, colors, shadows, spacing, typography } from '../constants/theme';
 
 type ThemeType = 'light' | 'dark';
+type AppearanceMode = 'system' | 'light' | 'dark';
 
 interface ThemeContextType {
   theme: ThemeType;
-  toggleTheme: () => void;
+  appearanceMode: AppearanceMode;
+  setAppearanceMode: (mode: AppearanceMode) => Promise<void>;
   isDark: boolean;
   colors: typeof colors.light | typeof colors.dark;
   spacing: typeof spacing;
@@ -19,26 +22,53 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [theme, setTheme] = useState<ThemeType>(systemColorScheme || 'light');
+  const [actualTheme, setActualTheme] = useState<ThemeType>(systemColorScheme || 'light');
+  const [currentAppearanceMode, setCurrentAppearanceMode] = useState<AppearanceMode>('system');
 
   useEffect(() => {
-    if (systemColorScheme) {
-      setTheme(systemColorScheme);
-    }
-  }, [systemColorScheme]);
+    const loadSettings = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem('appearanceMode');
+        if (savedMode) {
+          setCurrentAppearanceMode(savedMode as AppearanceMode);
+        }
+      } catch (error) {
+        console.error('ThemeProvider: Error loading appearance settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
 
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+  useEffect(() => {
+    let newTheme: ThemeType;
+    if (currentAppearanceMode === 'light') {
+      newTheme = 'light';
+    } else if (currentAppearanceMode === 'dark') {
+      newTheme = 'dark';
+    } else {
+      newTheme = systemColorScheme || 'light';
+    }
+    setActualTheme(newTheme);
+  }, [currentAppearanceMode, systemColorScheme]);
+
+  const handleSetAppearanceMode = React.useCallback(async (mode: AppearanceMode) => {
+    setCurrentAppearanceMode(mode);
+    try {
+      await AsyncStorage.setItem('appearanceMode', mode);
+    } catch (error) {
+      console.error('ThemeProvider: Error saving appearance settings:', error);
+    }
+  }, []);
 
   const value = {
-    theme,
-    toggleTheme,
-    isDark: theme === 'dark',
-    colors: colors[theme],
+    theme: actualTheme,
+    appearanceMode: currentAppearanceMode,
+    setAppearanceMode: handleSetAppearanceMode,
+    isDark: actualTheme === 'dark',
+    colors: colors[actualTheme],
     spacing,
     typography,
-    shadows: shadows[theme],
+    shadows: shadows[actualTheme],
     borderRadius,
   };
 

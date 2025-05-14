@@ -1,7 +1,6 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
@@ -83,67 +82,34 @@ const updateWidgetThemePreference = async (newAppTheme: 'light' | 'dark') => {
 };
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
-  const { colors, spacing, typography, borderRadius, theme, toggleTheme } = useTheme();
+  const { 
+    colors, 
+    spacing, 
+    typography, 
+    borderRadius, 
+    theme, // This is the actual applied theme ('light' or 'dark')
+    appearanceMode: contextAppearanceMode, // User's preference ('system', 'light', 'dark')
+    setAppearanceMode: setContextAppearanceMode // Function to update preference
+  } = useTheme();
   const { signOut } = useClerkAuth();
   const { user, isLoaded } = useUser();
   const [showSettings, setShowSettings] = useState(false);
-  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>('system');
-  const systemColorScheme = useColorScheme();
+  const systemColorScheme = useColorScheme(); // Still needed for widget logic if mode is system
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+  // New useEffect to update widget theme preference when the actual app theme changes
   useEffect(() => {
-    loadAppearanceSettings();
-  }, []);
-
-  useEffect(() => {
-    // Determine the target theme based on appearanceMode and systemColorScheme
-    let targetThemeMode: 'light' | 'dark' | null = null;
-
-    if (appearanceMode === 'system') {
-      targetThemeMode = systemColorScheme === undefined ? null : systemColorScheme;
-    } else {
-      targetThemeMode = appearanceMode; // 'light' or 'dark'
+    if (theme) { // theme is 'light' or 'dark' from useTheme()
+      updateWidgetThemePreference(theme);
     }
-
-    // If a target theme is determined and it's different from the current app theme, toggle
-    if (targetThemeMode && theme !== targetThemeMode) {
-      toggleTheme();
-    }
-
-    // Update widget theme preference whenever the effective theme changes
-    if (targetThemeMode) { // targetThemeMode will be 'light' or 'dark'
-      updateWidgetThemePreference(targetThemeMode);
-    }
-  }, [appearanceMode, systemColorScheme, theme, toggleTheme]);
-
-  const loadAppearanceSettings = async () => {
-    try {
-      const savedMode = await AsyncStorage.getItem('appearanceMode');
-      if (savedMode) {
-        setAppearanceMode(savedMode as AppearanceMode); // This will trigger the theme-sync useEffect
-      }
-      // If no savedMode, the initial useState('system') for appearanceMode will be used,
-      // and the theme-sync useEffect will apply it based on systemColorScheme.
-    } catch (error) {
-      console.error('Error loading appearance settings:', error);
-    }
-  };
+  }, [theme]);
 
   const handleAppearanceChange = async (mode: AppearanceMode) => {
-    setAppearanceMode(mode); // Update state for app UI
-    await AsyncStorage.setItem('appearanceMode', mode); // Save for app persistence
+    await setContextAppearanceMode(mode); // Update context and AsyncStorage via context
 
-    // Determine the theme to send to the widget
-    let themeForWidget: 'light' | 'dark';
-    if (mode === 'system') {
-      // systemColorScheme can be null, if so, default to 'light' for the widget
-      themeForWidget = systemColorScheme === 'dark' ? 'dark' : 'light';
-    } else {
-      themeForWidget = mode; // 'light' or 'dark'
-    }
-    // Update the widget's theme preference
-    await updateWidgetThemePreference(themeForWidget);
+    // The widget theme update is now handled by the useEffect above, listening to `theme` from context.
+    // No direct call to updateWidgetThemePreference needed here.
   };
 
   const handleSignOut = async () => {
@@ -457,7 +423,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
                 onPress={() => handleAppearanceChange(mode)}
               >
                 <View style={styles.radioButton}>
-                  {appearanceMode === mode && <View style={styles.radioButtonInner} />}
+                  {contextAppearanceMode === mode && <View style={styles.radioButtonInner} />}
                 </View>
                 <Text style={styles.radioLabel}>
                   {mode.charAt(0).toUpperCase() + mode.slice(1)}
