@@ -55,7 +55,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
   };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: number;
 
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
@@ -115,7 +115,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
       {isSettingsVisible && (
         <View style={styles.settingsContainer}>
           <View style={styles.settingRow}>
-            <ThemedText style={styles.settingLabel}>Work Duration (min)</ThemedText>
+            <ThemedText style={[styles.settingLabel, { color: colors.text }]}>Work Duration (min)</ThemedText>
             <View style={styles.durationControls}>
               <TouchableOpacity
                 style={[styles.durationButton, { backgroundColor: colors.primary }]}
@@ -123,7 +123,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
               >
                 <ThemedText style={styles.buttonText}>-</ThemedText>
               </TouchableOpacity>
-              <ThemedText style={styles.durationText}>{workDuration}</ThemedText>
+              <ThemedText style={[styles.durationText, { color: colors.text }]}>{workDuration}</ThemedText>
               <TouchableOpacity
                 style={[styles.durationButton, { backgroundColor: colors.primary }]}
                 onPress={() => adjustDuration('work', true)}
@@ -134,7 +134,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
           </View>
 
           <View style={styles.settingRow}>
-            <ThemedText style={styles.settingLabel}>Break Duration (min)</ThemedText>
+            <ThemedText style={[styles.settingLabel, { color: colors.text }]}>Break Duration (min)</ThemedText>
             <View style={styles.durationControls}>
               <TouchableOpacity
                 style={[styles.durationButton, { backgroundColor: colors.primary }]}
@@ -142,7 +142,7 @@ export function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
               >
                 <ThemedText style={styles.buttonText}>-</ThemedText>
               </TouchableOpacity>
-              <ThemedText style={styles.durationText}>{breakDuration}</ThemedText>
+              <ThemedText style={[styles.durationText, { color: colors.text }]}>{breakDuration}</ThemedText>
               <TouchableOpacity
                 style={[styles.durationButton, { backgroundColor: colors.primary }]}
                 onPress={() => adjustDuration('break', true)}

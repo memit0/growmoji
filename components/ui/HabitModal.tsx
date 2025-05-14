@@ -40,13 +40,13 @@ export function HabitModal({ visible, onClose, onSave }: HabitModalProps) {
       <View style={styles.modalOverlay}>
         <ThemedView style={[styles.modalContent, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
-            <ThemedText type="title">New Habit</ThemedText>
+            <ThemedText type="title" style={{ color: colors.text }}>New Habit</ThemedText>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <ThemedText style={styles.closeButtonText}>✕</ThemedText>
+              <ThemedText style={[styles.closeButtonText, { color: colors.text }]}>✕</ThemedText>
             </TouchableOpacity>
           </View>
 
-          <ThemedText style={styles.subtitle}>Choose an emoji for your habit</ThemedText>
+          <ThemedText style={[styles.subtitle, { color: colors.text }]}>Choose an emoji for your habit</ThemedText>
 
           <View style={styles.emojiGrid}>
             {COMMON_EMOJIS.map((emoji) => (
