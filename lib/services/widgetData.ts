@@ -23,16 +23,18 @@ export interface WidgetHabit {
 export interface WidgetDataForStorage {
   tasks: WidgetTask[];
   habits: WidgetHabit[];
+  appTheme?: 'light' | 'dark';
   // We can also store aggregated counts as numbers
   totalTasks?: number;
   completedTasksToday?: number;
   activeHabits?: number;
 }
 
-export function updateWidgetData(todos: Todo[], habits: Habit[]) {
+export function updateWidgetData(todos: Todo[], habits: Habit[], currentTheme: 'light' | 'dark') {
   console.log('[widgetData] Attempting to update widget data.');
   console.log('[widgetData] Received Todos:', JSON.stringify(todos.slice(0,3)));
   console.log('[widgetData] Received Habits:', JSON.stringify(habits.slice(0,3)));
+  console.log('[widgetData] Received Theme:', currentTheme);
 
   try {
     const widgetTasks: WidgetTask[] = todos.map(todo => ({
@@ -50,6 +52,7 @@ export function updateWidgetData(todos: Todo[], habits: Habit[]) {
     const dataToStore = {
       tasks: widgetTasks.slice(0, 3),
       habits: widgetHabits.slice(0, 3),
+      appTheme: currentTheme,
       totalTasks: widgetTasks.length,
       activeHabits: widgetHabits.length,
     } as any; 
@@ -76,6 +79,7 @@ export function clearWidgetData() {
     const emptyData = {
       tasks: [],
       habits: [],
+      appTheme: undefined,
       totalTasks: 0,
       activeHabits: 0,
     } as any;

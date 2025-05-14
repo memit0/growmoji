@@ -14,7 +14,7 @@ import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -48,7 +48,7 @@ export default function HomeScreen() {
       console.log('[handleAddTodo] todosService.createTodo SUCCEEDED. Response:', createdTodo);
       setTodos(prevTodos => {
         const newTodos = [...prevTodos, createdTodo];
-        updateWidgetData(newTodos, habits);
+        updateWidgetData(newTodos, habits, theme);
         return newTodos;
       });
       setNewTodoTitle('');
@@ -67,7 +67,7 @@ export default function HomeScreen() {
       await todosService.deleteTodo(id);
       setTodos(prevTodos => {
         const newTodos = prevTodos.filter(todo => todo.id !== id);
-        updateWidgetData(newTodos, habits);
+        updateWidgetData(newTodos, habits, theme);
         return newTodos;
       });
     } catch (error) {
@@ -75,7 +75,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn, habits]);
+  }, [isSignedIn, habits, theme]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
     if (!isSignedIn) return;
@@ -84,14 +84,14 @@ export default function HomeScreen() {
       await habitsService.deleteHabit(id);
       setHabits(prevHabits => {
         const newHabits = prevHabits.filter(habit => habit.id !== id);
-        updateWidgetData(todos, newHabits);
+        updateWidgetData(todos, newHabits, theme);
         return newHabits;
       });
       console.log(`[HomeScreen] Successfully deleted habit: ${id}`);
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [isSignedIn, todos]);
+  }, [isSignedIn, todos, theme]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
     if (!isSignedIn) return;
@@ -105,7 +105,7 @@ export default function HomeScreen() {
         const newTodos = prevTodos.map(todo =>
           todo.id === id ? updatedTodo : todo
         );
-        updateWidgetData(newTodos, habits);
+        updateWidgetData(newTodos, habits, theme);
         return newTodos;
       });
     } catch (error) {
@@ -113,7 +113,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn, todos, habits]);
+  }, [isSignedIn, todos, habits, theme]);
 
   interface HabitModalData {
     title: string;
@@ -141,7 +141,7 @@ export default function HomeScreen() {
       console.log('[handleAddHabit] habitsService.createHabit SUCCEEDED. Response:', createdHabit);
       setHabits(prevHabits => {
         const newHabits = [...prevHabits, createdHabit];
-        updateWidgetData(todos, newHabits);
+        updateWidgetData(todos, newHabits, theme);
         return newHabits;
       });
       setIsHabitModalVisible(false);
@@ -211,7 +211,7 @@ export default function HomeScreen() {
       // Refresh all habits to update UI
       const refreshedHabits = await habitsService.getHabits();
       setHabits(refreshedHabits);
-      updateWidgetData(todos, refreshedHabits);
+      updateWidgetData(todos, refreshedHabits, theme);
       console.log('[HomeScreen] Refreshed habits list.');
 
     } catch (error) {
@@ -248,11 +248,11 @@ export default function HomeScreen() {
 
   // New useEffect to update widget data when todos or habits change from any source (initial fetch, add, delete, etc.)
   useEffect(() => {
-    if (isSignedIn) {
-      console.log('[HomeScreen] Detected change in todos or habits, updating widget data.');
-      updateWidgetData(todos, habits);
+    if (isSignedIn && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
+      updateWidgetData(todos, habits, theme);
     }
-  }, [todos, habits, isSignedIn]); // Watch todos, habits, and isSignedIn status
+  // Adding theme to dependency array to re-run if theme changes.
+  }, [todos, habits, isSignedIn, theme]); 
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
