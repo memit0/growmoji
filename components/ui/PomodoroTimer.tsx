@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, habitsService } from '../../lib/services/habits';
+import { PaywallModal } from './PaywallModal';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -20,6 +22,7 @@ interface HabitStats {
 
 export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProps) {
   const { colors } = useTheme();
+  const { isPremium } = useSubscription();
   
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats>({
@@ -31,6 +34,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     weeklyCompletionRate: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const calculateStats = useCallback((habits: Habit[]): HabitStats => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -134,6 +138,36 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
       </View>
     </View>
   );
+
+  // If user is not premium, show widget restriction message
+  if (!isPremium) {
+    return (
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+        <ThemedView style={[styles.premiumFeatureCard, { backgroundColor: colors.card }]}>
+          <ThemedText style={styles.premiumIcon}>📱</ThemedText>
+          <ThemedText type="title" style={[styles.premiumTitle, { color: colors.text }]}>
+            Widget Access
+          </ThemedText>
+          <ThemedText style={[styles.premiumDescription, { color: colors.secondary }]}>
+            Add beautiful widgets to your home screen and get detailed progress analytics with Premium
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.upgradeButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowPaywall(true)}
+          >
+            <ThemedText style={styles.upgradeButtonText}>🚀 Upgrade to Premium</ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
+        <PaywallModal
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
+          title="Unlock Widget Access"
+          subtitle="Get beautiful widgets and advanced analytics"
+        />
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -415,5 +449,35 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+  },
+  premiumFeatureCard: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  premiumIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  premiumTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  premiumDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  upgradeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

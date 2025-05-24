@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ClerkProvider, useAuth as useClerkAuth } from "@clerk/clerk-expo";
 import * as SecureStore from 'expo-secure-store';
 import { NotificationsProvider } from '../contexts/NotificationsContext';
+import { SubscriptionProvider } from '../contexts/SubscriptionContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 
 // WebBrowser.maybeCompleteAuthSession(); // Likely not needed if not using Clerk for web OAuth redirects handled by it
@@ -39,9 +40,11 @@ export default function RootLayout() {
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <ThemeProvider>
-          <NotificationsProvider>
-            <RootNavigation />
-          </NotificationsProvider>
+          <SubscriptionProvider>
+            <NotificationsProvider>
+              <RootNavigation />
+            </NotificationsProvider>
+          </SubscriptionProvider>
         </ThemeProvider>
       </GestureHandlerRootView>
     </ClerkProvider>

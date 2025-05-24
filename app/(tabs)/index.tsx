@@ -5,8 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HabitCard } from '@/components/ui/HabitCard';
 import { HabitModal } from '@/components/ui/HabitModal';
+import { PaywallModal } from '@/components/ui/PaywallModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
@@ -15,10 +17,12 @@ import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
 
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
+  const { isPremium } = useSubscription();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   
   // Refactored loading states
   const [isScreenLoading, setIsScreenLoading] = useState(false);
@@ -128,6 +132,15 @@ export default function HomeScreen() {
        else console.log(`[handleAddHabit] Guard: No emoji or not signed in. Emoji: "${emoji}", isSignedIn: ${isSignedIn}. Bailing out.`);
       return;
     }
+
+    // Check habit limit for free users
+    if (!isPremium && habits.length >= 3) {
+      console.log('[handleAddHabit] Free user has reached habit limit. Showing paywall.');
+      setIsHabitModalVisible(false);
+      setShowPaywall(true);
+      return;
+    }
+
     console.log('[handleAddHabit] Proceeding: Setting isSubmittingHabit to true.');
     setIsSubmittingHabit(true);
     try {
@@ -308,12 +321,34 @@ export default function HomeScreen() {
 
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
           <View style={styles.sectionHeaderRow}>
-            <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
+            <View style={styles.habitHeaderLeft}>
+              <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
+              <ThemedText style={[styles.habitCount, { color: colors.secondary }]}>
+                {habits.length}/{isPremium ? '∞' : '3'} habits
+                {!isPremium && habits.length >= 3 && (
+                  <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • Limit reached</ThemedText>
+                )}
+              </ThemedText>
+            </View>
             <TouchableOpacity 
-              style={[styles.newHabitButton, { backgroundColor: colors.primary }]}
-              onPress={() => setIsHabitModalVisible(true)}
+              style={[
+                styles.newHabitButton, 
+                { backgroundColor: (!isPremium && habits.length >= 3) ? colors.border : colors.primary }
+              ]}
+              onPress={() => {
+                if (!isPremium && habits.length >= 3) {
+                  setShowPaywall(true);
+                } else {
+                  setIsHabitModalVisible(true);
+                }
+              }}
             >
-              <ThemedText style={[styles.newHabitButtonText, { color: '#FFFFFF' }]}>New Habit</ThemedText>
+              <ThemedText style={[
+                styles.newHabitButtonText, 
+                { color: (!isPremium && habits.length >= 3) ? colors.secondary : '#FFFFFF' }
+              ]}>
+                {(!isPremium && habits.length >= 3) ? 'Upgrade' : 'New Habit'}
+              </ThemedText>
             </TouchableOpacity>
           </View>
           <View>
@@ -336,6 +371,11 @@ export default function HomeScreen() {
           visible={isHabitModalVisible}
           onClose={() => setIsHabitModalVisible(false)}
           onSave={(emoji) => handleAddHabit(emoji)}
+        />
+
+        <PaywallModal
+          visible={showPaywall}
+          onClose={() => setShowPaywall(false)}
         />
       </ScrollView>
     </SafeAreaView>
@@ -412,5 +452,17 @@ const styles = StyleSheet.create({
   newHabitButtonText: {
     fontWeight: '600',
     fontSize: 14,
+  },
+  habitHeaderLeft: {
+    flex: 1,
+  },
+  habitCount: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  limitText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

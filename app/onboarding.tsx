@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Dimensions, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PaywallModal } from '../components/ui/PaywallModal';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -23,23 +25,38 @@ const onboardingSlides = [
   },
   {
     key: '4',
-    title: "Let's Get Started!",
-    description: 'Ready to simplify your life and amplify your achievements? Tap below to begin your journey with Clarity.',
+    title: 'Choose Your Experience',
+    description: 'Start with our free plan (3 habits) or unlock unlimited potential with premium features.',
   },
 ];
 
 export default function OnboardingScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
+  const { isPremium } = useSubscription();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showPaywall, setShowPaywall] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const handleNext = () => {
     if (currentIndex < onboardingSlides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      // Navigate to the paywall screen
-      router.replace('/'); 
+      // On last slide, show options
+      setShowPaywall(true);
+    }
+  };
+
+  const handleStartFree = () => {
+    setShowPaywall(false);
+    router.replace('/');
+  };
+
+  const handlePaywallClose = () => {
+    setShowPaywall(false);
+    // If they subscribed, go to app, otherwise stay
+    if (isPremium) {
+      router.replace('/');
     }
   };
 
@@ -91,6 +108,52 @@ export default function OnboardingScreen() {
       fontSize: typography.fontSize.md,
       fontWeight: '600',
     },
+    lastSlideButtons: {
+      width: '100%',
+      alignItems: 'center',
+      marginTop: spacing.lg,
+    },
+    premiumButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      width: '80%',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    freeButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: borderRadius.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+      width: '80%',
+      alignItems: 'center',
+    },
+    premiumButtonText: {
+      color: '#FFFFFF',
+      fontSize: typography.fontSize.md,
+      fontWeight: '600',
+    },
+    freeButtonText: {
+      color: colors.text,
+      fontSize: typography.fontSize.md,
+      fontWeight: '500',
+    },
+    freeSubtext: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondary,
+      textAlign: 'center',
+      marginTop: spacing.xs,
+      marginBottom: spacing.md,
+    },
     paginationContainer: {
       position: 'absolute',
       bottom: spacing.xxl + spacing.lg + 60, // Adjust based on button height + desired spacing
@@ -125,6 +188,18 @@ export default function OnboardingScreen() {
     <View style={styles.slide}>
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.description}>{item.description}</Text>
+      
+      {currentIndex === onboardingSlides.length - 1 && (
+        <View style={styles.lastSlideButtons}>
+          <TouchableOpacity style={styles.premiumButton} onPress={() => setShowPaywall(true)}>
+            <Text style={styles.premiumButtonText}>🚀 Go Premium</Text>
+          </TouchableOpacity>
+          <Text style={styles.freeSubtext}>or</Text>
+          <TouchableOpacity style={styles.freeButton} onPress={handleStartFree}>
+            <Text style={styles.freeButtonText}>Start Free (3 habits)</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -153,13 +228,21 @@ export default function OnboardingScreen() {
           />
         ))}
       </View>
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.button} onPress={handleNext}>
-          <Text style={styles.buttonText}>
-            {currentIndex === onboardingSlides.length - 1 ? "Get Started" : "Next"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {currentIndex < onboardingSlides.length - 1 && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.button} onPress={handleNext}>
+            <Text style={styles.buttonText}>Next</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <PaywallModal
+        visible={showPaywall}
+        onClose={handlePaywallClose}
+        title="Unlock Unlimited Potential"
+        subtitle="Get unlimited habits, widgets, and premium features"
+        showCloseButton={true}
+      />
     </SafeAreaView>
   );
 } 
