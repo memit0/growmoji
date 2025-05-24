@@ -18,14 +18,22 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.mebattll.habittracker'
+    bundleIdentifier: 'com.mebattll.habittracker',
+    buildNumber: '1',
+    appleTeamId: 'RQPPB76S95',
+    infoPlist: {
+      NSUserTrackingUsageDescription: 'This app uses tracking to provide personalized habit tracking experience.',
+      NSCameraUsageDescription: 'This app uses camera to capture progress photos for habits.',
+      NSPhotoLibraryUsageDescription: 'This app accesses photo library to save and view habit progress photos.'
+    }
   },
   android: {
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff'
     },
-    package: 'com.mebattll.habittracker'
+    package: 'com.mebattll.habittracker',
+    versionCode: 1
   },
   web: {
     favicon: './assets/images/favicon.png'
@@ -34,7 +42,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     eas: {
-      projectId: 'habittracker'
+      projectId: '3fb45759-94dc-4b63-a52d-5c30d89fa6a5'
     }
   },
   plugins: [

@@ -20,6 +20,7 @@
       "appleTeamId": "RQPPB76S95",
       "bundleIdentifier": "com.mebattll.habittracker",
       "entitlements": {
+        "com.apple.developer.applesignin": ["Default"],
         "com.apple.security.application-groups": [
           "group.com.mebattll.habittracker.widget"
         ]
@@ -38,9 +39,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "a26f9a4a-1a32-4686-8119-13d069f4819b"
       }
     }
   }
