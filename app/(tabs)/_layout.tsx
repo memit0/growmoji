@@ -48,10 +48,10 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="timer"
           options={{
-            title: 'Timer',
+            title: 'Dashboard',
             headerTitle: '',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="timer-outline" size={size} color={color} />
+              <Ionicons name="analytics-outline" size={size} color={color} />
             ),
           }}
         />

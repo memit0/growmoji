@@ -1,5 +1,7 @@
+import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, habitsService } from '../../lib/services/habits';
 import { ThemedText } from './ThemedText';
@@ -20,6 +22,7 @@ interface HabitStats {
 
 export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProps) {
   const { colors } = useTheme();
+  const { isSignedIn, isLoaded } = useClerkAuth();
   
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats>({
@@ -65,21 +68,61 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
   }, []);
 
   const loadHabits = useCallback(async () => {
+    if (!isSignedIn) {
+      setHabits([]);
+      setStats({
+        totalHabits: 0,
+        activeHabits: 0,
+        completedToday: 0,
+        averageStreak: 0,
+        longestStreak: 0,
+        weeklyCompletionRate: 0,
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const fetchedHabits = await habitsService.getHabits();
       setHabits(fetchedHabits);
       setStats(calculateStats(fetchedHabits));
+      onRefresh?.();
     } catch (error) {
       console.error('Error loading habits:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [calculateStats]);
+  }, [calculateStats, isSignedIn, onRefresh]);
 
+  // Initial load when auth is ready
   useEffect(() => {
-    loadHabits();
-  }, [loadHabits]);
+    if (isLoaded) {
+      loadHabits();
+    }
+  }, [loadHabits, isLoaded]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoaded && isSignedIn) {
+        loadHabits();
+      }
+    }, [loadHabits, isLoaded, isSignedIn])
+  );
+
+  // Auto-refresh every 30 seconds when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (!isLoaded || !isSignedIn) return;
+
+      const interval = setInterval(() => {
+        loadHabits();
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }, [loadHabits, isLoaded, isSignedIn])
+  );
 
   const getMotivationalMessage = () => {
     if (stats.completedToday === stats.totalHabits && stats.totalHabits > 0) {
@@ -135,21 +178,46 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     </View>
   );
 
+  // Show loading while auth is loading
+  if (!isLoaded) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ThemedView style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
+          <ThemedText style={[styles.loadingText, { color: colors.secondary }]}>
+            Loading...
+          </ThemedText>
+        </ThemedView>
+      </View>
+    );
+  }
+
+  // Show sign in message when not authenticated
+  if (!isSignedIn) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ThemedView style={[styles.notSignedInContainer, { backgroundColor: colors.card }]}>
+          <ThemedText style={[styles.notSignedInTitle, { color: colors.text }]}>
+            📊 Habit Dashboard
+          </ThemedText>
+          <ThemedText style={[styles.notSignedInText, { color: colors.secondary }]}>
+            Please sign in to view your habit progress and analytics.
+          </ThemedText>
+        </ThemedView>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <ThemedView style={[styles.header, { backgroundColor: colors.card }]}>
         <ThemedText type="title" style={[styles.headerTitle, { color: colors.text }]}>
           Progress Dashboard
         </ThemedText>
-        <TouchableOpacity
-          style={[styles.refreshButton, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            loadHabits();
-            onRefresh?.();
-          }}
-        >
-          <ThemedText style={styles.refreshButtonText}>Refresh</ThemedText>
-        </TouchableOpacity>
+        {isLoading && (
+          <ThemedText style={[styles.refreshingText, { color: colors.secondary }]}>
+            Refreshing...
+          </ThemedText>
+        )}
       </ThemedView>
 
       <ThemedView style={[styles.motivationCard, { backgroundColor: colors.card }]}>
@@ -233,14 +301,6 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
           })}
         </ThemedView>
       )}
-
-      {isLoading && (
-        <ThemedView style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
-          <ThemedText style={[styles.loadingText, { color: colors.secondary }]}>
-            Loading progress data...
-          </ThemedText>
-        </ThemedView>
-      )}
     </ScrollView>
   );
 }
@@ -267,13 +327,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  refreshButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  refreshButtonText: {
-    color: '#FFFFFF',
+  refreshingText: {
     fontSize: 14,
     fontWeight: '600',
   },
@@ -414,6 +468,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
+    fontSize: 16,
+  },
+  notSignedInContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  notSignedInTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  notSignedInText: {
     fontSize: 16,
   },
 }); 

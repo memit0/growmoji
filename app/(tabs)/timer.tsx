@@ -1,4 +1,4 @@
-import { PomodoroTimer } from '@/components/ui/PomodoroTimer';
+import { HabitProgressDashboard } from '@/components/ui/HabitProgressDashboard';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ProfileModal } from '../../app/components';
@@ -10,7 +10,7 @@ export default function TimerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <PomodoroTimer onComplete={() => {}} />
+      <HabitProgressDashboard onRefresh={() => {}} />
       <ProfileModal
         isVisible={isProfileModalVisible}
         onClose={() => setIsProfileModalVisible(false)}
@@ -22,7 +22,5 @@ export default function TimerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 }); 
