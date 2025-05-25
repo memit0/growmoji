@@ -11,6 +11,9 @@ interface SubscriptionContextType {
   restorePurchases: () => Promise<boolean>;
   refreshOfferings: () => Promise<void>;
   error: string | null;
+  // Debug features
+  debugPremiumOverride: boolean;
+  setDebugPremiumOverride: (override: boolean) => void;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -32,9 +35,11 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOffering[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugPremiumOverride, setDebugPremiumOverride] = useState(false);
 
-  // Check if user has premium subscription (either Yearly or Monthly)
+  // Check if user has premium subscription (either Yearly or Monthly) or debug override
   const isPremium = 
+    debugPremiumOverride ||
     customerInfo?.entitlements.active['Yearly'] !== undefined ||
     customerInfo?.entitlements.active['Monthly'] !== undefined;
 
@@ -48,11 +53,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setError(null);
 
       // Configure RevenueCat
-      if (Platform.OS === 'ios') {
-        await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '' });
-      } else if (Platform.OS === 'android') {
-        await Purchases.configure({ apiKey: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '' });
+      const apiKey = Platform.OS === 'ios' 
+        ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY 
+        : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+
+      if (!apiKey) {
+        throw new Error(`Missing RevenueCat API key for ${Platform.OS}`);
       }
+
+      console.log(`[RevenueCat] Configuring for ${Platform.OS} with key: ${apiKey.substring(0, 10)}...`);
+      await Purchases.configure({ apiKey });
 
       console.log('[RevenueCat] Configuration successful');
 
@@ -67,6 +77,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.log('[RevenueCat] Available offerings count:', Object.keys(offerings.all || {}).length);
       console.log('[RevenueCat] Current offering:', offerings.current);
 
+      // Log app identifier for debugging
+      console.log('[RevenueCat] App bundle identifier:', Platform.OS === 'ios' ? 'com.mebattll.habittracker' : 'com.mebattll.habittracker');
+
       setCustomerInfo(customerInfo);
       
       // Handle offerings
@@ -77,9 +90,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         console.warn('[RevenueCat] No offerings found. Possible reasons:');
         console.warn('1. Offering not created in RevenueCat dashboard');
         console.warn('2. Products not configured in App Store Connect/Google Play Console');
-        console.warn('3. Offering configuration still propagating (can take up to 24 hours)');
-        console.warn('4. App identifier mismatch between RevenueCat and app stores');
-        setError('No subscription plans available. This could be due to configuration still propagating from RevenueCat dashboard. Please try refreshing in a few minutes.');
+        console.warn('3. Bundle identifier mismatch between app and RevenueCat dashboard');
+        console.warn('4. Offering configuration still propagating (can take up to 24 hours)');
+        console.warn('5. API key might be for wrong project');
+        setError('No subscription plans available. Please check RevenueCat dashboard configuration and ensure bundle identifiers match.');
       } else {
         console.log('[RevenueCat] Found offerings:', offeringsArray.length);
         offeringsArray.forEach((offering, index) => {
@@ -87,6 +101,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
             identifier: offering.identifier,
             serverDescription: offering.serverDescription,
             availablePackages: offering.availablePackages.length
+          });
+          offering.availablePackages.forEach((pkg, pkgIndex) => {
+            console.log(`[RevenueCat] Package ${pkgIndex + 1}:`, {
+              identifier: pkg.identifier,
+              productId: pkg.product.identifier,
+              price: pkg.product.priceString
+            });
           });
         });
       }
@@ -101,12 +122,16 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.error('Error initializing RevenueCat:', error);
       
       // More specific error handling
-      if (error.message?.includes('no products registered')) {
+      if (error.message?.includes('Missing RevenueCat API key')) {
+        setError(`Missing RevenueCat API key for ${Platform.OS}. Please check your environment variables.`);
+      } else if (error.message?.includes('no products registered')) {
         setError('RevenueCat configuration incomplete. Please create an Offering in your dashboard.');
       } else if (error.message?.includes('API key')) {
         setError('Invalid RevenueCat API key. Please check your environment variables.');
+      } else if (error.message?.includes('network')) {
+        setError('Network error. Please check your internet connection and try again.');
       } else {
-        setError('Failed to initialize subscription system. Please try again.');
+        setError(`Failed to initialize subscription system: ${error.message}`);
       }
     } finally {
       setIsLoading(false);
@@ -169,6 +194,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     restorePurchases,
     refreshOfferings,
     error,
+    // Debug features
+    debugPremiumOverride,
+    setDebugPremiumOverride,
   };
 
   return (

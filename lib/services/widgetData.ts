@@ -24,17 +24,19 @@ export interface WidgetDataForStorage {
   tasks: WidgetTask[];
   habits: WidgetHabit[];
   appTheme?: 'light' | 'dark';
+  isPremium?: 0 | 1; // 0 for false, 1 for true
   // We can also store aggregated counts as numbers
   totalTasks?: number;
   completedTasksToday?: number;
   activeHabits?: number;
 }
 
-export function updateWidgetData(todos: Todo[], habits: Habit[], currentTheme: 'light' | 'dark') {
+export function updateWidgetData(todos: Todo[], habits: Habit[], currentTheme: 'light' | 'dark', isPremium: boolean = false) {
   console.log('[widgetData] Attempting to update widget data.');
   console.log('[widgetData] Received Todos:', JSON.stringify(todos.slice(0,3)));
   console.log('[widgetData] Received Habits:', JSON.stringify(habits.slice(0,3)));
   console.log('[widgetData] Received Theme:', currentTheme);
+  console.log('[widgetData] Received Premium Status:', isPremium);
 
   try {
     const widgetTasks: WidgetTask[] = todos.map(todo => ({
@@ -53,6 +55,7 @@ export function updateWidgetData(todos: Todo[], habits: Habit[], currentTheme: '
       tasks: widgetTasks.slice(0, 3),
       habits: widgetHabits.slice(0, 3),
       appTheme: currentTheme,
+      isPremium: isPremium ? 1 : 0,
       totalTasks: widgetTasks.length,
       activeHabits: widgetHabits.length,
     } as any; 
@@ -80,6 +83,7 @@ export function clearWidgetData() {
       tasks: [],
       habits: [],
       appTheme: undefined,
+      isPremium: 0,
       totalTasks: 0,
       activeHabits: 0,
     } as any;

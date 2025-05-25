@@ -19,6 +19,7 @@ struct WidgetData: Decodable {
     var tasks: [WidgetTask]
     var habits: [WidgetHabit]
     var appTheme: String? // Added to receive theme from app
+    var isPremium: Int? // 0 for false, 1 for true
     // var totalTasks: Int? // Can be used if needed
     // var activeHabits: Int? // Can be used if needed
 }
@@ -30,6 +31,7 @@ struct HabitTrackerEntry: TimelineEntry {
     let habits: [WidgetHabit]
     let tasks: [WidgetTask]
     let appTheme: String? // Added to store the app's theme
+    let isPremium: Bool // Added to store premium status
     let relevance: TimelineEntryRelevance?
 
     static func placeholder(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
@@ -38,11 +40,12 @@ struct HabitTrackerEntry: TimelineEntry {
                           habits: [], 
                           tasks: [],
                           appTheme: nil, // Default appTheme
+                          isPremium: false, // Default to non-premium
                           relevance: nil)
     }
 
     static func empty(configuration: DisplayWidgetIntent = DisplayWidgetIntent()) -> HabitTrackerEntry {
-        HabitTrackerEntry(date: Date(), configuration: configuration, habits: [], tasks: [], appTheme: nil, relevance: nil)
+        HabitTrackerEntry(date: Date(), configuration: configuration, habits: [], tasks: [], appTheme: nil, isPremium: false, relevance: nil)
     }
 }
 
@@ -108,12 +111,13 @@ struct HabitTrackerTimelineProvider: AppIntentTimelineProvider {
         let decoder = JSONDecoder()
         do {
             let loadedWidgetData = try decoder.decode(WidgetData.self, from: savedData)
-            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count), AppTheme: \(loadedWidgetData.appTheme ?? "nil")")
+            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count), AppTheme: \(loadedWidgetData.appTheme ?? "nil"), IsPremium: \(loadedWidgetData.isPremium ?? 0)")
             return HabitTrackerEntry(date: Date(), 
                                      configuration: configuration, 
                                      habits: Array(loadedWidgetData.habits.prefix(3)), 
                                      tasks: Array(loadedWidgetData.tasks.prefix(3)),
                                      appTheme: loadedWidgetData.appTheme, // Pass decoded appTheme
+                                     isPremium: loadedWidgetData.isPremium == 1, // Pass decoded premium status
                                      relevance: nil)
         } catch {
             print("[HabitTrackerWidget] FAILED to decode WidgetData from savedData. Error: \(error.localizedDescription)")
@@ -188,15 +192,56 @@ struct HabitTrackerWidgetEntryView : View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if family == .systemSmall {
-                SmallWidgetView(habits: entry.habits, appSpecifiedColorScheme: effectiveColorScheme)
-            } else if family == .systemMedium {
-                MediumWidgetView(tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
+            if !entry.isPremium {
+                // Show upgrade message for non-premium users
+                UpgradeWidgetView(family: family, appSpecifiedColorScheme: effectiveColorScheme)
             } else {
-                LargeWidgetView(habits: entry.habits, tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
+                // Show actual content for premium users
+                if family == .systemSmall {
+                    SmallWidgetView(habits: entry.habits, appSpecifiedColorScheme: effectiveColorScheme)
+                } else if family == .systemMedium {
+                    MediumWidgetView(tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
+                } else {
+                    LargeWidgetView(habits: entry.habits, tasks: entry.tasks, appSpecifiedColorScheme: effectiveColorScheme)
+                }
             }
         }
         .padding()
+    }
+}
+
+struct UpgradeWidgetView: View {
+    var family: WidgetFamily
+    var appSpecifiedColorScheme: ColorScheme
+    
+    var body: some View {
+        VStack(alignment: .center, spacing: 8) {
+            Image(systemName: "star.fill")
+                .font(.title)
+                .foregroundColor(.yellow)
+            
+            Text("Premium Required")
+                .font(family == .systemSmall ? .caption : .headline)
+                .fontWeight(.bold)
+                .foregroundColor(appSpecifiedColorScheme == .light ? .black : .white)
+                .multilineTextAlignment(.center)
+            
+            if family != .systemSmall {
+                Text("Upgrade to Premium to see your habits and tasks in widgets")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+            }
+            
+            Spacer()
+            
+            Text("Tap to upgrade")
+                .font(.caption2)
+                .foregroundColor(.blue)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

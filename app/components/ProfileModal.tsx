@@ -1,85 +1,33 @@
+import { RevenueCatDebug } from '@/components/ui/RevenueCatDebug';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { habitsService } from '@/lib/services/habits';
+import { todosService } from '@/lib/services/todos';
+import { updateWidgetData } from '@/lib/services/widgetData';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useColorScheme
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useColorScheme
 } from 'react-native';
+
+type AppearanceMode = 'system' | 'light' | 'dark';
 
 interface ProfileModalProps {
   isVisible: boolean;
   onClose: () => void;
 }
 
-type AppearanceMode = 'system' | 'light' | 'dark';
-
 const APP_GROUP_ID = "group.com.mebattll.habittracker.widget";
 const WIDGET_DATA_KEY = "widgetData";
-
-// Helper function to update widget data in UserDefaults
-// This function assumes you have native methods (e.g., via NativeWidgetBridge or libraries)
-const updateWidgetThemePreference = async (newAppTheme: 'light' | 'dark') => {
-  try {
-    // 1. Get current widgetData string from UserDefaults
-    // Replace with actual call to your native module/library
-    // const existingDataString = await MyWidgetBridge.getWidgetData(APP_GROUP_ID, WIDGET_DATA_KEY);
-    // Example with react-native-default-preference:
-    // const existingDataString = await DefaultPreference.get(WIDGET_DATA_KEY, APP_GROUP_ID);
-
-    let currentWidgetData: any = { tasks: [], habits: [] }; // Default structure
-
-    // For demonstration, we'll simulate fetching. In a real app, use your actual native call.
-    // This is a placeholder for fetching.
-    const existingDataString = null; // Placeholder: replace with actual native call result.
-                                     // If using react-native-default-preference, handle its promise.
-
-    if (existingDataString) {
-      try {
-        currentWidgetData = JSON.parse(existingDataString);
-      } catch (e) {
-        console.warn("ProfileModal: Could not parse existing widget data, will overwrite with new theme and default data.", e);
-        currentWidgetData = { tasks: [], habits: [] }; // Fallback
-      }
-    }
-
-    // 2. Update the appTheme
-    const updatedWidgetData = {
-      ...currentWidgetData,
-      appTheme: newAppTheme,
-      // Ensure tasks and habits are preserved or set to empty arrays if not present
-      tasks: currentWidgetData.tasks || [],
-      habits: currentWidgetData.habits || [],
-    };
-
-    // 3. Serialize updated object
-    const newDataString = JSON.stringify(updatedWidgetData);
-
-    // 4. Write back to UserDefaults
-    // Replace with actual call to your native module/library
-    // await MyWidgetBridge.setWidgetData(APP_GROUP_ID, WIDGET_DATA_KEY, newDataString);
-    // Example with react-native-default-preference:
-    // await DefaultPreference.set(WIDGET_DATA_KEY, newDataString, APP_GROUP_ID);
-    console.log("ProfileModal: Simulating writing to UserDefaults:", newDataString); // Placeholder
-
-    // 5. Notify the widget to reload
-    // Replace with actual call to your native module/library
-    // await MyWidgetBridge.reloadAllWidgets();
-    // Example with react-native-widgetkit:
-    // WidgetKit.reloadAllTimelines();
-    console.log("ProfileModal: Simulating widget reload all timelines."); // Placeholder
-
-  } catch (error) {
-    console.error("ProfileModal: Failed to update widget theme preference:", error);
-  }
-};
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
   const { 
@@ -93,23 +41,34 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
   } = useTheme();
   const { signOut } = useClerkAuth();
   const { user, isLoaded } = useUser();
+  const { isPremium } = useSubscription();
   const [showSettings, setShowSettings] = useState(false);
   const systemColorScheme = useColorScheme(); // Still needed for widget logic if mode is system
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-  // New useEffect to update widget theme preference when the actual app theme changes
+  // Update widget data when theme changes
   useEffect(() => {
-    if (theme) { // theme is 'light' or 'dark' from useTheme()
-      updateWidgetThemePreference(theme);
+    const updateWidgetWithCurrentData = async () => {
+      try {
+        const [todos, habits] = await Promise.all([
+          todosService.getTodos(),
+          habitsService.getHabits()
+        ]);
+        updateWidgetData(todos || [], habits || [], theme, isPremium);
+      } catch (error) {
+        console.error('ProfileModal: Error updating widget data with theme change:', error);
+      }
+    };
+
+    if (theme) {
+      updateWidgetWithCurrentData();
     }
-  }, [theme]);
+  }, [theme, isPremium]);
 
   const handleAppearanceChange = async (mode: AppearanceMode) => {
-    await setContextAppearanceMode(mode); // Update context and AsyncStorage via context
-
-    // The widget theme update is now handled by the useEffect above, listening to `theme` from context.
-    // No direct call to updateWidgetThemePreference needed here.
+    await setContextAppearanceMode(mode);
+    // Widget theme update is handled by the useEffect above
   };
 
   const handleSignOut = async () => {
@@ -467,6 +426,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
             <Ionicons name="logo-twitter" size={24} color={colors.primary} />
             <Text style={styles.linkText}>@mebattll</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>RevenueCat Debug</Text>
+          <RevenueCatDebug />
         </View>
 
         <View style={styles.dangerZone}>

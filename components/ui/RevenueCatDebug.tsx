@@ -1,12 +1,21 @@
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 
 export function RevenueCatDebug() {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const { offerings, customerInfo, isPremium, refreshOfferings, isLoading, error } = useSubscription();
+  const { 
+    offerings, 
+    customerInfo, 
+    isPremium, 
+    refreshOfferings, 
+    isLoading, 
+    error,
+    debugPremiumOverride,
+    setDebugPremiumOverride
+  } = useSubscription();
 
   const showDetailedInfo = () => {
     const info = {
@@ -102,6 +111,24 @@ export function RevenueCatDebug() {
           <View style={styles.row}>
             <ThemedText style={[styles.value, styles.errorText]}>{error}</ThemedText>
           </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Debug Controls</ThemedText>
+        <View style={styles.row}>
+          <ThemedText style={styles.label}>Premium Override</ThemedText>
+          <Switch
+            value={debugPremiumOverride}
+            onValueChange={setDebugPremiumOverride}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={debugPremiumOverride ? '#FFFFFF' : colors.secondary}
+          />
+        </View>
+        {debugPremiumOverride && (
+          <ThemedText style={[styles.value, { color: '#10B981', fontSize: 12, fontStyle: 'italic' }]}>
+            Debug mode: Premium features enabled for testing
+          </ThemedText>
         )}
       </View>
 
