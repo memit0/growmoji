@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HabitCard } from '@/components/ui/HabitCard';
 import { HabitModal } from '@/components/ui/HabitModal';
-import { PaywallModal } from '@/components/ui/PaywallModal';
+import { RemotePaywallModal } from '@/components/ui/RemotePaywallModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -373,7 +373,7 @@ export default function HomeScreen() {
           onSave={(emoji) => handleAddHabit(emoji)}
         />
 
-        <PaywallModal
+        <RemotePaywallModal
           visible={showPaywall}
           onClose={() => setShowPaywall(false)}
         />

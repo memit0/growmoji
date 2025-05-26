@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Dimensions, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { PaywallModal } from '../components/ui/PaywallModal';
+import { RemotePaywallModal } from '../components/ui/RemotePaywallModal';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -236,12 +236,9 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      <PaywallModal
+      <RemotePaywallModal
         visible={showPaywall}
         onClose={handlePaywallClose}
-        title="Unlock Unlimited Potential"
-        subtitle="Get unlimited habits, widgets, and premium features"
-        showCloseButton={true}
       />
     </SafeAreaView>
   );

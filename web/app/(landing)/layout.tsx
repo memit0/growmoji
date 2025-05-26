@@ -89,9 +89,9 @@ export default function LandingLayout({
             <div>
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="#" className="hover:text-foreground">Help Center</Link></li>
-                <li><Link href="#" className="hover:text-foreground">Contact</Link></li>
-                <li><Link href="#" className="hover:text-foreground">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-foreground">Terms of Service</Link></li>
+                <li><Link href="https://twitter.com/mebattll" target="_blank" rel="noopener noreferrer" className="hover:text-foreground">Contact</Link></li>
+                <li><Link href="/privacy" className="hover:text-foreground">Privacy</Link></li>
               </ul>
             </div>
             

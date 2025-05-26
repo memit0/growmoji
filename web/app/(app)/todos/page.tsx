@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import type { Todo } from "@/lib/supabase";
 import { useAuth } from "@clerk/nextjs";
 import {
-    CheckCircle,
-    CheckSquare,
-    Clock,
-    Plus,
-    Trash2
+  CheckCircle,
+  CheckSquare,
+  Clock,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -49,6 +49,11 @@ export default function TodosPage() {
 
   const handleCreateTodo = async () => {
     if (!newTodoContent.trim()) return;
+
+    // Check if user has reached the 3-todo limit
+    if (todos.length >= 3) {
+      return; // Don't create if at limit
+    }
 
     try {
       const response = await fetch('/api/todos', {
@@ -115,6 +120,7 @@ export default function TodosPage() {
 
   const completedCount = todos.filter(t => t.is_completed).length;
   const pendingCount = todos.length - completedCount;
+  const isAtLimit = todos.length >= 3;
 
   if (loading) {
     return (
@@ -144,15 +150,16 @@ export default function TodosPage() {
             My Tasks
           </h1>
           <p className="text-muted-foreground mt-1">
-            Organize and track your tasks. {completedCount} completed, {pendingCount} pending.
+            Organize and track your tasks. {completedCount} completed, {pendingCount} pending. {todos.length}/3 tasks
+            {isAtLimit && <span className="text-red-500 font-medium"> • Limit reached</span>}
           </p>
         </div>
         
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" disabled={isAtLimit}>
               <Plus className="h-4 w-4" />
-              Add Task
+              {isAtLimit ? 'Limit Reached' : 'Add Task'}
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -171,7 +178,7 @@ export default function TodosPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleCreateTodo} className="flex-1">
+                <Button onClick={handleCreateTodo} className="flex-1" disabled={isAtLimit}>
                   Create Task
                 </Button>
                 <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
@@ -216,9 +223,9 @@ export default function TodosPage() {
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todos.length}</div>
+            <div className="text-2xl font-bold">{todos.length}/3</div>
             <p className="text-xs text-muted-foreground">
-              All time tasks
+              Tasks (limit: 3)
             </p>
           </CardContent>
         </Card>
@@ -261,11 +268,11 @@ export default function TodosPage() {
                'No completed tasks'}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {filter === 'all' ? 'Create your first task to get started!' :
+              {filter === 'all' ? 'Create your first task to get started! (Limit: 3 tasks)' :
                filter === 'pending' ? 'All tasks are completed! Great job!' :
                'Complete some tasks to see them here.'}
             </p>
-            {filter === 'all' && (
+            {filter === 'all' && !isAtLimit && (
               <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Create Your First Task
