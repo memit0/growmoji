@@ -11,6 +11,9 @@ export function RevenueCatDebug() {
     customerInfo, 
     isPremium, 
     refreshOfferings, 
+    refreshCustomerInfo,
+    simulatePurchase,
+    checkRevenueCatConfig,
     isLoading, 
     error,
     debugPremiumOverride,
@@ -18,14 +21,30 @@ export function RevenueCatDebug() {
   } = useSubscription();
 
   const showDetailedInfo = () => {
-    const info = {
+    const activeEntitlements = customerInfo ? Object.keys(customerInfo.entitlements.active) : [];
+    const allEntitlements = customerInfo ? Object.keys(customerInfo.entitlements.all || {}) : [];
+    
+    const info: { [key: string]: string | number } = {
       'Is Premium': isPremium ? 'Yes' : 'No',
       'Is Loading': isLoading ? 'Yes' : 'No',
       'Error': error || 'None',
       'Offerings Count': offerings?.length || 0,
       'Customer Info': customerInfo ? 'Available' : 'Not available',
-      'Active Entitlements': customerInfo ? Object.keys(customerInfo.entitlements.active).join(', ') || 'None' : 'N/A',
+      'Active Entitlements': activeEntitlements.join(', ') || 'None',
+      'All Entitlements': allEntitlements.join(', ') || 'None',
+      'Debug Override': debugPremiumOverride ? 'Yes' : 'No',
     };
+
+    // Add specific entitlement checks
+    if (customerInfo) {
+      info['Growmoji Premium Check'] = customerInfo.entitlements.active['Growmoji Premium'] ? 'ACTIVE' : 'INACTIVE';
+      info['Yearly Check'] = customerInfo.entitlements.active['Yearly'] ? 'ACTIVE' : 'INACTIVE';
+      info['Monthly Check'] = customerInfo.entitlements.active['Monthly'] ? 'ACTIVE' : 'INACTIVE';
+      info['yearly Check'] = customerInfo.entitlements.active['yearly'] ? 'ACTIVE' : 'INACTIVE';
+      info['monthly Check'] = customerInfo.entitlements.active['monthly'] ? 'ACTIVE' : 'INACTIVE';
+      info['pro Check'] = customerInfo.entitlements.active['pro'] ? 'ACTIVE' : 'INACTIVE';
+      info['premium Check'] = customerInfo.entitlements.active['premium'] ? 'ACTIVE' : 'INACTIVE';
+    }
 
     const message = Object.entries(info)
       .map(([key, value]) => `${key}: ${value}`)
@@ -168,9 +187,58 @@ export function RevenueCatDebug() {
         <ThemedText style={styles.buttonText}>Refresh Offerings</ThemedText>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.button} onPress={refreshCustomerInfo}>
+        <ThemedText style={styles.buttonText}>Refresh Customer Info</ThemedText>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.button, { backgroundColor: '#8B5CF6' }]} 
+        onPress={checkRevenueCatConfig}
+      >
+        <ThemedText style={styles.buttonText}>🔍 Run Full Config Check</ThemedText>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.button} onPress={showDetailedInfo}>
         <ThemedText style={styles.buttonText}>Show Detailed Info</ThemedText>
       </TouchableOpacity>
+
+      <View style={styles.section}>
+        <ThemedText style={styles.sectionTitle}>Test Entitlements</ThemedText>
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#10B981' }]} 
+          onPress={() => simulatePurchase('pro')}
+        >
+          <ThemedText style={styles.buttonText}>Test: "pro" (Most Common)</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#10B981' }]} 
+          onPress={() => simulatePurchase('premium')}
+        >
+          <ThemedText style={styles.buttonText}>Test: "premium"</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#10B981' }]} 
+          onPress={() => simulatePurchase('Yearly')}
+        >
+          <ThemedText style={styles.buttonText}>Test: "Yearly"</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#10B981' }]} 
+          onPress={() => simulatePurchase('Monthly')}
+        >
+          <ThemedText style={styles.buttonText}>Test: "Monthly"</ThemedText>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#EF4444' }]} 
+          onPress={() => simulatePurchase('nonexistent')}
+        >
+          <ThemedText style={styles.buttonText}>Test: Invalid Entitlement</ThemedText>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 } 

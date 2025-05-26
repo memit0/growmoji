@@ -11,8 +11,7 @@ Your RevenueCat is already configured with:
 - **Monthly Plan**: `growmoji.monthly`
 
 ### Entitlements  
-- **Yearly**: Yearly access to all pro features
-- **Monthly**: Monthly access to all pro features
+- **Growmoji Premium**: Access to all premium features (both monthly and yearly unlock this)
 
 ⚠️ **Status**: Both products show "Missing Metadata" - you need to configure these in App Store Connect.
 
@@ -105,7 +104,7 @@ Check your console for these RevenueCat logs:
 
 3. **Premium features not unlocking**
    - ✅ **Cause**: Entitlement names mismatch
-   - 🔧 **Fix**: Code already updated to check for "Yearly" and "Monthly" entitlements
+   - 🔧 **Fix**: Code now checks for "Growmoji Premium" entitlement (matches dashboard)
 
 ## 6. Next Steps
 
