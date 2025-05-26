@@ -111,13 +111,15 @@ struct HabitTrackerTimelineProvider: AppIntentTimelineProvider {
         let decoder = JSONDecoder()
         do {
             let loadedWidgetData = try decoder.decode(WidgetData.self, from: savedData)
-            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count), AppTheme: \(loadedWidgetData.appTheme ?? "nil"), IsPremium: \(loadedWidgetData.isPremium ?? 0)")
+            print("[HabitTrackerWidget] Successfully decoded WidgetData. Habits: \(loadedWidgetData.habits.count), Tasks: \(loadedWidgetData.tasks.count), AppTheme: \(loadedWidgetData.appTheme ?? "nil"), IsPremium (Int? from JSON): \(loadedWidgetData.isPremium as Any)")
+            let entryIsPremium = loadedWidgetData.isPremium == 1
+            print("[HabitTrackerWidget] Calculated entry.isPremium (Bool): \(entryIsPremium)")
             return HabitTrackerEntry(date: Date(), 
                                      configuration: configuration, 
                                      habits: Array(loadedWidgetData.habits.prefix(3)), 
                                      tasks: Array(loadedWidgetData.tasks.prefix(3)),
                                      appTheme: loadedWidgetData.appTheme, // Pass decoded appTheme
-                                     isPremium: loadedWidgetData.isPremium == 1, // Pass decoded premium status
+                                     isPremium: entryIsPremium, // Pass decoded premium status
                                      relevance: nil)
         } catch {
             print("[HabitTrackerWidget] FAILED to decode WidgetData from savedData. Error: \(error.localizedDescription)")

@@ -21,6 +21,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.mebattll.habittracker',
     buildNumber: '1',
     appleTeamId: 'RQPPB76S95',
+    config: {
+      usesNonExemptEncryption: false
+    },
     infoPlist: {
       NSUserTrackingUsageDescription: 'This app uses tracking to provide personalized habit tracking experience.',
       NSCameraUsageDescription: 'This app uses camera to capture progress photos for habits.',

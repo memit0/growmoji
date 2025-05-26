@@ -9,14 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useColorScheme
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme
 } from 'react-native';
 
 type AppearanceMode = 'system' | 'light' | 'dark';
@@ -55,6 +55,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           todosService.getTodos(),
           habitsService.getHabits()
         ]);
+        console.log(
+          'ProfileModal useEffect: Updating widget with isPremium:', 
+          isPremium, 
+          'and theme:', 
+          theme
+        );
         updateWidgetData(todos || [], habits || [], theme, isPremium);
       } catch (error) {
         console.error('ProfileModal: Error updating widget data with theme change:', error);
