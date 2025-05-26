@@ -373,6 +373,16 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
 
       <ScrollView>
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Subscription</Text>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Status</Text>
+            <Text style={[styles.settingLabel, { color: isPremium ? colors.primary : colors.secondary }]}>
+              {isPremium ? 'Premium Member' : 'Free Member'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
           <View style={styles.radioGroup}>
             {(['system', 'light', 'dark'] as AppearanceMode[]).map((mode) => (
