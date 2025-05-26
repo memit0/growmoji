@@ -32,11 +32,19 @@ export default function HomeScreen() {
 
   const { isSignedIn, userId } = useClerkAuth();
 
+  const isTaskLimitReached = todos.length >= 3; // Added for UI disabling
+
   const handleAddTodo = async () => {
     console.log(`[handleAddTodo] Called. Title: "${newTodoTitle}", isSubmittingTodo: ${isSubmittingTodo}, isSignedIn: ${isSignedIn}, userId: ${userId}`);
     if (isSubmittingTodo || !newTodoTitle.trim() || !isSignedIn) {
       if (isSubmittingTodo) console.log('[handleAddTodo] Guard: Add todo already in progress. Bailing out.');
       else console.log(`[handleAddTodo] Guard: Empty title or not signed in. Title: "${newTodoTitle}", isSignedIn: ${isSignedIn}. Bailing out.`);
+      return;
+    }
+
+    if (todos.length >= 3) {
+      console.log('[handleAddTodo] Guard: Task limit reached. Bailing out.');
+      // Optionally, provide user feedback here (e.g., an alert)
       return;
     }
 
@@ -286,7 +294,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.inputRow}>
             <TextInput
-              placeholder="Add task..."
+              placeholder={isTaskLimitReached ? "Task limit reached" : "Add task..."}
               style={[styles.input, { 
                 backgroundColor: colors.background,
                 borderColor: colors.border,
@@ -297,12 +305,19 @@ export default function HomeScreen() {
               onChangeText={setNewTodoTitle}
               onSubmitEditing={handleAddTodo}
               returnKeyType="done"
+              editable={!isTaskLimitReached} // Disable input if limit reached
             />
             <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: colors.primary }]} 
+              style={[
+                styles.addButton, 
+                { backgroundColor: isTaskLimitReached ? colors.disabled : colors.primary }, // Change button color if disabled
+              ]} 
               onPress={handleAddTodo}
+              disabled={isTaskLimitReached} // Disable button if limit reached
             >
-              <ThemedText style={[styles.addButtonText, { color: '#FFFFFF' }]}>Add</ThemedText>
+              <ThemedText style={[styles.addButtonText, { color: '#FFFFFF' }]}>
+                {isTaskLimitReached ? 'Limit' : 'Add'}
+              </ThemedText>
             </TouchableOpacity>
           </View>
           <View>
@@ -465,4 +480,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
+  // Add a new style for disabled button/input elements if needed
+  // For example:
+  // disabledInput: {
+  //   backgroundColor: '#e0e0e0', // Lighter grey for disabled state
+  //   color: '#a0a0a0',
+  // },
+  // disabledButton: {
+  //   backgroundColor: '#cccccc',
+  // },
 });

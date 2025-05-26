@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import type { Todo } from "@/lib/supabase";
 import { useAuth } from "@clerk/nextjs";
 import {
-  CheckCircle,
-  CheckSquare,
-  Clock,
-  Plus,
-  Trash2
+    CheckCircle,
+    CheckSquare,
+    Clock,
+    Plus,
+    Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 

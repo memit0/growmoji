@@ -13,6 +13,7 @@ export const colors = {
     error: '#FF3B30',
     warning: '#FF9500',
     info: '#5856D6',
+    disabled: '#D3D3D3',
   },
   dark: {
     primary: '#007AFF',
@@ -26,6 +27,7 @@ export const colors = {
     error: '#FF3B30',
     warning: '#FF9500',
     info: '#5856D6',
+    disabled: '#3A3A3C',
   },
 };
 
