@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Validate URL format
 try {
   new URL(supabaseUrl);
-} catch (error) {
+} catch (_error) {
   throw new Error('Invalid Supabase URL format');
 }
 
@@ -55,7 +55,7 @@ export async function createSupabaseServerClient() {
 // Test connection function
 export async function testSupabaseConnection() {
   try {
-    const { data, error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('habits')
       .select('count', { count: 'exact', head: true });
     

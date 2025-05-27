@@ -64,7 +64,7 @@ export default function LandingPage() {
             <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md mx-auto">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Today's Habits</h3>
+                  <h3 className="font-semibold">Today&apos;s Habits</h3>
                   <span className="text-sm text-muted-foreground">3/5 completed</span>
                 </div>
                 
@@ -175,7 +175,7 @@ export default function LandingPage() {
               {
                 name: "Mike Chen",
                 role: "Software Engineer",
-                content: "The most beautiful habit tracker I've ever used. The design is clean and the emoji features are exactly what I need.",
+                content: "The most beautiful habit tracker I&apos;ve ever used. The design is clean and the emoji features are exactly what I need.",
                 rating: 5
               },
               {

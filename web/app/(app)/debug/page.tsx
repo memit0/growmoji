@@ -7,6 +7,13 @@ import { useAuth } from '@clerk/nextjs';
 import { AlertCircle, CheckCircle, Crown, Loader2, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
+type ConnectionTestResult = {
+  success: boolean;
+  data?: any; 
+  error?: string;
+  details?: string;
+};
+
 export default function DebugPage() {
   const { isSignedIn, userId } = useAuth();
   const { 
@@ -20,7 +27,7 @@ export default function DebugPage() {
     isInitialized
   } = useSubscription();
   
-  const [connectionTest, setConnectionTest] = useState<any>(null);
+  const [connectionTest, setConnectionTest] = useState<ConnectionTestResult | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
 
   const testConnection = async () => {

@@ -65,7 +65,7 @@ export function checkPremiumStatus(customerInfo: CustomerInfo | null): boolean {
   );
 }
 
-export async function purchasePackage(packageToPurchase: any): Promise<boolean> {
+export async function purchasePackage(packageToPurchase: Offering['availablePackages'][number]): Promise<boolean> {
   try {
     if (!purchasesInstance) {
       throw new Error('RevenueCat not initialized');

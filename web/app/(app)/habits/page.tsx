@@ -16,6 +16,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+type LogEntry = {
+  log_date: string;
+  // Add other properties if logs have them, e.g., id: string;
+};
+
 export default function HabitsPage() {
   const { isSignedIn } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -111,7 +116,7 @@ export default function HabitsPage() {
         let newLastCheckDate: string | null = null;
         
         if (logs.length > 0) {
-          logs.sort((a: any, b: any) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
+          logs.sort((a: LogEntry, b: LogEntry) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
           

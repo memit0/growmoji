@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSubscription } from '@/hooks/useSubscription';
+import { Offering } from '@revenuecat/purchases-js';
 import { Crown, Loader2, Sparkles, Star, X, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -48,7 +49,7 @@ export function PaywallModal({
 }: PaywallModalProps) {
   const { offerings, purchase, isLoading, error } = useSubscription();
   const [purchasing, setPurchasing] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [selectedPackage, setSelectedPackage] = useState<Offering['availablePackages'][number] | null>(null);
 
   // Auto-select the first package when offerings are loaded
   useEffect(() => {

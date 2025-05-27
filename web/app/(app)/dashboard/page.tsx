@@ -9,15 +9,20 @@ import { Progress } from "@/components/ui/progress";
 import type { Habit, Todo } from "@/lib/supabase";
 import { useAuth } from "@clerk/nextjs";
 import {
-    Calendar,
-    CheckCircle,
-    Flame,
-    Plus,
-    Target,
-    TrendingUp
+  Calendar,
+  CheckCircle,
+  Flame,
+  Plus,
+  Target,
+  TrendingUp
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+type LogEntry = {
+  log_date: string;
+  // Add other properties if logs have them, e.g., id: string;
+};
 
 export default function DashboardPage() {
   const { isSignedIn } = useAuth();
@@ -85,7 +90,7 @@ export default function DashboardPage() {
         let newLastCheckDate: string | null = null;
         
         if (logs.length > 0) {
-          logs.sort((a: any, b: any) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
+          logs.sort((a: LogEntry, b: LogEntry) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
           
@@ -202,7 +207,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold">Good morning! 👋</h1>
           <p className="text-muted-foreground mt-1">
-            Let's make today count. You have {totalHabits - completedToday} habits and {pendingTodos} tasks left to complete.
+            Let&apos;s make today count. You have {totalHabits - completedToday} habits and {pendingTodos} tasks left to complete.
           </p>
         </div>
         <Dialog open={isCreateHabitModalOpen} onOpenChange={setIsCreateHabitModalOpen}>
@@ -257,7 +262,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Progress</CardTitle>
+            <CardTitle className="text-sm font-medium">Today&apos;s Progress</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -314,7 +319,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
-            Today's Habits
+            Today&apos;s Habits
           </CardTitle>
         </CardHeader>
         <CardContent>
