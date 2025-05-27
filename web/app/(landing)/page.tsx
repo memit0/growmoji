@@ -2,14 +2,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-    Apple,
-    BarChart3,
-    Calendar,
-    CheckCircle,
-    Download,
-    Smartphone,
-    Star,
-    Target
+  Apple,
+  BarChart3,
+  Calendar,
+  CheckCircle,
+  Download,
+  Smartphone,
+  Star,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 
@@ -192,7 +192,7 @@ export default function LandingPage() {
                       <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
-                  <p className="text-muted-foreground italic">"{testimonial.content}"</p>
+                  <p className="text-muted-foreground italic">&quot;{testimonial.content}&quot;</p>
                   <div>
                     <p className="font-semibold">{testimonial.name}</p>
                     <p className="text-sm text-muted-foreground">{testimonial.role}</p>
