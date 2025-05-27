@@ -160,7 +160,7 @@ export default function LandingPage() {
               Loved by thousands of users
             </h2>
             <p className="text-xl text-muted-foreground">
-              See what our users say about GrowMoji
+              See what our users say about Growmoji
             </p>
           </div>
           
@@ -169,7 +169,7 @@ export default function LandingPage() {
               {
                 name: "Sarah Johnson",
                 role: "Product Manager",
-                content: "GrowMoji has completely transformed my daily routine. The emoji habits and streak feature keeps me motivated every single day.",
+                content: "Growmoji has completely transformed my daily routine. The emoji habits and streak feature keeps me motivated every single day.",
                 rating: 5
               },
               {
@@ -181,7 +181,7 @@ export default function LandingPage() {
               {
                 name: "Emily Davis",
                 role: "Fitness Coach",
-                content: "I recommend GrowMoji to all my clients. It's simple, effective, and helps build lasting behavioral changes with fun emojis.",
+                content: "I recommend Growmoji to all my clients. It's simple, effective, and helps build lasting behavioral changes with fun emojis.",
                 rating: 5
               }
             ].map((testimonial, index) => (
@@ -211,7 +211,7 @@ export default function LandingPage() {
             Ready to build better habits?
           </h2>
           <p className="text-xl mb-8 opacity-90">
-            Join thousands of users who are already transforming their lives with GrowMoji.
+            Join thousands of users who are already transforming their lives with Growmoji.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/sign-up">

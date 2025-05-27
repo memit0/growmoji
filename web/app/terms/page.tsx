@@ -2,59 +2,101 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function TermsPage() {
   return (
-    <div className="container mx-auto px-4 py-12">
-      <Card>
-        <CardContent className="p-8 prose prose-slate max-w-none">
-          <h1>Terms of Service</h1>
-          <p className="text-muted-foreground">Last updated: March 2024</p>
+    <Card className="max-w-4xl mx-auto p-6">
+      <CardContent>
+        <div className="prose dark:prose-invert max-w-none">
+          <h1 className="text-2xl font-bold mb-6">Terms & Conditions</h1>
           
-          <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing and using GrowMoji, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.
+            These terms and conditions apply to the Growmoji app (hereby referred to as &quot;Application&quot;) 
+            for mobile devices that was created by Mehmet Battal (hereby referred to as &quot;Service Provider&quot;) 
+            as a Freemium service.
           </p>
 
-          <h2>2. Use License</h2>
-          <p>
-            Permission is granted to temporarily use GrowMoji for personal, non-commercial purposes. This is the grant of a license, not a transfer of title, and under this license you may not:
+          <p className="mt-4">
+            Upon downloading or utilizing the Application, you are automatically agreeing to the following terms. 
+            It is strongly advised that you thoroughly read and understand these terms prior to using the Application. 
+            Unauthorized copying, modification of the Application, any part of the Application, or our trademarks 
+            is strictly prohibited. Any attempts to extract the source code of the Application, translate the 
+            Application into other languages, or create derivative versions are not permitted. All trademarks, 
+            copyrights, database rights, and other intellectual property rights related to the Application remain 
+            the property of the Service Provider.
           </p>
-          <ul>
-            <li>Modify or copy the materials</li>
-            <li>Use the materials for any commercial purpose</li>
-            <li>Attempt to decompile or reverse engineer any software contained in GrowMoji</li>
-            <li>Remove any copyright or other proprietary notations from the materials</li>
+
+          <p className="mt-4">
+            The Service Provider is dedicated to ensuring that the Application is as beneficial and efficient as 
+            possible. As such, they reserve the right to modify the Application or charge for their services at 
+            any time and for any reason. The Service Provider assures you that any charges for the Application 
+            or its services will be clearly communicated to you.
+          </p>
+
+          <h2 className="text-xl font-bold mt-6 mb-4">Third-Party Services</h2>
+          <p>
+            Please note that the Application utilizes third-party services that have their own Terms and 
+            Conditions. Below are the links to the Terms and Conditions of the third-party service providers 
+            used by the Application:
+          </p>
+          <ul className="list-disc pl-6 mb-4">
+            <li><a href="https://expo.dev/terms" target="_blank" rel="noopener noreferrer">Expo</a></li>
+            <li><a href="https://www.revenuecat.com/terms" target="_blank" rel="noopener noreferrer">RevenueCat</a></li>
+            <li><a href="https://clerk.com/terms" target="_blank" rel="noopener noreferrer">Clerk</a></li>
           </ul>
 
-          <h2>3. User Account</h2>
+          <h2 className="text-xl font-bold mt-6 mb-4">Internet and Network Connectivity</h2>
           <p>
-            To access certain features of GrowMoji, you must register for an account. You agree to provide accurate and complete information when creating your account and to keep your account credentials secure.
+            Please be aware that the Service Provider does not assume responsibility for certain aspects. Some 
+            functions of the Application require an active internet connection, which can be Wi-Fi or provided 
+            by your mobile network provider. The Service Provider cannot be held responsible if the Application 
+            does not function at full capacity due to lack of access to Wi-Fi or if you have exhausted your 
+            data allowance.
           </p>
 
-          <h2>4. Privacy</h2>
-          <p>
-            Your use of GrowMoji is also governed by our Privacy Policy. Please review our Privacy Policy, which also governs the site and informs users of our data collection practices.
+          <p className="mt-4">
+            If you are using the application outside of a Wi-Fi area, please be aware that your mobile network 
+            provider&apos;s agreement terms still apply. Consequently, you may incur charges from your mobile provider 
+            for data usage during the connection to the application, or other third-party charges. By using the 
+            application, you accept responsibility for any such charges, including roaming data charges if you use 
+            the application outside of your home territory (i.e., region or country) without disabling data roaming. 
+            If you are not the bill payer for the device on which you are using the application, they assume that 
+            you have obtained permission from the bill payer.
           </p>
 
-          <h2>5. Disclaimer</h2>
+          <h2 className="text-xl font-bold mt-6 mb-4">Updates and Termination</h2>
           <p>
-            The materials on GrowMoji are provided on an 'as is' basis. GrowMoji makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.
+            The Service Provider may wish to update the application at some point. The application is currently 
+            available as per the requirements for the operating system (and for any additional systems they decide 
+            to extend the availability of the application to) may change, and you will need to download the updates 
+            if you want to continue using the application. The Service Provider does not guarantee that it will 
+            always update the application so that it is relevant to you and/or compatible with the particular 
+            operating system version installed on your device.
           </p>
 
-          <h2>6. Limitations</h2>
+          <p className="mt-4">
+            However, you agree to always accept updates to the application when offered to you. The Service Provider 
+            may also wish to cease providing the application and may terminate its use at any time without providing 
+            termination notice to you. Unless they inform you otherwise, upon any termination:
+          </p>
+          <ul className="list-disc pl-6 mb-4">
+            <li>The rights and licenses granted to you in these terms will end</li>
+            <li>You must cease using the application, and (if necessary) delete it from your device</li>
+          </ul>
+
+          <h2 className="text-xl font-bold mt-6 mb-4">Changes to Terms and Conditions</h2>
           <p>
-            In no event shall GrowMoji or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on GrowMoji.
+            The Service Provider may periodically update their Terms and Conditions. Therefore, you are advised 
+            to review this page regularly for any changes. The Service Provider will notify you of any changes 
+            by posting the new Terms and Conditions on this page.
           </p>
 
-          <h2>7. Revisions and Errata</h2>
-          <p>
-            The materials appearing on GrowMoji could include technical, typographical, or photographic errors. GrowMoji does not warrant that any of the materials on its website are accurate, complete, or current.
-          </p>
+          <p className="mt-4">These terms and conditions are effective as of 2025-05-27</p>
 
-          <h2>8. Contact Information</h2>
+          <h2 className="text-xl font-bold mt-6 mb-4">Contact Us</h2>
           <p>
-            If you have any questions about these Terms of Service, please contact us at <a href="https://twitter.com/mebattll" target="_blank" rel="noopener noreferrer">@mebattll</a> on Twitter.
+            If you have any questions or suggestions about the Terms and Conditions, please do not hesitate to 
+            contact the Service Provider at mebattll@gmail.com.
           </p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 } 

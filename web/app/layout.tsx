@@ -6,19 +6,19 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "GrowMoji - Build Better Habits",
+  title: "Growmoji - Build Better Habits",
   description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
   keywords: ["habit tracker", "productivity", "goals", "habits", "self-improvement", "emoji", "growmoji"],
-  authors: [{ name: "GrowMoji Team" }],
+  authors: [{ name: "Growmoji Team" }],
   openGraph: {
-    title: "GrowMoji - Build Better Habits",
+    title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
     type: "website",
     url: "https://growmoji.app",
   },
   twitter: {
     card: "summary_large_image",
-    title: "GrowMoji - Build Better Habits",
+    title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
   },
 };

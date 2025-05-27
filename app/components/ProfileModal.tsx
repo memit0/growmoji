@@ -1,4 +1,4 @@
-import { RevenueCatDebug } from '@/components/ui/RevenueCatDebug';
+// import { RevenueCatDebug } from '@/components/ui/RevenueCatDebug';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { habitsService } from '@/lib/services/habits';
@@ -444,10 +444,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>RevenueCat Debug</Text>
           <RevenueCatDebug />
-        </View>
+        </View> */}
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerTitle}>Danger Zone</Text>

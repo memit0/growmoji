@@ -16,13 +16,13 @@ export default function LandingLayout({
             <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center">
               <Image
                 src="/icon.png"
-                alt="GrowMoji Logo"
+                alt="Growmoji Logo"
                 width={32}
                 height={32}
                 className="object-contain"
               />
             </div>
-            <span className="font-bold text-xl">GrowMoji</span>
+            <span className="font-bold text-xl">Growmoji</span>
           </Link>
           
           <nav className="hidden md:flex items-center space-x-6">
@@ -64,13 +64,13 @@ export default function LandingLayout({
                 <div className="h-8 w-8 rounded-lg overflow-hidden flex items-center justify-center">
                   <Image
                     src="/icon.png"
-                    alt="GrowMoji Logo"
+                    alt="Growmoji Logo"
                     width={32}
                     height={32}
                     className="object-contain"
                   />
                 </div>
-                <span className="font-bold text-xl">GrowMoji</span>
+                <span className="font-bold text-xl">Growmoji</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Build better habits, achieve your goals with emojis.
@@ -104,7 +104,7 @@ export default function LandingLayout({
           </div>
           
           <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 GrowMoji. All rights reserved.</p>
+            <p>&copy; 2024 Growmoji. All rights reserved.</p>
           </div>
         </div>
       </footer>
