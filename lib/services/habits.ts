@@ -17,11 +17,23 @@ export interface HabitLog {
   created_at?: string;
 }
 
+// Helper function to get current user ID
+const getCurrentUserId = async (): Promise<string> => {
+  // This will be called from components that have access to useUser hook
+  // For now, we'll throw an error if no user is found
+  throw new Error('getCurrentUserId must be called from a component with user context');
+};
+
 export const habitsService = {
-  async getHabits(): Promise<Habit[]> {
+  async getHabits(userId: string): Promise<Habit[]> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { data, error } = await supabase
       .from('habits')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -32,11 +44,19 @@ export const habitsService = {
     return data || [];
   },
 
-  async createHabit(habit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'>): Promise<Habit> {
+  async createHabit(
+    habit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'>, 
+    userId: string
+  ): Promise<Habit> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { data, error } = await supabase
       .from('habits')
       .insert([{
         ...habit,
+        user_id: userId,
         current_streak: 0,
         last_check_date: null,
       }])
@@ -50,11 +70,16 @@ export const habitsService = {
     return data;
   },
 
-  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>): Promise<Habit> {
+  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>, userId: string): Promise<Habit> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { data, error } = await supabase
       .from('habits')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', userId) // Ensure user can only update their own habits
       .select()
       .single();
 
@@ -66,11 +91,16 @@ export const habitsService = {
     return data;
   },
 
-  async deleteHabit(id: string): Promise<void> {
+  async deleteHabit(id: string, userId: string): Promise<void> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { error } = await supabase
       .from('habits')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', userId); // Ensure user can only delete their own habits
 
     if (error) {
       console.error('Error deleting habit:', error);
@@ -78,7 +108,23 @@ export const habitsService = {
     }
   },
 
-  async logHabitCompletion(habitId: string, log_date: string): Promise<HabitLog> {
+  async logHabitCompletion(habitId: string, log_date: string, userId: string): Promise<HabitLog> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    // First verify the habit belongs to the user
+    const { data: habit } = await supabase
+      .from('habits')
+      .select('id')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!habit) {
+      throw new Error('Habit not found or access denied');
+    }
+
     const { data, error } = await supabase
       .from('habit_logs')
       .insert([{ habit_id: habitId, log_date: log_date }])
@@ -93,7 +139,23 @@ export const habitsService = {
     return data;
   },
 
-  async getHabitLogs(habitId: string, startDate?: string, endDate?: string): Promise<HabitLog[]> {
+  async getHabitLogs(habitId: string, userId: string, startDate?: string, endDate?: string): Promise<HabitLog[]> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    // First verify the habit belongs to the user
+    const { data: habit } = await supabase
+      .from('habits')
+      .select('id')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!habit) {
+      throw new Error('Habit not found or access denied');
+    }
+
     const { data, error } = await supabase
       .from('habit_logs')
       .select('*')
@@ -107,7 +169,23 @@ export const habitsService = {
     return data || [];
   },
 
-  async deleteHabitLog(habitId: string, logDate: string): Promise<void> {
+  async deleteHabitLog(habitId: string, logDate: string, userId: string): Promise<void> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    // First verify the habit belongs to the user
+    const { data: habit } = await supabase
+      .from('habits')
+      .select('id')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!habit) {
+      throw new Error('Habit not found or access denied');
+    }
+
     const { error } = await supabase
       .from('habit_logs')
       .delete()
@@ -121,11 +199,16 @@ export const habitsService = {
     console.log('[habitsService.deleteHabitLog] Supabase delete SUCCEEDED.', { habitId, logDate });
   },
 
-  async updateHabitStreakDetails(id: string, updates: { current_streak: number; last_check_date: string | null }): Promise<Habit> {
+  async updateHabitStreakDetails(id: string, updates: { current_streak: number; last_check_date: string | null }, userId: string): Promise<Habit> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
     const { data, error } = await supabase
       .from('habits')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', userId) // Ensure user can only update their own habits
       .select('id, user_id, emoji, start_date, current_streak, last_check_date, created_at')
       .single();
 

@@ -1,4 +1,4 @@
-import { useAuth as useClerkAuth } from '@clerk/clerk-expo';
+import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -23,6 +23,8 @@ interface HabitStats {
 export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProps) {
   const { colors } = useTheme();
   const { isSignedIn, isLoaded } = useClerkAuth();
+  const { user } = useUser();
+  const userId = user?.id;
   
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats>({
@@ -68,7 +70,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
   }, []);
 
   const loadHabits = useCallback(async () => {
-    if (!isSignedIn) {
+    if (!isSignedIn || !userId) {
       setHabits([]);
       setStats({
         totalHabits: 0,
@@ -84,7 +86,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
 
     try {
       setIsLoading(true);
-      const fetchedHabits = await habitsService.getHabits();
+      const fetchedHabits = await habitsService.getHabits(userId);
       setHabits(fetchedHabits);
       setStats(calculateStats(fetchedHabits));
       onRefresh?.();
@@ -93,7 +95,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     } finally {
       setIsLoading(false);
     }
-  }, [calculateStats, isSignedIn, onRefresh]);
+  }, [calculateStats, isSignedIn, userId, onRefresh]);
 
   // Initial load when auth is ready
   useEffect(() => {
@@ -105,23 +107,23 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (isLoaded && isSignedIn) {
+      if (isLoaded && isSignedIn && userId) {
         loadHabits();
       }
-    }, [loadHabits, isLoaded, isSignedIn])
+    }, [loadHabits, isLoaded, isSignedIn, userId])
   );
 
   // Auto-refresh every 30 seconds when screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (!isLoaded || !isSignedIn) return;
+      if (!isLoaded || !isSignedIn || !userId) return;
 
       const interval = setInterval(() => {
         loadHabits();
       }, 30000); // 30 seconds
 
       return () => clearInterval(interval);
-    }, [loadHabits, isLoaded, isSignedIn])
+    }, [loadHabits, isLoaded, isSignedIn, userId])
   );
 
   const getMotivationalMessage = () => {
