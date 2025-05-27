@@ -181,7 +181,7 @@ export default function LandingPage() {
               {
                 name: "Emily Davis",
                 role: "Fitness Coach",
-                content: "I recommend Growmoji to all my clients. It's simple, effective, and helps build lasting behavioral changes with fun emojis.",
+                content: "I recommend Growmoji to all my clients. It&apos;s simple, effective, and helps build lasting behavioral changes with fun emojis.",
                 rating: 5
               }
             ].map((testimonial, index) => (

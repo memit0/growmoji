@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 type ConnectionTestResult = {
   success: boolean;
-  data?: any; 
+  data?: unknown; 
   error?: string;
   details?: string;
 };
