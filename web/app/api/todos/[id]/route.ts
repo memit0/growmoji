@@ -2,10 +2,15 @@ import { todosService } from '@/lib/services/todos';
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -14,7 +19,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const todo = await todosService.updateTodo(params.id, body);
+    const todo = await todosService.updateTodo(id, body);
     return NextResponse.json(todo);
   } catch (error) {
     console.error('Error updating todo:', error);
@@ -24,8 +29,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -33,7 +39,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await todosService.deleteTodo(params.id);
+    await todosService.deleteTodo(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting todo:', error);
