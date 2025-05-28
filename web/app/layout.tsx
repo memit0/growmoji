@@ -16,7 +16,10 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://growmoji.app",
   },
-  twitter: {
+  icons: {
+    icon: "/favicon.jpg",
+  },
+  twitter:   {
     card: "summary_large_image",
     title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
