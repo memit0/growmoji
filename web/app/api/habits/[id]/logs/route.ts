@@ -2,12 +2,15 @@ import { habitsService } from '@/lib/services/habits';
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
 export async function POST(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
-  const { params } = context;
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -26,10 +29,9 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
-  const { params } = context;
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -47,10 +49,9 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
-  const { params } = context;
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
