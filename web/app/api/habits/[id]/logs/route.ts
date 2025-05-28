@@ -2,9 +2,15 @@ import { habitsService } from '@/lib/services/habits';
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
 export async function POST(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
   const { params } = context;
   try {
@@ -25,7 +31,7 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
   const { params } = context;
   try {
@@ -45,7 +51,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  context: any
+  context: RouteContext
 ) {
   const { params } = context;
   try {
