@@ -2,17 +2,11 @@ import { habitsService } from '@/lib/services/habits';
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
 export async function POST(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
-  const { params } = context;
+  const { id } = params;
   try {
     const { userId } = await auth();
     
@@ -21,7 +15,7 @@ export async function POST(
     }
 
     const { log_date } = await request.json();
-    const log = await habitsService.logHabitCompletion(params.id, log_date);
+    const log = await habitsService.logHabitCompletion(id, log_date);
     return NextResponse.json(log);
   } catch (error) {
     console.error('Error logging habit completion:', error);
@@ -31,9 +25,9 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
-  const { params } = context;
+  const { id } = params;
   try {
     const { userId } = await auth();
     
@@ -41,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const logs = await habitsService.getHabitLogs(params.id);
+    const logs = await habitsService.getHabitLogs(id);
     return NextResponse.json(logs);
   } catch (error) {
     console.error('Error fetching habit logs:', error);
@@ -51,9 +45,9 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  context: RouteContext
+  { params }: { params: { id: string } }
 ) {
-  const { params } = context;
+  const { id } = params;
   try {
     const { userId } = await auth();
     
@@ -68,7 +62,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'log_date is required' }, { status: 400 });
     }
 
-    await habitsService.deleteHabitLog(params.id, logDate);
+    await habitsService.deleteHabitLog(id, logDate);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting habit log:', error);
