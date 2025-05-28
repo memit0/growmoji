@@ -1,7 +1,12 @@
+import { ConsoleWarningFilter } from '@/components/ConsoleWarningFilter';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+
+// Import environment validation (auto-runs in production)
+import '@/lib/env-validation';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -32,10 +37,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      afterSignOutUrl="/"
+      signInUrl="/auth/sign-in"
+      signUpUrl="/auth/sign-up"
+      appearance={{
+        variables: {
+          colorPrimary: "#0f172a",
+        },
+      }}
+      // Enhanced error handling for browser extensions
+      telemetry={false}
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    >
       <html lang="en">
         <body className={inter.className}>
-          {children}
+          <ConsoleWarningFilter />
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </body>
       </html>
     </ClerkProvider>

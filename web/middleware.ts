@@ -13,6 +13,12 @@ export default clerkMiddleware(async (auth, req) => {
   if (isProtectedRoute(req)) {
     await auth.protect();
   }
+}, {
+  // Add authorizedParties for enhanced security in production
+  // This prevents subdomain cookie leaking attacks
+  authorizedParties: process.env.NODE_ENV === 'production' 
+    ? [process.env.NEXT_PUBLIC_APP_URL || 'https://growmoji.app']
+    : undefined,
 });
 
 export const config = {
