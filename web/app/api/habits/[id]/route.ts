@@ -2,10 +2,15 @@ import { habitsService } from '@/lib/services/habits';
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -14,7 +19,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const habit = await habitsService.updateHabit(params.id, body);
+    const habit = await habitsService.updateHabit(id, body);
     return NextResponse.json(habit);
   } catch (error) {
     console.error('Error updating habit:', error);
@@ -24,8 +29,9 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteContext
 ) {
+  const { id } = await context.params;
   try {
     const { userId } = await auth();
     
@@ -33,7 +39,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await habitsService.deleteHabit(params.id);
+    await habitsService.deleteHabit(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting habit:', error);
