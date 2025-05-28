@@ -12,7 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Validate URL format
 try {
   new URL(supabaseUrl);
-} catch (_error) {
+} catch {
   throw new Error('Invalid Supabase URL format');
 }
 
