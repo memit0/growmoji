@@ -9,14 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  useColorScheme
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useColorScheme
 } from 'react-native';
 
 type AppearanceMode = 'system' | 'light' | 'dark';
@@ -50,10 +50,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
   // Update widget data when theme changes
   useEffect(() => {
     const updateWidgetWithCurrentData = async () => {
+      // Check if user is available and has an ID
+      if (!user?.id) {
+        console.log('ProfileModal useEffect: User not available, skipping widget update');
+        return;
+      }
+
       try {
+        console.log('ProfileModal useEffect: Fetching data for user:', user.id);
         const [todos, habits] = await Promise.all([
-          todosService.getTodos(),
-          habitsService.getHabits()
+          todosService.getTodos(user.id),
+          habitsService.getHabits(user.id)
         ]);
         console.log(
           'ProfileModal useEffect: Updating widget with isPremium:', 
@@ -67,10 +74,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       }
     };
 
-    if (theme) {
+    if (theme && user?.id) {
       updateWidgetWithCurrentData();
     }
-  }, [theme, isPremium]);
+  }, [theme, isPremium, user?.id]);
 
   const handleAppearanceChange = async (mode: AppearanceMode) => {
     await setContextAppearanceMode(mode);

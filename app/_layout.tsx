@@ -89,7 +89,6 @@ function RootNavigation() {
       ) : (
         <Stack.Screen name="(auth)" />
       )}
-      <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

@@ -1,4 +1,3 @@
-import { Clerk } from '@clerk/clerk-expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
@@ -20,7 +19,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Corrected Supabase client initialization
+// Create Supabase client without Clerk integration for now
+// This prevents the session access error during initialization
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
@@ -28,43 +28,50 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
   },
-
-  async accessToken() { // Placed at the root of the options object
-    try {
-      const session = Clerk.session;
-      console.log('[SupabaseClient] Clerk.session:', session?.id);
-      if (!session) {
-        console.error('[SupabaseClient] No active Clerk session found when trying to get token.');
-        return null;
-      }
-      const token = await session.getToken();
-      console.log('[SupabaseClient] Token from Clerk:', token ? token.substring(0, 20) + '...' : 'No token retrieved');
-      
-      if (!token) {
-        console.error('[SupabaseClient] Clerk session.getToken() returned null or undefined.');
-        return null;
-      }
-      return token;
-    } catch (error) {
-      console.error("[SupabaseClient] Error getting Clerk token for Supabase:", error);
-      return null;
-    }
-  },
 });
 
-// Test connection - REMOVING THIS BLOCK as supabase.auth.getSession() is not available when accessToken is configured
-/*
-supabase.auth.getSession().then(({ data, error }) => {
-  if (error) {
-    debugLog('Supabase', 'Connection Test Error', error);
-  } else {
-    debugLog('Supabase', 'Connection Test Success', {
-      hasSession: !!data.session,
-      user: data.session?.user?.email
+// Helper function to create authenticated Supabase client with Clerk token
+export const createAuthenticatedSupabaseClient = async (clerkToken: string) => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${clerkToken}`,
+      },
+    },
+  });
+};
+
+// Function to sync Clerk authentication with Supabase
+export const syncClerkWithSupabase = async (clerkToken: string, clerkUser: any) => {
+  try {
+    // Create a custom session for Supabase using Clerk token
+    const { data, error } = await supabase.auth.setSession({
+      access_token: clerkToken,
+      refresh_token: clerkToken, // In this case, we'll use the same token
     });
+
+    if (error) {
+      console.error('Error syncing Clerk with Supabase:', error);
+      return { success: false, error };
+    }
+
+    debugLog('Supabase Sync', 'Clerk session synced', {
+      hasSession: !!data.session,
+      userId: data.session?.user?.id
+    });
+
+    return { success: true, session: data.session };
+  } catch (error) {
+    console.error('Error in syncClerkWithSupabase:', error);
+    return { success: false, error };
   }
-});
-*/
+};
 
 // Add query debug listener
 supabase.channel('custom-all-channel')
