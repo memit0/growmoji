@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface OAuthRedirectHandlerProps {
@@ -10,7 +9,6 @@ interface OAuthRedirectHandlerProps {
 
 export function OAuthRedirectHandler({ children }: OAuthRedirectHandlerProps) {
   const { isLoaded, userId } = useAuth();
-  const router = useRouter();
   const [isHandlingRedirect, setIsHandlingRedirect] = useState(false);
 
   useEffect(() => {
