@@ -36,15 +36,8 @@ export function useSubscription(): UseSubscriptionReturn {
   // Initialize RevenueCat when user is available
   useEffect(() => {
     const initialize = async () => {
-      if (!isLoaded) {
-        // Still loading Clerk auth
-        return;
-      }
-      
-      if (!userId) {
-        // User not authenticated
+      if (!isLoaded || !userId) {
         setIsLoading(false);
-        setIsInitialized(false);
         return;
       }
 
@@ -52,37 +45,25 @@ export function useSubscription(): UseSubscriptionReturn {
         setIsLoading(true);
         setError(null);
         
-        console.log('[useSubscription] Initializing RevenueCat for user:', userId);
-        
         await initializeRevenueCat(userId);
         setIsInitialized(true);
         
-        // Fetch initial data with proper error handling
-        const [customerInfoResult, offeringsResult] = await Promise.allSettled([
+        // Fetch initial data
+        const [customerInfoResult, offeringsResult] = await Promise.all([
           getCustomerInfo(),
           getOfferings()
         ]);
         
-        if (customerInfoResult.status === 'fulfilled') {
-          setCustomerInfo(customerInfoResult.value);
-        } else {
-          console.warn('[useSubscription] Failed to get customer info:', customerInfoResult.reason);
-        }
-        
-        if (offeringsResult.status === 'fulfilled') {
-          setOfferings(offeringsResult.value);
-        } else {
-          console.warn('[useSubscription] Failed to get offerings:', offeringsResult.reason);
-        }
+        setCustomerInfo(customerInfoResult);
+        setOfferings(offeringsResult);
         
         console.log('[useSubscription] Initialization complete', {
-          customerInfo: customerInfoResult.status === 'fulfilled' ? customerInfoResult.value : null,
-          offerings: offeringsResult.status === 'fulfilled' ? offeringsResult.value?.length || 0 : 0
+          customerInfo: customerInfoResult,
+          offerings: offeringsResult?.length || 0
         });
       } catch (err) {
         console.error('[useSubscription] Initialization failed:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize subscription');
-        setIsInitialized(false);
       } finally {
         setIsLoading(false);
       }
@@ -119,18 +100,14 @@ export function useSubscription(): UseSubscriptionReturn {
 
   const purchase = useCallback(async (packageToPurchase: any): Promise<boolean> => {
     if (!isInitialized) {
-      console.warn('[useSubscription] Purchase attempted before initialization');
       throw new Error('Subscription not initialized');
     }
     
     try {
       setError(null);
-      console.log('[useSubscription] Starting purchase process:', packageToPurchase?.identifier);
-      
       const success = await purchasePackage(packageToPurchase);
       
       if (success) {
-        console.log('[useSubscription] Purchase successful, refreshing customer info');
         // Refresh customer info after successful purchase
         await refreshCustomerInfo();
       }
@@ -138,8 +115,7 @@ export function useSubscription(): UseSubscriptionReturn {
       return success;
     } catch (err) {
       console.error('[useSubscription] Purchase failed:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Purchase failed';
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Purchase failed');
       throw err;
     }
   }, [isInitialized, refreshCustomerInfo]);

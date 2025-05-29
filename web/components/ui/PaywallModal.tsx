@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { PurchaseSuccessOverlay } from '@/components/ui/PurchaseSuccessOverlay';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Offering } from '@revenuecat/purchases-js';
 import { Crown, Loader2, Sparkles, Star, X, Zap } from 'lucide-react';
@@ -51,7 +50,6 @@ export function PaywallModal({
   const { offerings, purchase, isLoading, error } = useSubscription();
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Offering['availablePackages'][number] | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // Auto-select the first package when offerings are loaded
   useEffect(() => {
@@ -68,8 +66,8 @@ export function PaywallModal({
       const success = await purchase(selectedPackage);
       
       if (success) {
-        console.log('Purchase successful! Showing success overlay...');
-        setShowSuccess(true);
+        // Close modal on successful purchase
+        onClose();
       }
     } catch (error) {
       console.error('Purchase failed:', error);
@@ -79,11 +77,6 @@ export function PaywallModal({
     }
   };
 
-  const handleSuccessComplete = () => {
-    setShowSuccess(false);
-    onClose();
-  };
-
   const handleClose = () => {
     if (showCloseButton && !purchasing) {
       onClose();
@@ -91,11 +84,10 @@ export function PaywallModal({
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={showCloseButton ? handleClose : undefined}>
-        <DialogContent 
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
-        >
+    <Dialog open={isOpen} onOpenChange={showCloseButton ? handleClose : undefined}>
+      <DialogContent 
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         <DialogHeader className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-2">
@@ -232,11 +224,5 @@ export function PaywallModal({
         </div>
       </DialogContent>
     </Dialog>
-    
-    <PurchaseSuccessOverlay 
-      show={showSuccess}
-      onComplete={handleSuccessComplete}
-    />
-  </>
   );
 } 

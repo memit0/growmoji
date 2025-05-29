@@ -1,5 +1,3 @@
-import { AuthFlowBoundary } from '@/components/app/AuthFlowBoundary';
-import { OAuthRedirectHandler } from '@/components/app/OAuthRedirectHandler';
 import { PremiumGuard } from '@/components/app/PremiumGuard';
 import { UserSubscriptionStatus } from '@/components/app/UserSubscriptionStatus';
 import { SignOutButton } from '@/components/shared/sign-out-button';
@@ -39,12 +37,10 @@ export default async function AppLayout({
   ];
 
   return (
-    <OAuthRedirectHandler>
-      <AuthFlowBoundary>
-        <PremiumGuard>
-          <div className="min-h-screen bg-slate-50">
-            {/* Sidebar */}
-            <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200">
+    <PremiumGuard>
+      <div className="min-h-screen bg-slate-50">
+        {/* Sidebar */}
+        <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200">
           <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="flex items-center gap-2 p-6 border-b">
@@ -115,7 +111,5 @@ export default async function AppLayout({
         </div>
       </div>
     </PremiumGuard>
-    </AuthFlowBoundary>
-    </OAuthRedirectHandler>
   );
 } 
