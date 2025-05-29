@@ -17,7 +17,7 @@ export default function SignUpPage() {
               card: "shadow-lg border-0",
             }
           }}
-          fallbackRedirectUrl="/test-redirect"
+          fallbackRedirectUrl="/dashboard"
         />
       </div>
     </div>

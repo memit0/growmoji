@@ -60,7 +60,8 @@ export function PremiumGuard({ children }: PremiumGuardProps) {
     return <>{children}</>;
   }
 
-  // Show hard paywall for non-premium users
+  // If not loading, not premium, and no error, then prepare to show paywall content.
+  // The PaywallModal will be conditionally rendered based on showPaywall state.
   return (
     <>
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -76,13 +77,16 @@ export function PremiumGuard({ children }: PremiumGuardProps) {
         </div>
       </div>
 
-      <PaywallModal
-        isOpen={showPaywall}
-        onClose={() => {}} // No close action - hard paywall
-        showCloseButton={false} // Unskippable
-        title="Upgrade to Premium"
-        subtitle="Access the web version and unlock unlimited features"
-      />
+      {/* Conditionally render PaywallModal only when showPaywall is true */}
+      {showPaywall && (
+        <PaywallModal
+          isOpen={true} // isOpen is now controlled by the existence of the modal itself
+          onClose={() => {}} // No close action - hard paywall
+          showCloseButton={false} // Unskippable
+          title="Upgrade to Premium"
+          subtitle="Access the web version and unlock unlimited features"
+        />
+      )}
     </>
   );
 } 
