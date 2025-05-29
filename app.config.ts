@@ -2,17 +2,12 @@ import { ConfigContext, ExpoConfig } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Habit Tracker',
-  slug: 'habittracker',
+  name: 'Growmoji',
+  slug: 'growmoji',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  userInterfaceStyle: 'light',
-  splash: {
-    image: './assets/images/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#ffffff'
-  },
+  userInterfaceStyle: 'automatic',
   assetBundlePatterns: [
     '**/*'
   ],
@@ -26,17 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     infoPlist: {
       NSUserTrackingUsageDescription: 'This app uses tracking to provide personalized habit tracking experience.',
-      NSCameraUsageDescription: 'This app uses camera to capture progress photos for habits.',
-      NSPhotoLibraryUsageDescription: 'This app accesses photo library to save and view habit progress photos.'
     }
-  },
-  android: {
-    adaptiveIcon: {
-      foregroundImage: './assets/images/adaptive-icon.png',
-      backgroundColor: '#ffffff'
-    },
-    package: 'com.mebattll.habittracker',
-    versionCode: 1
   },
   web: {
     favicon: './assets/images/favicon.png'

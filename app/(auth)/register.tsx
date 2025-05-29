@@ -1,6 +1,6 @@
 import { useOAuth, useSignUp } from '@clerk/clerk-expo';
-import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -23,18 +23,45 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
+  const handleNavigateToLogin = () => {
+    if (isNavigating || isLoading) return;
+    setIsNavigating(true);
+    router.push('/(auth)/login');
+    // Reset after a short delay to prevent rapid navigation
+    setTimeout(() => setIsNavigating(false), 500);
+  };
+
+  // Cleanup navigation state on unmount
+  useEffect(() => {
+    return () => {
+      setIsNavigating(false);
+      setIsLoading(false);
+    };
+  }, []);
+
+  // Reset navigation state when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setIsNavigating(false);
+    }, [])
+  );
+
   const onSignUpPress = async () => {
-    if (!isLoaded) {
+    if (!isLoaded || isLoading) {
       return;
     }
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return;
     }
+
+    setIsLoading(true);
 
     try {
       await signUp.create({
@@ -47,18 +74,21 @@ export default function RegisterScreen() {
       setPendingVerification(true);
     } catch (err: any) {
       console.error("Clerk SignUp Error:", JSON.stringify(err, null, 2));
-      const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage 
-                         ? err.errors[0].longMessage 
-                         : "An unexpected error occurred during sign up. Please try again.";
+      const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage
+        ? err.errors[0].longMessage
+        : "An unexpected error occurred during sign up. Please try again.";
       Alert.alert("Registration Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSocialSignUp = React.useCallback(async (strategy: 'oauth_google' | 'oauth_apple') => {
-    if (!isLoaded) {
+    if (!isLoaded || isLoading) {
       return;
     }
 
+    setIsLoading(true);
     const oauthFlowFunction = strategy === 'oauth_google' ? startGoogleOAuthFlow : startAppleOAuthFlow;
 
     try {
@@ -78,13 +108,17 @@ export default function RegisterScreen() {
       console.error(`OAuth error (${strategy}):`, JSON.stringify(err, null, 2));
       const errorMessage = err.errors?.[0]?.longMessage || err.message || "An unexpected error occurred during social sign-up.";
       Alert.alert("Registration Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isLoaded, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
+  }, [isLoaded, isLoading, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
 
   const onVerifyPress = async () => {
-    if (!isLoaded) {
+    if (!isLoaded || isLoading) {
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({
@@ -99,10 +133,12 @@ export default function RegisterScreen() {
       }
     } catch (err: any) {
       console.error("Clerk Verification Error:", JSON.stringify(err, null, 2));
-       const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage 
-                         ? err.errors[0].longMessage 
-                         : "An unexpected error occurred during verification. Please try again.";
+      const errorMessage = err.errors && err.errors[0] && err.errors[0].longMessage
+        ? err.errors[0].longMessage
+        : "An unexpected error occurred during verification. Please try again.";
       Alert.alert("Verification Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -137,7 +173,7 @@ export default function RegisterScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
-      opacity: !isLoaded ? 0.7 : 1,
+      opacity: !isLoaded || isLoading ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -159,13 +195,13 @@ export default function RegisterScreen() {
       fontSize: typography.fontSize.sm,
     },
     socialLoginContainer: {
-      marginTop: spacing.lg, 
+      marginTop: spacing.lg,
       marginBottom: spacing.md,
     },
     socialLoginSeparator: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginVertical: spacing.lg, 
+      marginVertical: spacing.lg,
     },
     separatorLine: {
       flex: 1,
@@ -173,7 +209,7 @@ export default function RegisterScreen() {
       backgroundColor: colors.border,
     },
     separatorText: {
-      color: colors.border, 
+      color: colors.border,
       marginHorizontal: spacing.sm,
       fontSize: typography.fontSize.sm,
     },
@@ -230,8 +266,8 @@ export default function RegisterScreen() {
               secureTextEntry
               editable={isLoaded}
             />
-            <TouchableOpacity style={styles.button} onPress={onSignUpPress} disabled={!isLoaded}>
-              <Text style={styles.buttonText}>{!isLoaded ? 'Loading...' : 'Create Account'}</Text>
+            <TouchableOpacity style={styles.button} onPress={onSignUpPress} disabled={!isLoaded || isLoading}>
+              <Text style={styles.buttonText}>{!isLoaded || isLoading ? 'Loading...' : 'Create Account'}</Text>
             </TouchableOpacity>
 
             <View style={styles.socialLoginContainer}>
@@ -241,18 +277,18 @@ export default function RegisterScreen() {
                 <View style={styles.separatorLine} />
               </View>
 
-              <TouchableOpacity 
-                onPress={() => handleSocialSignUp('oauth_google')} 
-                style={styles.socialButton} 
-                disabled={!isLoaded}
+              <TouchableOpacity
+                onPress={() => handleSocialSignUp('oauth_google')}
+                style={styles.socialButton}
+                disabled={!isLoaded || isLoading}
               >
                 <Text style={styles.socialButtonText}>Sign Up with Google</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                onPress={() => handleSocialSignUp('oauth_apple')} 
-                style={styles.socialButton} 
-                disabled={!isLoaded}
+              <TouchableOpacity
+                onPress={() => handleSocialSignUp('oauth_apple')}
+                style={styles.socialButton}
+                disabled={!isLoaded || isLoading}
               >
                 <Text style={styles.socialButtonText}>Sign Up with Apple</Text>
               </TouchableOpacity>
@@ -260,11 +296,9 @@ export default function RegisterScreen() {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
-              <Link href="/login" asChild>
-                <TouchableOpacity>
-                  <Text style={styles.footerLink}>Login</Text>
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity onPress={handleNavigateToLogin} disabled={isNavigating || isLoading}>
+                <Text style={[styles.footerLink, (isNavigating || isLoading) && { opacity: 0.5 }]}>Login</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -281,12 +315,12 @@ export default function RegisterScreen() {
               keyboardType="number-pad"
               editable={isLoaded}
             />
-            <TouchableOpacity style={styles.button} onPress={onVerifyPress} disabled={!isLoaded}>
-              <Text style={styles.buttonText}>{!isLoaded ? 'Loading...' : 'Verify Email'}</Text>
+            <TouchableOpacity style={styles.button} onPress={onVerifyPress} disabled={!isLoaded || isLoading}>
+              <Text style={styles.buttonText}>{!isLoaded || isLoading ? 'Loading...' : 'Verify Email'}</Text>
             </TouchableOpacity>
           </>
         )}
       </View>
     </KeyboardAvoidingView>
   );
-} 
+}

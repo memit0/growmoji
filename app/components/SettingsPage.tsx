@@ -4,12 +4,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SettingsPageProps {
@@ -153,4 +153,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ isVisible, onClose }
       </View>
     </Modal>
   );
-}; 
+};
+
+export default SettingsPage; 

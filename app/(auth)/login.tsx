@@ -1,15 +1,15 @@
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
-import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -20,14 +20,41 @@ export default function LoginScreen() {
 
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
+  const handleNavigateToRegister = () => {
+    if (isNavigating || isLoading) return;
+    setIsNavigating(true);
+    router.push('/(auth)/register');
+    // Reset after a short delay to prevent rapid navigation
+    setTimeout(() => setIsNavigating(false), 500);
+  };
+
+  // Cleanup navigation state on unmount
+  useEffect(() => {
+    return () => {
+      setIsNavigating(false);
+      setIsLoading(false);
+    };
+  }, []);
+
+  // Reset navigation state when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      setIsNavigating(false);
+    }, [])
+  );
+
   const onSignInPress = async () => {
-    if (!isLoaded) {
+    if (!isLoaded || isLoading) {
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const signInAttempt = await signIn.create({
@@ -44,18 +71,21 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       console.error("Clerk SignIn Error:", JSON.stringify(err, null, 2));
-      const errorMessage = err.errors && err.errors[0] && err.errors[0].message 
-                         ? err.errors[0].message 
-                         : "An unexpected error occurred. Please try again.";
+      const errorMessage = err.errors && err.errors[0] && err.errors[0].message
+        ? err.errors[0].message
+        : "An unexpected error occurred. Please try again.";
       Alert.alert("Login Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSocialSignIn = React.useCallback(async (strategy: 'oauth_google' | 'oauth_apple') => {
-    if (!isLoaded) {
+    if (!isLoaded || isLoading) {
       return;
     }
 
+    setIsLoading(true);
     const oauthFlowFunction = strategy === 'oauth_google' ? startGoogleOAuthFlow : startAppleOAuthFlow;
 
     try {
@@ -67,7 +97,7 @@ export default function LoginScreen() {
       } else {
         console.warn("OAuth flow did not complete fully or did not create a session directly.", { oauthSignIn, oauthSignUp });
         Alert.alert(
-          "OAuth Action Needed", 
+          "OAuth Action Needed",
           "The sign-in process may require additional steps. Please try email/password or check your details."
         );
       }
@@ -75,8 +105,10 @@ export default function LoginScreen() {
       console.error(`OAuth error (${strategy}):`, JSON.stringify(err, null, 2));
       const errorMessage = err.errors?.[0]?.longMessage || err.message || "An unexpected error occurred during social sign-in.";
       Alert.alert("Login Error", errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [isLoaded, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
+  }, [isLoaded, isLoading, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
 
   const styles = StyleSheet.create({
     container: {
@@ -109,7 +141,7 @@ export default function LoginScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
-      opacity: !isLoaded ? 0.7 : 1,
+      opacity: !isLoaded || isLoading ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -170,9 +202,9 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}> 
+      <View style={styles.content}>
         <Text style={styles.title}>Welcome Back</Text>
-        
+
         <TextInput
           autoCapitalize="none"
           value={emailAddress}
@@ -191,8 +223,8 @@ export default function LoginScreen() {
           onChangeText={(password) => setPassword(password)}
           editable={isLoaded}
         />
-        <TouchableOpacity onPress={onSignInPress} style={styles.button} disabled={!isLoaded}>
-          <Text style={styles.buttonText}>{!isLoaded ? 'Loading...' : 'Login'}</Text>
+        <TouchableOpacity onPress={onSignInPress} style={styles.button} disabled={!isLoaded || isLoading}>
+          <Text style={styles.buttonText}>{!isLoaded || isLoading ? 'Loading...' : 'Login'}</Text>
         </TouchableOpacity>
 
         <View style={styles.socialLoginContainer}>
@@ -202,18 +234,18 @@ export default function LoginScreen() {
             <View style={styles.separatorLine} />
           </View>
 
-          <TouchableOpacity 
-            onPress={() => handleSocialSignIn('oauth_google')} 
-            style={styles.socialButton} 
-            disabled={!isLoaded}
+          <TouchableOpacity
+            onPress={() => handleSocialSignIn('oauth_google')}
+            style={styles.socialButton}
+            disabled={!isLoaded || isLoading}
           >
             <Text style={styles.socialButtonText}>Sign In with Google</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            onPress={() => handleSocialSignIn('oauth_apple')} 
-            style={styles.socialButton} 
-            disabled={!isLoaded}
+          <TouchableOpacity
+            onPress={() => handleSocialSignIn('oauth_apple')}
+            style={styles.socialButton}
+            disabled={!isLoaded || isLoading}
           >
             <Text style={styles.socialButtonText}>Sign In with Apple</Text>
           </TouchableOpacity>
@@ -221,13 +253,11 @@ export default function LoginScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account?</Text>
-          <Link href="/register" asChild>
-            <TouchableOpacity>
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </Link>
+          <TouchableOpacity onPress={handleNavigateToRegister} disabled={isNavigating || isLoading}>
+            <Text style={[styles.footerLink, (isNavigating || isLoading) && { opacity: 0.5 }]}>Sign Up</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
-} 
+}

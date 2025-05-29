@@ -60,23 +60,22 @@ function RootNavigation() {
     if (!isLoaded) {
       return;
     }
-    const inAuthGroup = segments[0] === '(auth)';
-    const inAppGroup = segments[0] === '(tabs)';
 
-    if (isSignedIn) {
-      if (!inAppGroup) {
+    const inAuthGroup = segments[0] === '(auth)';
+
+    // Add a small delay to prevent rapid navigation conflicts
+    const timeoutId = setTimeout(() => {
+      if (isSignedIn && !inAuthGroup) {
+        // User is signed in but not in the app - redirect to main app
         router.replace('/(tabs)');
-      } else if (inAuthGroup) {
-        router.replace('/(tabs)');
-      }
-    } else {
-      if (!inAuthGroup) {
-        router.replace('/(auth)/login');
-      } else if (inAppGroup) {
+      } else if (!isSignedIn && inAuthGroup === false) {
+        // User is not signed in and not in auth group - redirect to login
         router.replace('/(auth)/login');
       }
-    }
-  }, [isLoaded, isSignedIn, segments, router]);
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoaded, isSignedIn, segments]);
 
   if (!isLoaded) {
     return null;

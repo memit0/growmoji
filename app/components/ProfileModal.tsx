@@ -9,14 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    useColorScheme
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme
 } from 'react-native';
 
 type AppearanceMode = 'system' | 'light' | 'dark';
@@ -30,11 +30,11 @@ const APP_GROUP_ID = "group.com.mebattll.habittracker.widget";
 const WIDGET_DATA_KEY = "widgetData";
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }) => {
-  const { 
-    colors, 
-    spacing, 
-    typography, 
-    borderRadius, 
+  const {
+    colors,
+    spacing,
+    typography,
+    borderRadius,
     theme, // This is the actual applied theme ('light' or 'dark')
     appearanceMode: contextAppearanceMode, // User's preference ('system', 'light', 'dark')
     setAppearanceMode: setContextAppearanceMode // Function to update preference
@@ -63,9 +63,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           habitsService.getHabits(user.id)
         ]);
         console.log(
-          'ProfileModal useEffect: Updating widget with isPremium:', 
-          isPremium, 
-          'and theme:', 
+          'ProfileModal useEffect: Updating widget with isPremium:',
+          isPremium,
+          'and theme:',
           theme
         );
         updateWidgetData(todos || [], habits || [], theme, isPremium);
@@ -355,15 +355,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           </View>
         )}
 
-        <TouchableOpacity 
-          style={styles.menuItem} 
+        <TouchableOpacity
+          style={styles.menuItem}
           onPress={() => setShowSettings(true)}
         >
           <Ionicons name="settings-outline" size={24} color={colors.text} />
           <Text style={styles.menuItemText}>Settings</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton, { opacity: isSigningOut ? 0.7 : 1 }]}
           onPress={handleSignOut}
           disabled={isSigningOut || !isLoaded}
@@ -417,21 +417,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Legal</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://example.com/website')}
           >
             <Ionicons name="globe-outline" size={24} color={colors.primary} />
             <Text style={styles.linkText}>Visit Website</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://example.com/terms')}
           >
             <Ionicons name="document-text-outline" size={24} color={colors.primary} />
             <Text style={styles.linkText}>Terms and Conditions</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkButton}
             onPress={() => Linking.openURL('https://example.com/privacy')}
           >
@@ -442,7 +442,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Contact & Feedback</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.linkButton}
             onPress={handleContactPress}
           >
@@ -458,7 +458,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerTitle}>Danger Zone</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.dangerButton}
             onPress={handleDeleteAccount}
             disabled={isDeletingAccount || !isLoaded}
@@ -482,4 +482,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       {showSettings ? renderSettingsContent() : renderProfileContent()}
     </Modal>
   );
-}; 
+};
+
+export default ProfileModal; 

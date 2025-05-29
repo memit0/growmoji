@@ -1,17 +1,12 @@
 {
   "expo": {
-    "name": "Habit Tracker",
-    "slug": "habittracker",
-    "scheme": "habittracker",
+    "name": "Growmoji",
+    "slug": "growmoji",
+    "scheme": "growmoji",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -20,7 +15,9 @@
       "appleTeamId": "RQPPB76S95",
       "bundleIdentifier": "com.mebattll.habittracker",
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"],
+        "com.apple.developer.applesignin": [
+          "Default"
+        ],
         "com.apple.security.application-groups": [
           "group.com.mebattll.habittracker.widget"
         ]
