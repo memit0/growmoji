@@ -41,6 +41,8 @@ export default function RootLayout({
       afterSignOutUrl="/"
       signInUrl="/auth/sign-in"
       signUpUrl="/auth/sign-up"
+      afterSignInUrl="/dashboard"
+      afterSignUpUrl="/dashboard"
       appearance={{
         variables: {
           colorPrimary: "#0f172a",

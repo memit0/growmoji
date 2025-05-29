@@ -15,7 +15,7 @@ type ConnectionTestResult = {
 };
 
 export default function DebugPage() {
-  const { isSignedIn, userId } = useAuth();
+  const { isSignedIn, userId, sessionId, orgId } = useAuth();
   const { 
     isPremium, 
     isLoading: subscriptionLoading, 
@@ -29,13 +29,43 @@ export default function DebugPage() {
   
   const [connectionTest, setConnectionTest] = useState<ConnectionTestResult | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
+  const [authFlowInfo, setAuthFlowInfo] = useState<string>('');
+
+  // Check for OAuth callback parameters and store auth flow information
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash;
+      const authInfo = {
+        searchParams: Object.fromEntries(urlParams.entries()),
+        hash: hash,
+        referrer: document.referrer,
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        clerkSessionId: sessionId,
+        clerkOrgId: orgId
+      };
+      setAuthFlowInfo(JSON.stringify(authInfo, null, 2));
+    }
+  });
 
   const testConnection = async () => {
     setTestingConnection(true);
     try {
-      const response = await fetch('/api/test-connection');
-      const data = await response.json();
-      setConnectionTest(data);
+      const [apiResponse, authResponse] = await Promise.all([
+        fetch('/api/test-connection'),
+        fetch('/api/auth-debug')
+      ]);
+      
+      const [apiData, authData] = await Promise.all([
+        apiResponse.json(),
+        authResponse.json()
+      ]);
+      
+      setConnectionTest({ 
+        success: apiData.success && authData.success, 
+        data: { apiTest: apiData, authTest: authData }
+      });
     } catch (error) {
       setConnectionTest({ 
         success: false, 
@@ -168,6 +198,49 @@ export default function DebugPage() {
               </pre>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* OAuth Flow Debug */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            OAuth Flow Debug
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Current Session Info:</h4>
+              <div className="space-y-1 text-sm">
+                <p>User ID: {userId || 'None'}</p>
+                <p>Session ID: {sessionId || 'None'}</p>
+                <p>Org ID: {orgId || 'None'}</p>
+                <p>Is Signed In: {isSignedIn ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+            
+            {authFlowInfo && (
+              <div>
+                <h4 className="font-medium mb-2">Auth Flow Information:</h4>
+                <div className="p-4 bg-muted rounded-lg">
+                  <pre className="text-xs overflow-auto max-h-64">
+                    {authFlowInfo}
+                  </pre>
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <h4 className="font-medium mb-2">Browser Information:</h4>
+              <div className="space-y-1 text-sm">
+                <p>User Agent: {typeof window !== 'undefined' ? navigator.userAgent : 'N/A'}</p>
+                <p>Cookies Enabled: {typeof window !== 'undefined' ? navigator.cookieEnabled ? 'Yes' : 'No' : 'N/A'}</p>
+                <p>Local Storage Available: {typeof window !== 'undefined' && typeof localStorage !== 'undefined' ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
