@@ -10,9 +10,19 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  console.log('Middleware triggered for URL:', req.url);
+  const authState = await auth();
+  console.log('Auth state:', { userId: authState.userId, orgId: authState.orgId, sessionId: authState.sessionId });
+
   if (isProtectedRoute(req)) {
-    await auth.protect();
+    console.log('Protected route, calling auth.protect()');
+    auth.protect();
+    console.log('After auth.protect()');
   }
+
+  // Add a log to see if a redirect is happening and to where
+  // This requires inspecting the response, which clerkMiddleware handles internally.
+  // For now, we'll log before and after protect() and rely on browser dev tools for redirect tracing.
 }, {
   // Add authorizedParties for enhanced security in production
   // This prevents subdomain cookie leaking attacks
