@@ -17,7 +17,7 @@ export default function SignInPage() {
               card: "shadow-lg border-0",
             }
           }}
-          redirectUrl="/dashboard"
+          fallbackRedirectUrl="/dashboard"
         />
       </div>
     </div>
