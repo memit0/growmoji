@@ -22,6 +22,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
+
+  // Check Apple Sign-In availability on component mount
+  useEffect(() => {
+    AuthService.isAppleSignInAvailable().then(setIsAppleSignInAvailable);
+  }, []);
 
   const handleNavigateToRegister = () => {
     if (isNavigating || isLoading) return;
@@ -120,10 +126,14 @@ export default function LoginScreen() {
       console.log(`[LoginScreen] handleSocialSignIn: ${provider} sign-in initiated successfully`);
 
       // OAuth will handle the redirect. If data.url exists, it's the URL to open.
-      if (data?.url) {
+      if (data && 'url' in data && data.url) {
         console.log(`[LoginScreen] handleSocialSignIn: OAuth redirect URL received for ${provider}:`, data.url);
+      } else if (data && 'user' in data && data.user) {
+        console.log(`[LoginScreen] handleSocialSignIn: User signed in directly for ${provider}:`, data.user.id);
+        // For native sign-in, user is already authenticated, navigate to home
+        router.replace('/');
       } else {
-        console.warn(`[LoginScreen] handleSocialSignIn: No redirect URL in response for ${provider}`);
+        console.warn(`[LoginScreen] handleSocialSignIn: No redirect URL or user in response for ${provider}`);
       }
 
     } catch (err: any) {
@@ -275,13 +285,15 @@ export default function LoginScreen() {
             <Text style={styles.socialButtonText}>Sign In with Google</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => handleSocialSignIn('apple')}
-            style={styles.socialButton}
-            disabled={isLoading}
-          >
-            <Text style={styles.socialButtonText}>Sign In with Apple</Text>
-          </TouchableOpacity>
+          {isAppleSignInAvailable && (
+            <TouchableOpacity
+              onPress={() => handleSocialSignIn('apple')}
+              style={styles.socialButton}
+              disabled={isLoading}
+            >
+              <Text style={styles.socialButtonText}>Sign In with Apple</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.footer}>

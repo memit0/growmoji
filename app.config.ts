@@ -42,6 +42,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
-    '@bacons/apple-targets'
+    '@bacons/apple-targets',
+    'expo-apple-authentication'
   ]
 }); 

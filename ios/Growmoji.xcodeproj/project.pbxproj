@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		296750EC189E33DF96916858 /* libPods-Growmoji.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 860B91043FF5D7F1E5D34860 /* libPods-Growmoji.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		776D88DA11D870A458F5479B /* libPods-Growmoji.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 140406D896A37BB22A984776 /* libPods-Growmoji.a */; };
+		9B69CB4BCA4ADF1611A3EFF9 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DDF7CC19670C827A9E39E5A /* ExpoModulesProvider.swift */; };
+		A5078FC8ED2A7760762ECD21 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5E5337550FBC880A2EA8B8EC /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		BF7A3D221F8C794DBE35D23D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B68474B9DA22DF08FB397F /* ExpoModulesProvider.swift */; };
-		E3BAED9B9E66BB94F51BDAA9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BDA3C525C5722632C82FCCE8 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		XX09E725E164C2787243F7XX /* widget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XXD26DB380DB6D7349BA89XX /* widget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XX12B55A1EDABF083C3B51XX /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = XX470101BAEB8E0BBC8B0DXX /* WidgetKit.framework */; };
@@ -46,16 +46,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		05D643050FDFC22AC6336C76 /* Pods-Growmoji.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Growmoji.debug.xcconfig"; path = "Target Support Files/Pods-Growmoji/Pods-Growmoji.debug.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* Growmoji.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; fileEncoding = 4; includeInIndex = 0; path = Growmoji.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Growmoji/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = Info.plist; path = Growmoji/Info.plist; sourceTree = "<group>"; };
-		5811EC698DCFAB860912171C /* Pods-Growmoji.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Growmoji.release.xcconfig"; path = "Target Support Files/Pods-Growmoji/Pods-Growmoji.release.xcconfig"; sourceTree = "<group>"; };
-		860B91043FF5D7F1E5D34860 /* libPods-Growmoji.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Growmoji.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		140406D896A37BB22A984776 /* libPods-Growmoji.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Growmoji.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4EE862CBF9C6ED4258AC2FDE /* Pods-Growmoji.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Growmoji.release.xcconfig"; path = "Target Support Files/Pods-Growmoji/Pods-Growmoji.release.xcconfig"; sourceTree = "<group>"; };
+		5E5337550FBC880A2EA8B8EC /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Growmoji/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		6AA42545CDAA3703C35B03DE /* Pods-Growmoji.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Growmoji.debug.xcconfig"; path = "Target Support Files/Pods-Growmoji/Pods-Growmoji.debug.xcconfig"; sourceTree = "<group>"; };
+		9DDF7CC19670C827A9E39E5A /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Growmoji/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Growmoji/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BDA3C525C5722632C82FCCE8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Growmoji/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		E8B68474B9DA22DF08FB397F /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Growmoji/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 1; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Growmoji/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Growmoji-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "Growmoji-Bridging-Header.h"; path = "Growmoji/Growmoji-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -86,7 +86,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				296750EC189E33DF96916858 /* libPods-Growmoji.a in Frameworks */,
+				776D88DA11D870A458F5479B /* libPods-Growmoji.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -104,12 +104,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0EBFBB4D24A333945D0AF976 /* Growmoji */ = {
+		0A68DA11033F4D880252AF88 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				E8B68474B9DA22DF08FB397F /* ExpoModulesProvider.swift */,
+				433B346F4817F4AF37162398 /* Growmoji */,
 			);
-			name = Growmoji;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		13B07FAE1A68108700A75B9A /* Growmoji */ = {
@@ -121,7 +121,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				BDA3C525C5722632C82FCCE8 /* PrivacyInfo.xcprivacy */,
+				5E5337550FBC880A2EA8B8EC /* PrivacyInfo.xcprivacy */,
 			);
 			name = Growmoji;
 			sourceTree = "<group>";
@@ -134,17 +134,17 @@
 				XX4DFF38D47332D6BF0183XX /* SwiftUI.framework */,
 				XXCAF23C3FC41F82140FA1XX /* ActivityKit.framework */,
 				XXA12889081EB894481655XX /* AppIntents.framework */,
-				860B91043FF5D7F1E5D34860 /* libPods-Growmoji.a */,
+				140406D896A37BB22A984776 /* libPods-Growmoji.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4FEC7009E2A0D2522B43E6CB /* ExpoModulesProviders */ = {
+		433B346F4817F4AF37162398 /* Growmoji */ = {
 			isa = PBXGroup;
 			children = (
-				0EBFBB4D24A333945D0AF976 /* Growmoji */,
+				9DDF7CC19670C827A9E39E5A /* ExpoModulesProvider.swift */,
 			);
-			name = ExpoModulesProviders;
+			name = Growmoji;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -162,8 +162,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				D9017BA4E4797ABE7F79C006 /* Pods */,
-				4FEC7009E2A0D2522B43E6CB /* ExpoModulesProviders */,
+				DAEC12EC0B712775C1D57545 /* Pods */,
+				0A68DA11033F4D880252AF88 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -188,11 +188,11 @@
 			path = Growmoji/Supporting;
 			sourceTree = "<group>";
 		};
-		D9017BA4E4797ABE7F79C006 /* Pods */ = {
+		DAEC12EC0B712775C1D57545 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				05D643050FDFC22AC6336C76 /* Pods-Growmoji.debug.xcconfig */,
-				5811EC698DCFAB860912171C /* Pods-Growmoji.release.xcconfig */,
+				6AA42545CDAA3703C35B03DE /* Pods-Growmoji.debug.xcconfig */,
+				4EE862CBF9C6ED4258AC2FDE /* Pods-Growmoji.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -214,14 +214,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Growmoji" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				BC3F9D97DDA328FAE0338C3B /* [Expo] Configure project */,
+				7C16AFE5933750C94480CFC1 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				XX72A8CFBF0FBA13A79902XX /* Embed Foundation Extensions */,
-				BF43B53BE56A059511ECB133 /* [CP] Embed Pods Frameworks */,
+				6549D2B36713EA8EDA35699C /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -298,7 +298,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				E3BAED9B9E66BB94F51BDAA9 /* PrivacyInfo.xcprivacy in Resources */,
+				A5078FC8ED2A7760762ECD21 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,6 +353,43 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		6549D2B36713EA8EDA35699C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Growmoji/Pods-Growmoji-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Growmoji/Pods-Growmoji-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		7C16AFE5933750C94480CFC1 /* [Expo] Configure project */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "[Expo] Configure project";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Growmoji/expo-configure-project.sh\"\n";
+		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -403,43 +440,6 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Growmoji/Pods-Growmoji-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		BC3F9D97DDA328FAE0338C3B /* [Expo] Configure project */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "[Expo] Configure project";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Growmoji/expo-configure-project.sh\"\n";
-		};
-		BF43B53BE56A059511ECB133 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Growmoji/Pods-Growmoji-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Growmoji/Pods-Growmoji-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -448,7 +448,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				BF7A3D221F8C794DBE35D23D /* ExpoModulesProvider.swift in Sources */,
+				9B69CB4BCA4ADF1611A3EFF9 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -472,10 +472,9 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 05D643050FDFC22AC6336C76 /* Pods-Growmoji.debug.xcconfig */;
+			baseConfigurationReference = 6AA42545CDAA3703C35B03DE /* Pods-Growmoji.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Growmoji/Growmoji.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
@@ -515,10 +514,9 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5811EC698DCFAB860912171C /* Pods-Growmoji.release.xcconfig */;
+			baseConfigurationReference = 4EE862CBF9C6ED4258AC2FDE /* Pods-Growmoji.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = Growmoji/Growmoji.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
@@ -701,15 +699,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.mebattll.habittracker.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -746,15 +740,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.mebattll.habittracker.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 1;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};

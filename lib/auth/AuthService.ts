@@ -1,4 +1,6 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Linking from 'expo-linking';
+import { Platform } from 'react-native';
 import { supabase } from '../supabase';
 import { OAuthDebugger } from '../utils/oauthDebug';
 
@@ -217,21 +219,92 @@ export class AuthService {
     }
 
     /**
-     * Sign in with OAuth provider
+     * Sign in with OAuth provider (with native Apple Sign-In support)
      */
     static async signInWithOAuth(provider: 'google' | 'apple') {
+        // For Apple, use native Sign-In on iOS
+        if (provider === 'apple' && Platform.OS === 'ios') {
+            return this.signInWithAppleNative();
+        }
+
+        // For Google or Apple on non-iOS platforms, use web OAuth
+        return this.signInWithOAuthWeb(provider);
+    }
+
+    /**
+     * Native Apple Sign-In (iOS only)
+     */
+    static async signInWithAppleNative() {
+        console.log('[AuthService] signInWithAppleNative: Starting native Apple Sign-In');
+
+        try {
+            // Check if Apple Authentication is available
+            const isAvailable = await AppleAuthentication.isAvailableAsync();
+            if (!isAvailable) {
+                console.error('[AuthService] signInWithAppleNative: Apple Authentication not available');
+                return { success: false, error: new Error('Apple Authentication not available on this device') };
+            }
+
+            console.log('[AuthService] signInWithAppleNative: Apple Authentication available, requesting credential');
+
+            // Request Apple ID credential
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+            });
+
+            console.log('[AuthService] signInWithAppleNative: Apple credential received:', {
+                hasUser: !!credential.user,
+                hasEmail: !!credential.email,
+                hasFullName: !!credential.fullName,
+                hasIdentityToken: !!credential.identityToken,
+                hasAuthorizationCode: !!credential.authorizationCode,
+            });
+
+            // Sign in to Supabase with Apple ID token
+            const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: 'apple',
+                token: credential.identityToken!,
+            });
+
+            if (error) {
+                console.error('[AuthService] signInWithAppleNative: Supabase sign-in error:', error);
+                throw error;
+            }
+
+            console.log('[AuthService] signInWithAppleNative: ✅ Native Apple Sign-In successful');
+            return { success: true, data };
+
+        } catch (error: any) {
+            console.error('[AuthService] signInWithAppleNative: Error:', error);
+
+            if (error.code === 'ERR_REQUEST_CANCELED') {
+                // User canceled the sign-in
+                return { success: false, error: new Error('Sign-in was canceled') };
+            }
+
+            return { success: false, error };
+        }
+    }
+
+    /**
+     * Web-based OAuth (fallback for Google and Apple on non-iOS)
+     */
+    static async signInWithOAuthWeb(provider: 'google' | 'apple') {
         // Log environment and configuration
         OAuthDebugger.logEnvironment();
         OAuthDebugger.logSupabaseConfig();
 
-        console.log(`[AuthService] signInWithOAuth: Starting OAuth flow for ${provider}`);
-        console.log(`[AuthService] signInWithOAuth: Timestamp:`, new Date().toISOString());
+        console.log(`[AuthService] signInWithOAuthWeb: Starting OAuth flow for ${provider}`);
+        console.log(`[AuthService] signInWithOAuthWeb: Timestamp:`, new Date().toISOString());
 
         try {
             // Pre-flight checks
-            console.log(`[AuthService] signInWithOAuth: Pre-flight checks for ${provider}`);
-            console.log(`[AuthService] signInWithOAuth: Supabase client available:`, !!supabase);
-            console.log(`[AuthService] signInWithOAuth: Environment:`, {
+            console.log(`[AuthService] signInWithOAuthWeb: Pre-flight checks for ${provider}`);
+            console.log(`[AuthService] signInWithOAuthWeb: Supabase client available:`, !!supabase);
+            console.log(`[AuthService] signInWithOAuthWeb: Environment:`, {
                 supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...',
                 hasAnonKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
             });
@@ -254,13 +327,13 @@ export class AuthService {
             });
             const endTime = Date.now();
 
-            console.log(`[AuthService] signInWithOAuth: Request completed for ${provider} in ${endTime - startTime}ms`);
+            console.log(`[AuthService] signInWithOAuthWeb: Request completed for ${provider} in ${endTime - startTime}ms`);
 
             // Log the OAuth response
             OAuthDebugger.logOAuthResponse(provider, data, error);
 
             if (error) {
-                console.error(`[AuthService] signInWithOAuth: Error details for ${provider}:`, {
+                console.error(`[AuthService] signInWithOAuthWeb: Error details for ${provider}:`, {
                     message: error.message,
                     stack: error.stack,
                     fullError: error
@@ -270,7 +343,7 @@ export class AuthService {
 
             // Detailed data analysis
             if (data) {
-                console.log(`[AuthService] signInWithOAuth: Data structure for ${provider}:`, {
+                console.log(`[AuthService] signInWithOAuthWeb: Data structure for ${provider}:`, {
                     hasUrl: !!data.url,
                     hasProvider: !!data.provider,
                     provider: data.provider,
@@ -280,12 +353,12 @@ export class AuthService {
                 });
 
                 if (data.url) {
-                    console.log(`[AuthService] signInWithOAuth: Full redirect URL for ${provider}:`, data.url);
+                    console.log(`[AuthService] signInWithOAuthWeb: Full redirect URL for ${provider}:`, data.url);
 
                     // Parse URL for debugging
                     try {
                         const urlObj = new URL(data.url);
-                        console.log(`[AuthService] signInWithOAuth: URL breakdown for ${provider}:`, {
+                        console.log(`[AuthService] signInWithOAuthWeb: URL breakdown for ${provider}:`, {
                             protocol: urlObj.protocol,
                             hostname: urlObj.hostname,
                             pathname: urlObj.pathname,
@@ -293,19 +366,19 @@ export class AuthService {
                             hash: urlObj.hash
                         });
                     } catch (urlError) {
-                        console.error(`[AuthService] signInWithOAuth: Error parsing URL for ${provider}:`, urlError);
+                        console.error(`[AuthService] signInWithOAuthWeb: Error parsing URL for ${provider}:`, urlError);
                     }
                 } else {
-                    console.warn(`[AuthService] signInWithOAuth: No redirect URL provided by Supabase for ${provider}`);
-                    console.warn(`[AuthService] signInWithOAuth: This might indicate a configuration issue`);
+                    console.warn(`[AuthService] signInWithOAuthWeb: No redirect URL provided by Supabase for ${provider}`);
+                    console.warn(`[AuthService] signInWithOAuthWeb: This might indicate a configuration issue`);
                 }
             } else {
-                console.warn(`[AuthService] signInWithOAuth: No data returned from Supabase for ${provider}`);
+                console.warn(`[AuthService] signInWithOAuthWeb: No data returned from Supabase for ${provider}`);
             }
 
             return { success: true, data };
         } catch (error: any) {
-            console.error(`[AuthService] signInWithOAuth: Exception caught for ${provider}:`, {
+            console.error(`[AuthService] signInWithOAuthWeb: Exception caught for ${provider}:`, {
                 name: error.name,
                 message: error.message,
                 stack: error.stack,
@@ -314,14 +387,30 @@ export class AuthService {
 
             // Additional error context
             if (error.code) {
-                console.error(`[AuthService] signInWithOAuth: Error code for ${provider}:`, error.code);
+                console.error(`[AuthService] signInWithOAuthWeb: Error code for ${provider}:`, error.code);
             }
 
             if (error.details) {
-                console.error(`[AuthService] signInWithOAuth: Error details for ${provider}:`, error.details);
+                console.error(`[AuthService] signInWithOAuthWeb: Error details for ${provider}:`, error.details);
             }
 
             return { success: false, error };
+        }
+    }
+
+    /**
+     * Check if Apple Sign-In is available (iOS only)
+     */
+    static async isAppleSignInAvailable(): Promise<boolean> {
+        if (Platform.OS !== 'ios') {
+            return false;
+        }
+
+        try {
+            return await AppleAuthentication.isAvailableAsync();
+        } catch (error) {
+            console.error('[AuthService] isAppleSignInAvailable: Error checking availability:', error);
+            return false;
         }
     }
 
