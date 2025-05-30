@@ -78,3 +78,92 @@ CREATE INDEX ON habit_logs(log_date);
 CREATE INDEX ON todos(user_id);
 CREATE INDEX ON todos(is_completed);
 
+-- Enable Row Level Security for all tables
+ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE habit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for habits table
+CREATE POLICY "Users can select their own habits"
+ON habits FOR SELECT
+USING (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can insert their own habits"
+ON habits FOR INSERT
+WITH CHECK (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can update their own habits"
+ON habits FOR UPDATE
+USING (auth.uid()::text = user_id)
+WITH CHECK (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can delete their own habits"
+ON habits FOR DELETE
+USING (auth.uid()::text = user_id);
+
+-- RLS Policies for todos table
+CREATE POLICY "Users can select their own todos"
+ON todos FOR SELECT
+USING (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can insert their own todos"
+ON todos FOR INSERT
+WITH CHECK (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can update their own todos"
+ON todos FOR UPDATE
+USING (auth.uid()::text = user_id)
+WITH CHECK (auth.uid()::text = user_id);
+
+CREATE POLICY "Users can delete their own todos"
+ON todos FOR DELETE
+USING (auth.uid()::text = user_id);
+
+-- RLS Policies for habit_logs table
+CREATE POLICY "Users can select logs for their own habits"
+ON habit_logs FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM habits
+    WHERE habits.id = habit_logs.habit_id
+    AND habits.user_id = auth.uid()::text
+  )
+);
+
+CREATE POLICY "Users can insert logs for their own habits"
+ON habit_logs FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM habits
+    WHERE habits.id = habit_logs.habit_id
+    AND habits.user_id = auth.uid()::text
+  )
+);
+
+CREATE POLICY "Users can update logs for their own habits"
+ON habit_logs FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM habits
+    WHERE habits.id = habit_logs.habit_id
+    AND habits.user_id = auth.uid()::text
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM habits
+    WHERE habits.id = habit_logs.habit_id
+    AND habits.user_id = auth.uid()::text
+  )
+);
+
+CREATE POLICY "Users can delete logs for their own habits"
+ON habit_logs FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM habits
+    WHERE habits.id = habit_logs.habit_id
+    AND habits.user_id = auth.uid()::text
+  )
+);
+
