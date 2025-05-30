@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { habitsService } from '@/lib/services/habits';
 import { todosService } from '@/lib/services/todos';
 import { updateWidgetData } from '@/lib/services/widgetData';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import React, { useEffect, useState } from 'react';
@@ -96,14 +97,56 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     }
   };
 
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
+    if (!user?.id) {
+      Alert.alert("Error", "You must be logged in to delete your account.");
+      return;
+    }
+
     Alert.alert(
       "Delete Account",
-      "To delete your account, please contact support at support@example.com",
+      "Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your data.",
       [
         {
-          text: "OK",
-          style: "default",
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes, Delete",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingAccount(true);
+            try {
+              // Delete user data first
+              const { error: deleteDataError } = await supabase.rpc('delete_user_data', {
+                user_id_param: user.id
+              });
+
+              if (deleteDataError) {
+                throw new Error(`Failed to delete user data: ${deleteDataError.message}`);
+              }
+
+              // Since we can't use admin API from client side, we'll sign out and inform the user
+              // to contact support for full account deletion
+              await signOut();
+              Alert.alert(
+                "Account Data Deleted",
+                "Your account data has been deleted. For security reasons, please contact support to fully delete your authentication account.",
+                [{ text: "OK" }]
+              );
+              onClose();
+
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert(
+                "Error",
+                "Failed to delete account. Please try again later or contact support.",
+                [{ text: "OK" }]
+              );
+            } finally {
+              setIsDeletingAccount(false);
+            }
+          },
         },
       ]
     );
@@ -458,4 +501,4 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
   );
 };
 
-export default ProfileModal; 
+export default ProfileModal;

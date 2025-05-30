@@ -167,3 +167,17 @@ USING (
   )
 );
 
+-- Create Function for User Data Deletion
+CREATE OR REPLACE FUNCTION delete_user_data(user_id_param TEXT)
+RETURNS void AS $$
+BEGIN
+  -- Delete todos
+  DELETE FROM todos WHERE user_id = user_id_param;
+  
+  -- Delete habits (this will cascade delete habit_logs due to FK constraint)
+  DELETE FROM habits WHERE user_id = user_id_param;
+  
+  -- Any other user-related data cleanup can be added here
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
