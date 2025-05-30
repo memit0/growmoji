@@ -23,10 +23,12 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isAppleSignInAvailable, setIsAppleSignInAvailable] = useState(false);
+  const [isGoogleSignInAvailable, setIsGoogleSignInAvailable] = useState(false);
 
-  // Check Apple Sign-In availability on component mount
+  // Check Apple and Google Sign-In availability on component mount
   useEffect(() => {
     AuthService.isAppleSignInAvailable().then(setIsAppleSignInAvailable);
+    AuthService.isGoogleSignInAvailable().then(setIsGoogleSignInAvailable);
   }, []);
 
   const handleNavigateToRegister = () => {
@@ -277,13 +279,15 @@ export default function LoginScreen() {
             <View style={styles.separatorLine} />
           </View>
 
-          <TouchableOpacity
-            onPress={() => handleSocialSignIn('google')}
-            style={styles.socialButton}
-            disabled={isLoading}
-          >
-            <Text style={styles.socialButtonText}>Sign In with Google</Text>
-          </TouchableOpacity>
+          {isGoogleSignInAvailable && (
+            <TouchableOpacity
+              onPress={() => handleSocialSignIn('google')}
+              style={styles.socialButton}
+              disabled={isLoading}
+            >
+              <Text style={styles.socialButtonText}>Sign In with Google</Text>
+            </TouchableOpacity>
+          )}
 
           {isAppleSignInAvailable && (
             <TouchableOpacity

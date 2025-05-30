@@ -1,3 +1,4 @@
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Linking from 'expo-linking';
 import { Platform } from 'react-native';
@@ -219,12 +220,17 @@ export class AuthService {
     }
 
     /**
-     * Sign in with OAuth provider (with native Apple Sign-In support)
+     * Sign in with OAuth provider (with native Apple and Google Sign-In support)
      */
     static async signInWithOAuth(provider: 'google' | 'apple') {
         // For Apple, use native Sign-In on iOS
         if (provider === 'apple' && Platform.OS === 'ios') {
             return this.signInWithAppleNative();
+        }
+
+        // For Google, use native Sign-In on iOS
+        if (provider === 'google' && Platform.OS === 'ios') {
+            return this.signInWithGoogleNative();
         }
 
         // For Google or Apple on non-iOS platforms, use web OAuth
@@ -286,6 +292,95 @@ export class AuthService {
             }
 
             return { success: false, error };
+        }
+    }
+
+    /**
+     * Native Google Sign-In (iOS/Android)
+     */
+    static async signInWithGoogleNative() {
+        console.log('[AuthService] signInWithGoogleNative: Starting native Google Sign-In');
+
+        try {
+            // Configure Google Sign-In if not already configured
+            await this.configureGoogleSignIn();
+
+            console.log('[AuthService] signInWithGoogleNative: Google Sign-In configured, checking play services');
+
+            // Check if Google Play Services are available
+            await GoogleSignin.hasPlayServices();
+
+            console.log('[AuthService] signInWithGoogleNative: Initiating Google Sign-In');
+
+            // Trigger Google Sign-In
+            const response = await GoogleSignin.signIn();
+
+            console.log('[AuthService] signInWithGoogleNative: Google Sign-In successful:', {
+                hasData: !!response.data,
+                hasIdToken: !!response.data?.idToken,
+                userId: response.data?.user?.id,
+                email: response.data?.user?.email
+            });
+
+            if (!response.data?.idToken) {
+                throw new Error('No ID token received from Google Sign-In');
+            }
+
+            // Sign in to Supabase with Google ID token
+            const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.data.idToken,
+            });
+
+            if (error) {
+                console.error('[AuthService] signInWithGoogleNative: Supabase sign-in error:', error);
+                throw error;
+            }
+
+            console.log('[AuthService] signInWithGoogleNative: ✅ Native Google Sign-In successful');
+            return { success: true, data };
+
+        } catch (error: any) {
+            console.error('[AuthService] signInWithGoogleNative: Error:', error);
+
+            if (error.code === 'SIGN_IN_CANCELLED') {
+                // User canceled the sign-in
+                return { success: false, error: new Error('Sign-in was canceled') };
+            }
+
+            if (error.code === 'IN_PROGRESS') {
+                // Sign-in is already in progress
+                return { success: false, error: new Error('Sign-in already in progress') };
+            }
+
+            return { success: false, error };
+        }
+    }
+
+    /**
+     * Configure Google Sign-In
+     */
+    static async configureGoogleSignIn() {
+        try {
+            console.log('[AuthService] configureGoogleSignIn: Configuring Google Sign-In');
+
+            // You'll need to get your iOS client ID from Google Cloud Console
+            // For now, we'll use a placeholder - you'll need to replace this with your actual client ID
+            const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'YOUR_GOOGLE_WEB_CLIENT_ID';
+            const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || 'YOUR_GOOGLE_IOS_CLIENT_ID';
+
+            GoogleSignin.configure({
+                webClientId: webClientId, // From Google Cloud Console
+                iosClientId: iosClientId, // From Google Cloud Console (optional)
+                offlineAccess: true,
+                hostedDomain: '', // Optional
+                forceCodeForRefreshToken: true,
+            });
+
+            console.log('[AuthService] configureGoogleSignIn: ✅ Google Sign-In configured successfully');
+        } catch (error) {
+            console.error('[AuthService] configureGoogleSignIn: Error configuring Google Sign-In:', error);
+            throw error;
         }
     }
 
@@ -415,6 +510,23 @@ export class AuthService {
     }
 
     /**
+     * Check if Google Sign-In is available
+     */
+    static async isGoogleSignInAvailable(): Promise<boolean> {
+        try {
+            // Configure Google Sign-In first
+            await this.configureGoogleSignIn();
+
+            // Check if Play Services are available (this works on both iOS and Android)
+            await GoogleSignin.hasPlayServices();
+            return true;
+        } catch (error) {
+            console.error('[AuthService] isGoogleSignInAvailable: Error checking availability:', error);
+            return false;
+        }
+    }
+
+    /**
      * Sign out
      */
     static async signOut() {
@@ -449,6 +561,39 @@ export class AuthService {
             return { success: true };
         } catch (error) {
             console.error('Error resending confirmation:', error);
+            return { success: false, error };
+        }
+    }
+
+    /**
+     * Test Google Sign-In configuration (for debugging)
+     */
+    static async testGoogleSignInConfig() {
+        console.log('[AuthService] testGoogleSignInConfig: Testing Google Sign-In configuration');
+
+        try {
+            const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+            const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+
+            console.log('[AuthService] testGoogleSignInConfig: Environment variables:', {
+                hasWebClientId: !!webClientId && webClientId !== 'YOUR_GOOGLE_WEB_CLIENT_ID',
+                hasIosClientId: !!iosClientId && iosClientId !== 'YOUR_GOOGLE_IOS_CLIENT_ID',
+                webClientIdLength: webClientId?.length || 0,
+                iosClientIdLength: iosClientId?.length || 0
+            });
+
+            if (!webClientId || webClientId === 'YOUR_GOOGLE_WEB_CLIENT_ID') {
+                throw new Error('Google Web Client ID not configured. Please update your .env file.');
+            }
+
+            await this.configureGoogleSignIn();
+            await GoogleSignin.hasPlayServices();
+
+            console.log('[AuthService] testGoogleSignInConfig: ✅ Google Sign-In configuration test passed');
+            return { success: true };
+
+        } catch (error: any) {
+            console.error('[AuthService] testGoogleSignInConfig: ❌ Configuration test failed:', error);
             return { success: false, error };
         }
     }

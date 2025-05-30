@@ -36,6 +36,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    googleIosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     eas: {
       projectId: '3fb45759-94dc-4b63-a52d-5c30d89fa6a5'
     }
@@ -43,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     '@bacons/apple-targets',
-    'expo-apple-authentication'
+    'expo-apple-authentication',
+    '@react-native-google-signin/google-signin'
   ]
 }); 
