@@ -393,21 +393,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           <Text style={styles.sectionTitle}>Legal</Text>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL('https://example.com/website')}
+            onPress={() => Linking.openURL('https://www.growmoji.app')}
           >
             <Ionicons name="globe-outline" size={24} color={colors.primary} />
             <Text style={styles.linkText}>Visit Website</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL('https://example.com/terms')}
+            onPress={() => Linking.openURL('https://www.growmoji.app/terms')}
           >
             <Ionicons name="document-text-outline" size={24} color={colors.primary} />
             <Text style={styles.linkText}>Terms and Conditions</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => Linking.openURL('https://example.com/privacy')}
+            onPress={() => Linking.openURL('https://www.growmoji.app/privacy')}
           >
             <Ionicons name="shield-outline" size={24} color={colors.primary} />
             <Text style={styles.linkText}>Privacy Policy</Text>
