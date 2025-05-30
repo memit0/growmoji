@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Create Habits Table
 CREATE TABLE habits (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id TEXT NOT NULL DEFAULT (auth.jwt()->>'sub'),
+  user_id TEXT NOT NULL,
   emoji TEXT NOT NULL,
   start_date DATE NOT NULL,
   current_streak INTEGER DEFAULT 0,
@@ -24,21 +24,11 @@ CREATE TABLE habit_logs (
 -- Create Todos Table
 CREATE TABLE todos (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id TEXT NOT NULL DEFAULT (auth.jwt()->>'sub'),
+  user_id TEXT NOT NULL,
   content TEXT NOT NULL,
   is_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   completed_at TIMESTAMP WITH TIME ZONE
-);
-
--- Create Timer Settings Table
-CREATE TABLE timer_settings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id TEXT NOT NULL UNIQUE DEFAULT (auth.jwt()->>'sub'),
-  work_duration INTEGER DEFAULT 25, -- in minutes
-  break_duration INTEGER DEFAULT 5, -- in minutes
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create Function for Streak Calculation
@@ -88,41 +78,3 @@ CREATE INDEX ON habit_logs(log_date);
 CREATE INDEX ON todos(user_id);
 CREATE INDEX ON todos(is_completed);
 
--- Enable Row Level Security
-ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
-ALTER TABLE habit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE timer_settings ENABLE ROW LEVEL SECURITY;
-
--- Create RLS Policies
-DROP POLICY IF EXISTS habits_user_access ON habits;
-CREATE POLICY habits_user_access ON habits
-  FOR ALL
-  TO authenticated
-  USING ((auth.jwt()->>'sub') = user_id)
-  WITH CHECK ((auth.jwt()->>'sub') = user_id);
-
-DROP POLICY IF EXISTS habit_logs_user_access ON habit_logs;
-CREATE POLICY habit_logs_user_access ON habit_logs
-  FOR ALL
-  TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM habits h WHERE h.id = habit_logs.habit_id AND (auth.jwt()->>'sub') = h.user_id
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM habits h WHERE h.id = habit_logs.habit_id AND (auth.jwt()->>'sub') = h.user_id
-  ));
-
-DROP POLICY IF EXISTS todos_user_access ON todos;
-CREATE POLICY todos_user_access ON todos
-  FOR ALL
-  TO authenticated
-  USING ((auth.jwt()->>'sub') = user_id)
-  WITH CHECK ((auth.jwt()->>'sub') = user_id);
-
-DROP POLICY IF EXISTS timer_settings_user_access ON timer_settings;
-CREATE POLICY timer_settings_user_access ON timer_settings
-  FOR ALL
-  TO authenticated
-  USING ((auth.jwt()->>'sub') = user_id)
-  WITH CHECK ((auth.jwt()->>'sub') = user_id);

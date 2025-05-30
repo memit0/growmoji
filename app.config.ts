@@ -11,6 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: [
     '**/*'
   ],
+  scheme: 'com.mebattll.habittracker',
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.mebattll.habittracker',
@@ -21,6 +22,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     infoPlist: {
       NSUserTrackingUsageDescription: 'This app uses tracking to provide personalized habit tracking experience.',
+      CFBundleURLTypes: [
+        {
+          CFBundleURLName: 'com.mebattll.habittracker',
+          CFBundleURLSchemes: ['com.mebattll.habittracker']
+        }
+      ]
     }
   },
   web: {

@@ -1,4 +1,3 @@
-import { useOAuth, useSignIn } from '@clerk/clerk-expo';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -12,19 +11,17 @@ import {
   View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { AuthService } from '../../lib/auth/AuthService';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-
-  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
   const handleNavigateToRegister = () => {
     if (isNavigating || isLoading) return;
@@ -50,65 +47,101 @@ export default function LoginScreen() {
   );
 
   const onSignInPress = async () => {
-    if (!isLoaded || isLoading) {
+    if (isLoading) {
+      return;
+    }
+
+    if (!emailAddress || !password) {
+      Alert.alert("Error", "Please enter both email and password");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const signInAttempt = await signIn.create({
-        identifier: emailAddress,
-        password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailAddress,
+        password: password,
       });
 
-      if (signInAttempt.status === 'complete') {
-        await setActive({ session: signInAttempt.createdSessionId });
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
         router.replace('/');
-      } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
-        Alert.alert("Login Error", "Please check your credentials or complete other steps if required.");
       }
     } catch (err: any) {
-      console.error("Clerk SignIn Error:", JSON.stringify(err, null, 2));
-      const errorMessage = err.errors && err.errors[0] && err.errors[0].message
-        ? err.errors[0].message
-        : "An unexpected error occurred. Please try again.";
+      console.error("Supabase SignIn Error:", err);
+      const errorMessage = err.message || "An unexpected error occurred. Please try again.";
       Alert.alert("Login Error", errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialSignIn = React.useCallback(async (strategy: 'oauth_google' | 'oauth_apple') => {
-    if (!isLoaded || isLoading) {
+  const handleSocialSignIn = React.useCallback(async (provider: 'google' | 'apple') => {
+    console.log(`[LoginScreen] handleSocialSignIn: Starting ${provider} sign-in flow`);
+    console.log(`[LoginScreen] handleSocialSignIn: Current state:`, {
+      isLoading,
+      isNavigating,
+      timestamp: new Date().toISOString()
+    });
+
+    if (isLoading) {
+      console.log(`[LoginScreen] handleSocialSignIn: Skipping ${provider} - already loading`);
       return;
     }
 
     setIsLoading(true);
-    const oauthFlowFunction = strategy === 'oauth_google' ? startGoogleOAuthFlow : startAppleOAuthFlow;
+    console.log(`[LoginScreen] handleSocialSignIn: Set loading state for ${provider}`);
 
     try {
-      const { createdSessionId, setActive: setOAuthActive, signIn: oauthSignIn, signUp: oauthSignUp } = await oauthFlowFunction();
+      console.log(`[LoginScreen] handleSocialSignIn: Calling AuthService.signInWithOAuth for ${provider}`);
+      const { success, data, error } = await AuthService.signInWithOAuth(provider);
 
-      if (createdSessionId && setOAuthActive) {
-        await setOAuthActive({ session: createdSessionId });
-        router.replace('/');
-      } else {
-        console.warn("OAuth flow did not complete fully or did not create a session directly.", { oauthSignIn, oauthSignUp });
-        Alert.alert(
-          "OAuth Action Needed",
-          "The sign-in process may require additional steps. Please try email/password or check your details."
-        );
+      console.log(`[LoginScreen] handleSocialSignIn: AuthService response for ${provider}:`, {
+        success,
+        hasData: !!data,
+        hasError: !!error,
+        dataKeys: data ? Object.keys(data) : [],
+        errorMessage: error?.message
+      });
+
+      if (!success || error) {
+        console.error(`[LoginScreen] handleSocialSignIn: ${provider} sign-in failed:`, {
+          success,
+          error: error?.message || 'Unknown error',
+          fullError: error
+        });
+        throw error || new Error('Social sign-in failed');
       }
+
+      console.log(`[LoginScreen] handleSocialSignIn: ${provider} sign-in initiated successfully`);
+
+      // OAuth will handle the redirect. If data.url exists, it's the URL to open.
+      if (data?.url) {
+        console.log(`[LoginScreen] handleSocialSignIn: OAuth redirect URL received for ${provider}:`, data.url);
+      } else {
+        console.warn(`[LoginScreen] handleSocialSignIn: No redirect URL in response for ${provider}`);
+      }
+
     } catch (err: any) {
-      console.error(`OAuth error (${strategy}):`, JSON.stringify(err, null, 2));
-      const errorMessage = err.errors?.[0]?.longMessage || err.message || "An unexpected error occurred during social sign-in.";
+      console.error(`[LoginScreen] handleSocialSignIn: Exception during ${provider} sign-in:`, {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        fullError: err
+      });
+
+      const errorMessage = err.message || "An unexpected error occurred during social sign-in.";
+      console.error(`[LoginScreen] handleSocialSignIn: Showing error alert for ${provider}:`, errorMessage);
       Alert.alert("Login Error", errorMessage);
     } finally {
+      console.log(`[LoginScreen] handleSocialSignIn: Cleaning up loading state for ${provider}`);
       setIsLoading(false);
     }
-  }, [isLoaded, isLoading, startGoogleOAuthFlow, startAppleOAuthFlow, router, setActive]);
+  }, [isLoading, router]);
 
   const styles = StyleSheet.create({
     container: {
@@ -141,7 +174,7 @@ export default function LoginScreen() {
       padding: spacing.md,
       alignItems: 'center',
       marginTop: spacing.md,
-      opacity: !isLoaded || isLoading ? 0.7 : 1,
+      opacity: isLoading ? 0.7 : 1,
     },
     buttonText: {
       color: '#FFFFFF',
@@ -212,7 +245,7 @@ export default function LoginScreen() {
           placeholder="Enter email"
           placeholderTextColor={colors.border}
           onChangeText={(email) => setEmailAddress(email)}
-          editable={isLoaded}
+          editable={!isLoading}
         />
         <TextInput
           value={password}
@@ -221,10 +254,10 @@ export default function LoginScreen() {
           placeholderTextColor={colors.border}
           secureTextEntry={true}
           onChangeText={(password) => setPassword(password)}
-          editable={isLoaded}
+          editable={!isLoading}
         />
-        <TouchableOpacity onPress={onSignInPress} style={styles.button} disabled={!isLoaded || isLoading}>
-          <Text style={styles.buttonText}>{!isLoaded || isLoading ? 'Loading...' : 'Login'}</Text>
+        <TouchableOpacity onPress={onSignInPress} style={styles.button} disabled={isLoading}>
+          <Text style={styles.buttonText}>{isLoading ? 'Loading...' : 'Login'}</Text>
         </TouchableOpacity>
 
         <View style={styles.socialLoginContainer}>
@@ -235,17 +268,17 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => handleSocialSignIn('oauth_google')}
+            onPress={() => handleSocialSignIn('google')}
             style={styles.socialButton}
-            disabled={!isLoaded || isLoading}
+            disabled={isLoading}
           >
             <Text style={styles.socialButtonText}>Sign In with Google</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => handleSocialSignIn('oauth_apple')}
+            onPress={() => handleSocialSignIn('apple')}
             style={styles.socialButton}
-            disabled={!isLoaded || isLoading}
+            disabled={isLoading}
           >
             <Text style={styles.socialButtonText}>Sign In with Apple</Text>
           </TouchableOpacity>

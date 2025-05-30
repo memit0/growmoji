@@ -1,7 +1,7 @@
-import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, habitsService } from '../../lib/services/habits';
 import { ThemedText } from './ThemedText';
@@ -22,10 +22,9 @@ interface HabitStats {
 
 export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProps) {
   const { colors } = useTheme();
-  const { isSignedIn, isLoaded } = useClerkAuth();
-  const { user } = useUser();
+  const { user, loading } = useAuth();
   const userId = user?.id;
-  
+
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<HabitStats>({
     totalHabits: 0,
@@ -39,23 +38,23 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
 
   const calculateStats = useCallback((habits: Habit[]): HabitStats => {
     const todayStr = new Date().toISOString().split('T')[0];
-    
+
     const totalHabits = habits.length;
     const activeHabits = habits.filter(habit => habit.current_streak > 0).length;
-    const completedToday = habits.filter(habit => 
+    const completedToday = habits.filter(habit =>
       habit.last_check_date && habit.last_check_date.startsWith(todayStr)
     ).length;
-    
-    const averageStreak = totalHabits > 0 
+
+    const averageStreak = totalHabits > 0
       ? Math.round(habits.reduce((sum, habit) => sum + habit.current_streak, 0) / totalHabits)
       : 0;
-    
-    const longestStreak = habits.reduce((max, habit) => 
+
+    const longestStreak = habits.reduce((max, habit) =>
       Math.max(max, habit.current_streak), 0
     );
 
     // Simple weekly completion rate calculation
-    const weeklyCompletionRate = totalHabits > 0 
+    const weeklyCompletionRate = totalHabits > 0
       ? Math.round((completedToday / totalHabits) * 100)
       : 0;
 
@@ -70,7 +69,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
   }, []);
 
   const loadHabits = useCallback(async () => {
-    if (!isSignedIn || !userId) {
+    if (!user || !userId) {
       setHabits([]);
       setStats({
         totalHabits: 0,
@@ -95,35 +94,35 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     } finally {
       setIsLoading(false);
     }
-  }, [calculateStats, isSignedIn, userId, onRefresh]);
+  }, [calculateStats, user, userId, onRefresh]);
 
   // Initial load when auth is ready
   useEffect(() => {
-    if (isLoaded) {
+    if (!loading) {
       loadHabits();
     }
-  }, [loadHabits, isLoaded]);
+  }, [loadHabits, loading]);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (isLoaded && isSignedIn && userId) {
+      if (!loading && user && userId) {
         loadHabits();
       }
-    }, [loadHabits, isLoaded, isSignedIn, userId])
+    }, [loadHabits, loading, user, userId])
   );
 
   // Auto-refresh every 30 seconds when screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (!isLoaded || !isSignedIn || !userId) return;
+      if (loading || !user || !userId) return;
 
       const interval = setInterval(() => {
         loadHabits();
       }, 30000); // 30 seconds
 
       return () => clearInterval(interval);
-    }, [loadHabits, isLoaded, isSignedIn, userId])
+    }, [loadHabits, loading, user, userId])
   );
 
   const getMotivationalMessage = () => {
@@ -138,10 +137,10 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     }
   };
 
-  const StatCard = ({ title, value, subtitle, icon }: { 
-    title: string; 
-    value: string; 
-    subtitle?: string; 
+  const StatCard = ({ title, value, subtitle, icon }: {
+    title: string;
+    value: string;
+    subtitle?: string;
     icon: string;
   }) => (
     <ThemedView style={[styles.statCard, { backgroundColor: colors.card }]}>
@@ -167,21 +166,21 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
         <ThemedText style={[styles.progressValue, { color: colors.primary }]}>{progress}%</ThemedText>
       </View>
       <View style={[styles.progressBarBackground, { backgroundColor: colors.background }]}>
-        <View 
+        <View
           style={[
-            styles.progressBarFill, 
-            { 
+            styles.progressBarFill,
+            {
               backgroundColor: colors.primary,
               width: `${Math.min(progress, 100)}%`
             }
-          ]} 
+          ]}
         />
       </View>
     </View>
   );
 
   // Show loading while auth is loading
-  if (!isLoaded) {
+  if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ThemedView style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
@@ -194,7 +193,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
   }
 
   // Show sign in message when not authenticated
-  if (!isSignedIn) {
+  if (!user) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ThemedView style={[styles.notSignedInContainer, { backgroundColor: colors.card }]}>
@@ -259,19 +258,19 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
         <ThemedText type="subtitle" style={[styles.sectionTitle, { color: colors.text }]}>
           Progress Overview
         </ThemedText>
-        
-        <ProgressBar 
-          progress={stats.weeklyCompletionRate} 
+
+        <ProgressBar
+          progress={stats.weeklyCompletionRate}
           label="Daily Completion Rate"
         />
-        
-        <ProgressBar 
-          progress={stats.totalHabits > 0 ? Math.round((stats.activeHabits / stats.totalHabits) * 100) : 0} 
+
+        <ProgressBar
+          progress={stats.totalHabits > 0 ? Math.round((stats.activeHabits / stats.totalHabits) * 100) : 0}
           label="Active Habits"
         />
-        
-        <ProgressBar 
-          progress={stats.longestStreak > 0 ? Math.min((stats.averageStreak / stats.longestStreak) * 100, 100) : 0} 
+
+        <ProgressBar
+          progress={stats.longestStreak > 0 ? Math.min((stats.averageStreak / stats.longestStreak) * 100, 100) : 0}
           label="Average Streak Performance"
         />
       </ThemedView>
@@ -284,7 +283,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
           {habits.slice(0, 3).map((habit) => {
             const todayStr = new Date().toISOString().split('T')[0];
             const isCompletedToday = habit.last_check_date && habit.last_check_date.startsWith(todayStr);
-            
+
             return (
               <View key={habit.id} style={styles.habitItem}>
                 <View style={styles.habitInfo}>

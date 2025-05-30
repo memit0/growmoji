@@ -8,12 +8,12 @@ import { HabitModal } from '@/components/ui/HabitModal';
 import { RemotePaywallModal } from '@/components/ui/RemotePaywallModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
 import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
-import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
 
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
@@ -23,22 +23,21 @@ export default function HomeScreen() {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  
+
   // Refactored loading states
   const [isScreenLoading, setIsScreenLoading] = useState(false);
   const [isSubmittingTodo, setIsSubmittingTodo] = useState(false);
   const [isSubmittingHabit, setIsSubmittingHabit] = useState(false);
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
 
-  const { isSignedIn } = useClerkAuth();
-  const { user } = useUser();
+  const { user } = useAuth();
   const userId = user?.id;
 
   const isTaskLimitReached = todos.length >= 3;
   const isHabitLimitReached = habits.length >= 3;
 
   const handleAddTodo = async () => {
-    if (isSubmittingTodo || !newTodoTitle.trim() || !isSignedIn || !userId) return;
+    if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) return;
 
     // Check task limit for free users
     if (!isPremium && isTaskLimitReached) {
@@ -66,7 +65,7 @@ export default function HomeScreen() {
   };
 
   const handleDeleteTodo = useCallback(async (id: string) => {
-    if (!isSignedIn || !userId) return;
+    if (!user || !userId) return;
     setIsUpdatingItem(true);
     try {
       await todosService.deleteTodo(id, userId);
@@ -80,10 +79,10 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn, userId, habits, theme, isPremium]);
+  }, [user, userId, habits, theme, isPremium]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
-    if (!isSignedIn || !userId) return;
+    if (!user || !userId) return;
     console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
     try {
       await habitsService.deleteHabit(id, userId);
@@ -96,10 +95,10 @@ export default function HomeScreen() {
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [isSignedIn, userId, todos, theme, isPremium]);
+  }, [user, userId, todos, theme, isPremium]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
-    if (!isSignedIn || !userId) return;
+    if (!user || !userId) return;
     const todoToToggle = todos.find(t => t.id === id);
     if (!todoToToggle) return;
 
@@ -118,7 +117,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [isSignedIn, userId, todos, habits, theme, isPremium]);
+  }, [user, userId, todos, habits, theme, isPremium]);
 
   interface HabitModalData {
     title: string;
@@ -127,10 +126,10 @@ export default function HomeScreen() {
   }
 
   const handleAddHabit = async (emoji: string) => {
-    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, isSignedIn: ${isSignedIn}, userId: ${userId}`);
-    if (isSubmittingHabit || !emoji || !isSignedIn || !userId) {
-       if (isSubmittingHabit) console.log('[handleAddHabit] Guard: Add habit already in progress. Bailing out.');
-       else console.log(`[handleAddHabit] Guard: No emoji, not signed in, or no userId. Emoji: "${emoji}", isSignedIn: ${isSignedIn}, userId: ${userId}. Bailing out.`);
+    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, user: ${user ? 'present' : 'null'}, userId: ${userId}`);
+    if (isSubmittingHabit || !emoji || !user || !userId) {
+      if (isSubmittingHabit) console.log('[handleAddHabit] Guard: Add habit already in progress. Bailing out.');
+      else console.log(`[handleAddHabit] Guard: No emoji, not signed in, or no userId. Emoji: "${emoji}", user: ${user ? 'present' : 'null'}, userId: ${userId}. Bailing out.`);
       return;
     }
 
@@ -168,15 +167,15 @@ export default function HomeScreen() {
   };
 
   const handleHabitLog = async (habitId: string) => {
-    if (!isSignedIn || !userId) return;
-    
+    if (!user || !userId) return;
+
     setIsUpdatingItem(true);
     console.log(`[HomeScreen] handleHabitLog called for habit: ${habitId}`);
-    
+
     try {
       const todayStr = new Date().toISOString().split('T')[0];
       const targetHabit = habits.find(h => h.id === habitId);
-      
+
       if (!targetHabit) {
         console.error(`[HomeScreen] Habit not found: ${habitId}`);
         return;
@@ -240,29 +239,29 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (isSignedIn && userId) {
+    if (user && userId) {
       setIsScreenLoading(true);
       Promise.all([
         todosService.getTodos(userId).then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
         habitsService.getHabits(userId).then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
       ])
-      .finally(() => {
-        setIsScreenLoading(false);
-      });
+        .finally(() => {
+          setIsScreenLoading(false);
+        });
     } else {
       setTodos([]);
       setHabits([]);
       clearWidgetData(); // Clear widget data on sign out
     }
-  }, [isSignedIn, userId]);
+  }, [user, userId]);
 
   // New useEffect to update widget data when todos or habits change from any source (initial fetch, add, delete, etc.)
   useEffect(() => {
-    if (isSignedIn && userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
+    if (user && userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
       updateWidgetData(todos, habits, theme, isPremium);
     }
-  // Adding theme to dependency array to re-run if theme changes.
-  }, [todos, habits, isSignedIn, userId, theme, isPremium]); 
+    // Adding theme to dependency array to re-run if theme changes.
+  }, [todos, habits, user, userId, theme, isPremium]);
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
@@ -288,7 +287,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={[styles.bg]} contentContainerStyle={styles.container}>
-        <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
+        <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
             <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
             <ThemedText style={[styles.taskCount, { color: colors.secondary }]}>{todos.length}/3 tasks</ThemedText>
@@ -296,7 +295,7 @@ export default function HomeScreen() {
           <View style={styles.inputRow}>
             <TextInput
               placeholder={isTaskLimitReached ? "Task limit reached" : "Add task..."}
-              style={[styles.input, { 
+              style={[styles.input, {
                 backgroundColor: colors.background,
                 borderColor: colors.border,
                 color: colors.text
@@ -308,11 +307,11 @@ export default function HomeScreen() {
               returnKeyType="done"
               editable={!isTaskLimitReached} // Disable input if limit reached
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.addButton, 
+                styles.addButton,
                 { backgroundColor: isTaskLimitReached ? colors.disabled : colors.primary }, // Change button color if disabled
-              ]} 
+              ]}
               onPress={handleAddTodo}
               disabled={isTaskLimitReached} // Disable button if limit reached
             >
@@ -335,7 +334,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={[styles.cardSection, { backgroundColor: colors.card }]}> 
+        <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
             <View style={styles.habitHeaderLeft}>
               <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
@@ -346,9 +345,9 @@ export default function HomeScreen() {
                 )}
               </ThemedText>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.newHabitButton, 
+                styles.newHabitButton,
                 { backgroundColor: (!isPremium && habits.length >= 3) ? colors.border : colors.primary }
               ]}
               onPress={() => {
@@ -360,7 +359,7 @@ export default function HomeScreen() {
               }}
             >
               <ThemedText style={[
-                styles.newHabitButtonText, 
+                styles.newHabitButtonText,
                 { color: (!isPremium && habits.length >= 3) ? colors.secondary : '#FFFFFF' }
               ]}>
                 {(!isPremium && habits.length >= 3) ? 'Upgrade' : 'New Habit'}

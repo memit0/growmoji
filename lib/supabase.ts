@@ -19,59 +19,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create Supabase client without Clerk integration for now
-// This prevents the session access error during initialization
+// Create Supabase client for direct authentication
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    debug: true, // Enable auth debugging
   },
 });
 
-// Helper function to create authenticated Supabase client with Clerk token
-export const createAuthenticatedSupabaseClient = async (clerkToken: string) => {
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      storage: AsyncStorage,
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${clerkToken}`,
-      },
-    },
+// Enhanced auth state debugging
+supabase.auth.onAuthStateChange((event, session) => {
+  debugLog('Supabase Auth', `State Change - ${event}`, {
+    event,
+    hasSession: !!session,
+    userId: session?.user?.id,
+    provider: session?.user?.app_metadata?.provider,
+    email: session?.user?.email,
+    timestamp: new Date().toISOString()
   });
-};
-
-// Function to sync Clerk authentication with Supabase
-export const syncClerkWithSupabase = async (clerkToken: string, clerkUser: any) => {
-  try {
-    // Create a custom session for Supabase using Clerk token
-    const { data, error } = await supabase.auth.setSession({
-      access_token: clerkToken,
-      refresh_token: clerkToken, // In this case, we'll use the same token
-    });
-
-    if (error) {
-      console.error('Error syncing Clerk with Supabase:', error);
-      return { success: false, error };
-    }
-
-    debugLog('Supabase Sync', 'Clerk session synced', {
-      hasSession: !!data.session,
-      userId: data.session?.user?.id
-    });
-
-    return { success: true, session: data.session };
-  } catch (error) {
-    console.error('Error in syncClerkWithSupabase:', error);
-    return { success: false, error };
-  }
-};
+});
 
 // Add query debug listener
 supabase.channel('custom-all-channel')
@@ -80,4 +49,11 @@ supabase.channel('custom-all-channel')
   })
   .subscribe();
 
-console.log('DEBUG: Supabase client initialized:', supabase ? 'Yes' : 'No'); 
+console.log('DEBUG: Supabase client initialized:', supabase ? 'Yes' : 'No');
+debugLog('Supabase Client', 'Initialization Complete', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  autoRefreshToken: true,
+  persistSession: true,
+  detectSessionInUrl: false
+}); 
