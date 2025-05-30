@@ -78,15 +78,18 @@ function RootNavigation() {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inTabsGroup = segments[0] === '(tabs)';
     console.log('[RootNavigation] Navigation state:', {
       inAuthGroup,
+      inTabsGroup,
       hasUser: !!user,
       currentSegments: segments
     });
 
     // Add a small delay to prevent rapid navigation conflicts
     const timeoutId = setTimeout(() => {
-      if (user && !inAuthGroup) {
+      if (user && !inAuthGroup && !inTabsGroup) {
+        // Only redirect if user is authenticated but not in auth group or tabs group
         console.log('[RootNavigation] User authenticated, redirecting to main app');
         router.replace('/(tabs)');
       } else if (!user && inAuthGroup === false) {
