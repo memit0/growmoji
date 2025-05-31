@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { NotificationsProvider } from '../contexts/NotificationsContext';
-import { SubscriptionProvider } from '../contexts/SubscriptionContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthService } from '../lib/auth/AuthService';
 
@@ -13,11 +12,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider>
         <AuthProvider>
-          <SubscriptionProvider>
-            <NotificationsProvider>
-              <RootNavigation />
-            </NotificationsProvider>
-          </SubscriptionProvider>
+          <NotificationsProvider>
+            <RootNavigation />
+          </NotificationsProvider>
         </AuthProvider>
       </ThemeProvider>
     </GestureHandlerRootView>

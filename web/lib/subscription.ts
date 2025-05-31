@@ -14,15 +14,15 @@ export async function initializeRevenueCat(userId: string): Promise<void> {
 
     console.log('🔍 [USER ID COMPARISON] Web app is using User ID:', userId);
     console.log('🔍 [USER ID COMPARISON] Compare this with RevenueCat dashboard User ID');
-    
+
     purchasesInstance = Purchases.configure(apiKey, userId);
     console.log('[RevenueCat Web] Initialized successfully');
-    
+
     // Get customer info and show the actual user ID RevenueCat sees
     const customerInfo = await purchasesInstance.getCustomerInfo();
     console.log('🔍 [USER ID COMPARISON] RevenueCat returned User ID:', customerInfo.originalAppUserId);
     console.log('🔍 [USER ID COMPARISON] User IDs match?', userId === customerInfo.originalAppUserId);
-    
+
   } catch (error) {
     console.error('[RevenueCat Web] Initialization failed:', error);
     throw error;
@@ -57,25 +57,13 @@ export async function getOfferings(): Promise<Offering[] | null> {
 export function checkPremiumStatus(customerInfo: CustomerInfo | null): boolean {
   if (!customerInfo) return false;
 
-  // Check common entitlement patterns
+  // Check only for the correct premium entitlement
   const activeEntitlements = customerInfo.entitlements.active;
-  
+
   console.log('🔍 [ENTITLEMENTS CHECK] Active entitlements found:', Object.keys(activeEntitlements));
-  console.log('🔍 [ENTITLEMENTS CHECK] Looking for: pro, premium, plus, Yearly, Monthly, yearly, monthly, Growmoji Premium, Pro access to features');
-  
-  const isPremium = (
-    activeEntitlements['pro'] !== undefined ||
-    activeEntitlements['premium'] !== undefined ||
-    activeEntitlements['plus'] !== undefined ||
-    activeEntitlements['Yearly'] !== undefined ||
-    activeEntitlements['Monthly'] !== undefined ||
-    activeEntitlements['yearly'] !== undefined ||
-    activeEntitlements['monthly'] !== undefined ||
-    activeEntitlements['Growmoji Premium'] !== undefined ||
-    activeEntitlements['Pro access to features'] !== undefined ||
-    // Check if ANY entitlement is active (fallback)
-    Object.keys(activeEntitlements).length > 0
-  );
+  console.log('🔍 [ENTITLEMENTS CHECK] Looking for: Growmoji Premium');
+
+  const isPremium = activeEntitlements['Growmoji Premium'] !== undefined;
 
   console.log('🔍 [ENTITLEMENTS CHECK] Premium status result:', isPremium);
   return isPremium;
@@ -86,7 +74,7 @@ export async function purchasePackage(packageToPurchase: Offering['availablePack
     if (!purchasesInstance) {
       throw new Error('RevenueCat not initialized');
     }
-    
+
     const result = await purchasesInstance.purchase({
       rcPackage: packageToPurchase,
     });
@@ -102,7 +90,7 @@ export async function restorePurchases(): Promise<boolean> {
     if (!purchasesInstance) {
       throw new Error('RevenueCat not initialized');
     }
-    
+
     // RevenueCat web SDK doesn't have restorePurchases, but we can refresh customer info
     const customerInfo = await purchasesInstance.getCustomerInfo();
     return checkPremiumStatus(customerInfo);
@@ -119,8 +107,8 @@ export async function presentPaywall(): Promise<boolean> {
     // This function returns true if the user successfully subscribes
     return new Promise((resolve) => {
       // This will be handled by our custom PaywallModal component
-      window.dispatchEvent(new CustomEvent('showPaywall', { 
-        detail: { resolve } 
+      window.dispatchEvent(new CustomEvent('showPaywall', {
+        detail: { resolve }
       }));
     });
   } catch (error) {

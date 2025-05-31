@@ -6,15 +6,15 @@ import { ThemedText } from './ThemedText';
 
 export function RevenueCatDebug() {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const { 
-    offerings, 
-    customerInfo, 
-    isPremium, 
-    refreshOfferings, 
+  const {
+    offerings,
+    customerInfo,
+    isPremium,
+    refreshOfferings,
     refreshCustomerInfo,
     simulatePurchase,
     checkRevenueCatConfig,
-    isLoading, 
+    isLoading,
     error,
     debugPremiumOverride,
     setDebugPremiumOverride
@@ -23,7 +23,7 @@ export function RevenueCatDebug() {
   const showDetailedInfo = () => {
     const activeEntitlements = customerInfo ? Object.keys(customerInfo.entitlements.active) : [];
     const allEntitlements = customerInfo ? Object.keys(customerInfo.entitlements.all || {}) : [];
-    
+
     const info: { [key: string]: string | number } = {
       'Is Premium': isPremium ? 'Yes' : 'No',
       'Is Loading': isLoading ? 'Yes' : 'No',
@@ -38,12 +38,6 @@ export function RevenueCatDebug() {
     // Add specific entitlement checks
     if (customerInfo) {
       info['Growmoji Premium Check'] = customerInfo.entitlements.active['Growmoji Premium'] ? 'ACTIVE' : 'INACTIVE';
-      info['Yearly Check'] = customerInfo.entitlements.active['Yearly'] ? 'ACTIVE' : 'INACTIVE';
-      info['Monthly Check'] = customerInfo.entitlements.active['Monthly'] ? 'ACTIVE' : 'INACTIVE';
-      info['yearly Check'] = customerInfo.entitlements.active['yearly'] ? 'ACTIVE' : 'INACTIVE';
-      info['monthly Check'] = customerInfo.entitlements.active['monthly'] ? 'ACTIVE' : 'INACTIVE';
-      info['pro Check'] = customerInfo.entitlements.active['pro'] ? 'ACTIVE' : 'INACTIVE';
-      info['premium Check'] = customerInfo.entitlements.active['premium'] ? 'ACTIVE' : 'INACTIVE';
     }
 
     const message = Object.entries(info)
@@ -191,8 +185,8 @@ export function RevenueCatDebug() {
         <ThemedText style={styles.buttonText}>Refresh Customer Info</ThemedText>
       </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={[styles.button, { backgroundColor: '#8B5CF6' }]} 
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: '#8B5CF6' }]}
         onPress={checkRevenueCatConfig}
       >
         <ThemedText style={styles.buttonText}>🔍 Run Full Config Check</ThemedText>
@@ -204,36 +198,15 @@ export function RevenueCatDebug() {
 
       <View style={styles.section}>
         <ThemedText style={styles.sectionTitle}>Test Entitlements</ThemedText>
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#10B981' }]} 
-          onPress={() => simulatePurchase('pro')}
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: '#10B981' }]}
+          onPress={() => simulatePurchase('Growmoji Premium')}
         >
-          <ThemedText style={styles.buttonText}>Test: "pro" (Most Common)</ThemedText>
+          <ThemedText style={styles.buttonText}>Test: "Growmoji Premium" (Correct)</ThemedText>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#10B981' }]} 
-          onPress={() => simulatePurchase('premium')}
-        >
-          <ThemedText style={styles.buttonText}>Test: "premium"</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#10B981' }]} 
-          onPress={() => simulatePurchase('Yearly')}
-        >
-          <ThemedText style={styles.buttonText}>Test: "Yearly"</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#10B981' }]} 
-          onPress={() => simulatePurchase('Monthly')}
-        >
-          <ThemedText style={styles.buttonText}>Test: "Monthly"</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: '#EF4444' }]} 
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: '#EF4444' }]}
           onPress={() => simulatePurchase('nonexistent')}
         >
           <ThemedText style={styles.buttonText}>Test: Invalid Entitlement</ThemedText>
