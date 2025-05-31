@@ -1,6 +1,5 @@
 import { ConsoleWarningFilter } from '@/components/ConsoleWarningFilter';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -24,7 +23,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.jpg",
   },
-  twitter:   {
+  twitter: {
     card: "summary_large_image",
     title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
@@ -37,27 +36,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider
-      afterSignOutUrl="/"
-      signInUrl="/auth/sign-in"
-      signUpUrl="/auth/sign-up"
-      appearance={{
-        variables: {
-          colorPrimary: "#0f172a",
-        },
-      }}
-      // Enhanced error handling for browser extensions
-      telemetry={false}
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    >
-      <html lang="en">
-        <body className={inter.className}>
-          <ConsoleWarningFilter />
-          <ErrorBoundary>
-            {children}
-          </ErrorBoundary>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className={inter.className}>
+        <ConsoleWarningFilter />
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+      </body>
+    </html>
   );
 }

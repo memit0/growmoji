@@ -2,31 +2,31 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useAuth } from '@clerk/nextjs';
 import { AlertCircle, CheckCircle, Crown, Loader2, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
 type ConnectionTestResult = {
   success: boolean;
-  data?: unknown; 
+  data?: unknown;
   error?: string;
   details?: string;
 };
 
 export default function DebugPage() {
   const { isSignedIn, userId } = useAuth();
-  const { 
-    isPremium, 
-    isLoading: subscriptionLoading, 
-    customerInfo, 
-    offerings, 
+  const {
+    isPremium,
+    isLoading: subscriptionLoading,
+    customerInfo,
+    offerings,
     error: subscriptionError,
     refreshCustomerInfo,
     refreshOfferings,
     isInitialized
   } = useSubscription();
-  
+
   const [connectionTest, setConnectionTest] = useState<ConnectionTestResult | null>(null);
   const [testingConnection, setTestingConnection] = useState(false);
 
@@ -37,8 +37,8 @@ export default function DebugPage() {
       const data = await response.json();
       setConnectionTest(data);
     } catch (error) {
-      setConnectionTest({ 
-        success: false, 
+      setConnectionTest({
+        success: false,
         error: 'Network error',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
@@ -75,7 +75,7 @@ export default function DebugPage() {
               'Test Connection'
             )}
           </Button>
-          
+
           {connectionTest && (
             <div className="mt-4 p-4 bg-muted rounded-lg">
               <pre className="text-sm overflow-auto">
@@ -129,7 +129,7 @@ export default function DebugPage() {
             <p>Customer Info: {customerInfo ? 'Available' : 'None'}</p>
             <p>Offerings: {offerings ? `${offerings.length} available` : 'None'}</p>
           </div>
-          
+
           <div className="flex gap-2">
             <Button onClick={refreshCustomerInfo} disabled={subscriptionLoading}>
               Refresh Customer Info

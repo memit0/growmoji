@@ -1,118 +1,52 @@
-import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
+// TEMPORARY: RevenueCat integration disabled for web version
+// All premium checks bypassed - users get immediate access
 
-// Initialize RevenueCat on the client side
-let purchasesInstance: Purchases | null = null;
+// Commented out RevenueCat imports since integration is disabled
+// import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
+import { CustomerInfo, Offering } from '@revenuecat/purchases-js';
+
+// RevenueCat instance disabled for web version
+// let purchasesInstance: Purchases | null = null;
 
 export async function initializeRevenueCat(userId: string): Promise<void> {
-  if (purchasesInstance) return;
-
-  try {
-    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
-    if (!apiKey) {
-      throw new Error('Missing RevenueCat Web API key');
-    }
-
-    console.log('🔍 [USER ID COMPARISON] Web app is using User ID:', userId);
-    console.log('🔍 [USER ID COMPARISON] Compare this with RevenueCat dashboard User ID');
-
-    purchasesInstance = Purchases.configure(apiKey, userId);
-    console.log('[RevenueCat Web] Initialized successfully');
-
-    // Get customer info and show the actual user ID RevenueCat sees
-    const customerInfo = await purchasesInstance.getCustomerInfo();
-    console.log('🔍 [USER ID COMPARISON] RevenueCat returned User ID:', customerInfo.originalAppUserId);
-    console.log('🔍 [USER ID COMPARISON] User IDs match?', userId === customerInfo.originalAppUserId);
-
-  } catch (error) {
-    console.error('[RevenueCat Web] Initialization failed:', error);
-    throw error;
-  }
+  // TEMPORARY: RevenueCat initialization disabled for web version
+  console.log('[RevenueCat Web] Initialization bypassed - premium access granted to all users');
+  return Promise.resolve();
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
-  try {
-    if (!purchasesInstance) {
-      throw new Error('RevenueCat not initialized');
-    }
-    return await purchasesInstance.getCustomerInfo();
-  } catch (error) {
-    console.error('[RevenueCat Web] Failed to get customer info:', error);
-    return null;
-  }
+  // TEMPORARY: Return null since RevenueCat is disabled
+  console.log('[RevenueCat Web] getCustomerInfo bypassed - RevenueCat disabled');
+  return null;
 }
 
 export async function getOfferings(): Promise<Offering[] | null> {
-  try {
-    if (!purchasesInstance) {
-      throw new Error('RevenueCat not initialized');
-    }
-    const offerings = await purchasesInstance.getOfferings();
-    return Object.values(offerings.all || {});
-  } catch (error) {
-    console.error('[RevenueCat Web] Failed to get offerings:', error);
-    return null;
-  }
+  // TEMPORARY: Return empty array since RevenueCat is disabled
+  console.log('[RevenueCat Web] getOfferings bypassed - RevenueCat disabled');
+  return [];
 }
 
 export function checkPremiumStatus(customerInfo: CustomerInfo | null): boolean {
-  if (!customerInfo) return false;
-
-  // Check only for the correct premium entitlement
-  const activeEntitlements = customerInfo.entitlements.active;
-
-  console.log('🔍 [ENTITLEMENTS CHECK] Active entitlements found:', Object.keys(activeEntitlements));
-  console.log('🔍 [ENTITLEMENTS CHECK] Looking for: Growmoji Premium');
-
-  const isPremium = activeEntitlements['Growmoji Premium'] !== undefined;
-
-  console.log('🔍 [ENTITLEMENTS CHECK] Premium status result:', isPremium);
-  return isPremium;
+  // TEMPORARY: Always return true for premium status
+  console.log('[RevenueCat Web] checkPremiumStatus bypassed - always returning premium status');
+  return true;
 }
 
 export async function purchasePackage(packageToPurchase: Offering['availablePackages'][number]): Promise<boolean> {
-  try {
-    if (!purchasesInstance) {
-      throw new Error('RevenueCat not initialized');
-    }
-
-    const result = await purchasesInstance.purchase({
-      rcPackage: packageToPurchase,
-    });
-    return checkPremiumStatus(result.customerInfo);
-  } catch (error) {
-    console.error('[RevenueCat Web] Purchase failed:', error);
-    throw error;
-  }
+  // TEMPORARY: Always return success since RevenueCat is disabled
+  console.log('[RevenueCat Web] purchasePackage bypassed - RevenueCat disabled');
+  return true;
 }
 
 export async function restorePurchases(): Promise<boolean> {
-  try {
-    if (!purchasesInstance) {
-      throw new Error('RevenueCat not initialized');
-    }
-
-    // RevenueCat web SDK doesn't have restorePurchases, but we can refresh customer info
-    const customerInfo = await purchasesInstance.getCustomerInfo();
-    return checkPremiumStatus(customerInfo);
-  } catch (error) {
-    console.error('[RevenueCat Web] Restore failed:', error);
-    throw error;
-  }
+  // TEMPORARY: Always return success since RevenueCat is disabled
+  console.log('[RevenueCat Web] restorePurchases bypassed - RevenueCat disabled');
+  return true;
 }
 
 // Paywall utility function
 export async function presentPaywall(): Promise<boolean> {
-  try {
-    // For web, we'll use a modal instead of RevenueCat's native paywall
-    // This function returns true if the user successfully subscribes
-    return new Promise((resolve) => {
-      // This will be handled by our custom PaywallModal component
-      window.dispatchEvent(new CustomEvent('showPaywall', {
-        detail: { resolve }
-      }));
-    });
-  } catch (error) {
-    console.error('[RevenueCat Web] Paywall presentation failed:', error);
-    return false;
-  }
-} 
+  // TEMPORARY: Always return success since RevenueCat is disabled
+  console.log('[RevenueCat Web] presentPaywall bypassed - RevenueCat disabled');
+  return true;
+}

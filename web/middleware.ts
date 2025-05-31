@@ -1,35 +1,60 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/habits(.*)',
-  '/calendar(.*)',
-  '/stats(.*)',
-  '/todos(.*)',
-  '/timer(.*)',
-]);
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  });
 
-export default clerkMiddleware(async (auth, req) => {
-  console.log('Middleware triggered for URL:', req.url);
-  const authState = await auth();
-  console.log('Auth state:', { userId: authState.userId, orgId: authState.orgId, sessionId: authState.sessionId });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
 
-  if (isProtectedRoute(req)) {
-    console.log('Protected route, calling auth.protect()');
-    auth.protect();
-    console.log('After auth.protect()');
+  // Refresh session if expired - required for Server Components
+  await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Protected routes
+  const protectedPaths = ['/dashboard', '/habits', '/calendar', '/stats', '/todos', '/timer'];
+  const isProtectedRoute = protectedPaths.some(path =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  // Redirect to sign-in if accessing protected route without authentication
+  if (isProtectedRoute && !user) {
+    return NextResponse.redirect(new URL('/auth/sign-in', request.url));
   }
 
-  // Add a log to see if a redirect is happening and to where
-  // This requires inspecting the response, which clerkMiddleware handles internally.
-  // For now, we'll log before and after protect() and rely on browser dev tools for redirect tracing.
-}, {
-  // Add authorizedParties for enhanced security in production
-  // This prevents subdomain cookie leaking attacks
-  authorizedParties: process.env.NODE_ENV === 'production' 
-    ? [process.env.NEXT_PUBLIC_APP_URL || 'https://growmoji.app']
-    : undefined,
-});
+  // Redirect to dashboard if authenticated user tries to access auth pages
+  // BUT exclude the callback route which needs to be accessible for OAuth flow
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth/');
+  const isCallbackRoute = request.nextUrl.pathname === '/auth/callback';
+  if (isAuthRoute && user && !isCallbackRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  return supabaseResponse;
+}
 
 export const config = {
   matcher: [

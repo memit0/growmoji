@@ -1,5 +1,5 @@
+import { createSupabaseServerClient } from '@/lib/auth';
 import { habitsService } from '@/lib/services/habits';
-import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RouteContext {
@@ -12,9 +12,10 @@ export async function POST(
 ) {
   const { id } = await context.params;
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -33,9 +34,10 @@ export async function GET(
 ) {
   const { id } = await context.params;
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -53,15 +55,16 @@ export async function DELETE(
 ) {
   const { id } = await context.params;
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const logDate = searchParams.get('log_date');
-    
+
     if (!logDate) {
       return NextResponse.json({ error: 'log_date is required' }, { status: 400 });
     }

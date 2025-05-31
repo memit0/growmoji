@@ -1,7 +1,7 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
 import type { Habit } from '@/lib/supabase';
-import { useAuth } from '@clerk/nextjs';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useHabits() {
@@ -20,11 +20,11 @@ export function useHabits() {
       setLoading(true);
       setError(null);
       const response = await fetch('/api/habits');
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch habits: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setHabits(data);
     } catch (err) {
@@ -86,19 +86,19 @@ export function useHabits() {
         await fetch(`/api/habits/${habitId}/logs?log_date=${todayStr}`, {
           method: 'DELETE'
         });
-        
+
         // Get remaining logs to recalculate streak
         const logsResponse = await fetch(`/api/habits/${habitId}/logs`);
         const logs = await logsResponse.json();
-        
+
         let newStreak = 0;
         let newLastCheckDate: string | null = null;
-        
+
         if (logs.length > 0) {
           logs.sort((a: any, b: any) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
-          
+
           for (let i = logs.length - 2; i >= 0; i--) {
             const currentDate = new Date(logs[i + 1].log_date);
             const previousDate = new Date(logs[i].log_date);
@@ -111,7 +111,7 @@ export function useHabits() {
             }
           }
         }
-        
+
         // Update habit streak details
         await fetch(`/api/habits/${habitId}`, {
           method: 'PATCH',
@@ -129,7 +129,7 @@ export function useHabits() {
           body: JSON.stringify({ log_date: todayStr })
         });
       }
-      
+
       // Refresh habits
       await fetchHabits();
     } catch (err) {

@@ -7,14 +7,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import type { Todo } from "@/lib/supabase";
-import { useAuth } from "@clerk/nextjs";
 import {
-    CheckCircle,
-    CheckSquare,
-    Clock,
-    Plus,
-    Trash2
+  CheckCircle,
+  CheckSquare,
+  Clock,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -154,7 +154,7 @@ export default function TodosPage() {
             {isAtLimit && <span className="text-red-500 font-medium"> • Limit reached</span>}
           </p>
         </div>
-        
+
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2" disabled={isAtLimit}>
@@ -263,14 +263,14 @@ export default function TodosPage() {
           <CardContent>
             <CheckSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">
-              {filter === 'all' ? 'No tasks yet' : 
-               filter === 'pending' ? 'No pending tasks' : 
-               'No completed tasks'}
+              {filter === 'all' ? 'No tasks yet' :
+                filter === 'pending' ? 'No pending tasks' :
+                  'No completed tasks'}
             </h3>
             <p className="text-muted-foreground mb-4">
               {filter === 'all' ? 'Create your first task to get started! (Limit: 3 tasks)' :
-               filter === 'pending' ? 'All tasks are completed! Great job!' :
-               'Complete some tasks to see them here.'}
+                filter === 'pending' ? 'All tasks are completed! Great job!' :
+                  'Complete some tasks to see them here.'}
             </p>
             {filter === 'all' && !isAtLimit && (
               <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
@@ -291,11 +291,10 @@ export default function TodosPage() {
                     onCheckedChange={() => handleToggleTodo(todo.id)}
                     className="shrink-0"
                   />
-                  
+
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${
-                      todo.is_completed ? 'line-through text-muted-foreground' : ''
-                    }`}>
+                    <p className={`text-sm font-medium ${todo.is_completed ? 'line-through text-muted-foreground' : ''
+                      }`}>
                       {todo.content}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -312,7 +311,7 @@ export default function TodosPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <Button
                     variant="ghost"
                     size="icon"

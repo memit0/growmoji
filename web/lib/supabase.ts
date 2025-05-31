@@ -1,5 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient, createServerClient } from '@supabase/ssr';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -16,40 +15,53 @@ try {
   throw new Error('Invalid Supabase URL format');
 }
 
-// Create Supabase client for client-side operations
-export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-  },
-  global: {
-    headers: {
-      'X-Client-Info': 'habittracker-web'
-    }
-  }
-});
+// Create Supabase client for client-side operations  
+export const supabaseClient = createSupabaseBrowserClient();
 
-// Create Supabase client for server-side operations with Clerk auth
+// Create Supabase client for client-side operations
+export function createSupabaseBrowserClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+// Create Supabase client for server-side operations
 export async function createSupabaseServerClient() {
-  const { userId } = await auth();
-  
-  if (!userId) {
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+          }
+        },
+      },
+    }
+  );
+
+  // Get the current user
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
     throw new Error('User not authenticated');
   }
 
-  // Use service role key if available to bypass RLS, otherwise use anon key
-  const apiKey = supabaseServiceRoleKey || supabaseAnonKey;
-  
-  const client = createClient(supabaseUrl, apiKey, {
-    global: {
-      headers: {
-        'X-Client-Info': 'habittracker-web-server',
-        'X-User-ID': userId
-      }
-    }
-  });
-
-  return { client, userId };
+  return { client: supabase, userId: user.id };
 }
 
 // Test connection function
@@ -58,12 +70,12 @@ export async function testSupabaseConnection() {
     const { error } = await supabaseClient
       .from('habits')
       .select('count', { count: 'exact', head: true });
-    
+
     if (error) {
       console.error('Supabase connection test failed:', error);
       return { success: false, error: error.message };
     }
-    
+
     return { success: true, message: 'Connection successful' };
   } catch (error) {
     console.error('Supabase connection test error:', error);

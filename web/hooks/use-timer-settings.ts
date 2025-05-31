@@ -1,17 +1,34 @@
 'use client';
 
 import type { TimerSettings } from '@/lib/supabase';
-import { useAuth } from '@clerk/nextjs';
+import { createSupabaseBrowserClient } from '@/lib/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useTimerSettings() {
-  const { isSignedIn } = useAuth();
+  const supabase = createSupabaseBrowserClient();
+  const [user, setUser] = useState<any>(null);
   const [settings, setSettings] = useState<TimerSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get current user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
   const fetchSettings = useCallback(async () => {
-    if (!isSignedIn) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -20,11 +37,11 @@ export function useTimerSettings() {
       setLoading(true);
       setError(null);
       const response = await fetch('/api/timer-settings');
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch timer settings: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setSettings(data);
     } catch (err) {
@@ -33,7 +50,7 @@ export function useTimerSettings() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn]);
+  }, [user]);
 
   const updateSettings = useCallback(async (settingsData: { work_duration: number; break_duration: number }) => {
     try {

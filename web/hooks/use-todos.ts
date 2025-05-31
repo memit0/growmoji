@@ -1,7 +1,7 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
 import type { Todo } from '@/lib/supabase';
-import { useAuth } from '@clerk/nextjs';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useTodos() {
@@ -20,11 +20,11 @@ export function useTodos() {
       setLoading(true);
       setError(null);
       const response = await fetch('/api/todos');
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch todos: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       setTodos(data);
     } catch (err) {

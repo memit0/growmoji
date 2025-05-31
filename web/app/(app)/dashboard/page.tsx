@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import type { Habit, Todo } from "@/lib/supabase";
-import { useAuth } from "@clerk/nextjs";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 import {
   Calendar,
   CheckCircle,
@@ -25,7 +25,8 @@ type LogEntry = {
 };
 
 export default function DashboardPage() {
-  const { isSignedIn } = useAuth();
+  const supabase = createSupabaseBrowserClient();
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -33,11 +34,33 @@ export default function DashboardPage() {
   const [isCreateHabitModalOpen, setIsCreateHabitModalOpen] = useState(false);
   const [newHabitEmoji, setNewHabitEmoji] = useState('');
 
+  // Get current user
   useEffect(() => {
-    if (isSignedIn) {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (!user) {
+        router.push('/auth/sign-in');
+      }
+    };
+
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        router.push('/auth/sign-in');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase, router]);
+
+  useEffect(() => {
+    if (user) {
       fetchData();
     }
-  }, [isSignedIn]);
+  }, [user]);
 
   useEffect(() => {
     if (!isCreateHabitModalOpen) {
@@ -52,7 +75,7 @@ export default function DashboardPage() {
         fetch('/api/habits'),
         fetch('/api/todos')
       ]);
-      
+
       if (habitsResponse.ok && todosResponse.ok) {
         const [habitsData, todosData] = await Promise.all([
           habitsResponse.json(),
@@ -81,19 +104,19 @@ export default function DashboardPage() {
         await fetch(`/api/habits/${habitId}/logs?log_date=${todayStr}`, {
           method: 'DELETE'
         });
-        
+
         // Get remaining logs to recalculate streak
         const logsResponse = await fetch(`/api/habits/${habitId}/logs`);
         const logs = await logsResponse.json();
-        
+
         let newStreak = 0;
         let newLastCheckDate: string | null = null;
-        
+
         if (logs.length > 0) {
           logs.sort((a: LogEntry, b: LogEntry) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
-          
+
           for (let i = logs.length - 2; i >= 0; i--) {
             const currentDate = new Date(logs[i + 1].log_date);
             const previousDate = new Date(logs[i].log_date);
@@ -106,7 +129,7 @@ export default function DashboardPage() {
             }
           }
         }
-        
+
         // Update habit streak details
         await fetch(`/api/habits/${habitId}`, {
           method: 'PATCH',
@@ -124,7 +147,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ log_date: todayStr })
         });
       }
-      
+
       // Refresh habits
       const habitsResponse = await fetch('/api/habits');
       if (habitsResponse.ok) {
@@ -185,16 +208,16 @@ export default function DashboardPage() {
     const today = new Date().toISOString().split('T')[0];
     return h.last_check_date?.startsWith(today);
   }).length;
-  
+
   const totalHabits = habits.length;
   const completionRate = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
-  
+
   const completedTodos = todos.filter(t => t.is_completed).length;
   const pendingTodos = todos.length - completedTodos;
-  
+
   // Calculate current streak (highest streak among habits)
   const currentStreak = habits.reduce((max, habit) => Math.max(max, habit.current_streak), 0);
-  
+
   // Calculate week completion rate
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
@@ -230,9 +253,8 @@ export default function DashboardPage() {
                       key={emoji}
                       type="button"
                       onClick={() => setNewHabitEmoji(emoji)}
-                      className={`text-2xl p-2 rounded-lg border hover:bg-accent transition-colors ${
-                        newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
-                      }`}
+                      className={`text-2xl p-2 rounded-lg border hover:bg-accent transition-colors ${newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
+                        }`}
                     >
                       {emoji}
                     </button>
@@ -326,13 +348,13 @@ export default function DashboardPage() {
           <div className="space-y-4">
             {habits.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No habits yet. Create your first habit to get started! 
+                No habits yet. Create your first habit to get started!
               </p>
             ) : (
               habits.map((habit) => {
                 const todayStr = new Date().toISOString().split('T')[0];
                 const isCompletedToday = habit.last_check_date?.startsWith(todayStr);
-                
+
                 return (
                   <div key={habit.id} className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                     <Button
@@ -343,7 +365,7 @@ export default function DashboardPage() {
                     >
                       <span className="text-lg">{habit.emoji}</span>
                     </Button>
-                    
+
                     <div className="flex-1">
                       <h3 className={`font-medium text-lg ${isCompletedToday ? 'line-through text-muted-foreground' : ''}`}>
                         {habit.emoji}
@@ -355,7 +377,7 @@ export default function DashboardPage() {
                         </Badge>
                       </div>
                     </div>
-                    
+
                     {isCompletedToday && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
                     )}
@@ -374,24 +396,24 @@ export default function DashboardPage() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full justify-start gap-2"
               onClick={() => setIsCreateHabitModalOpen(true)}
             >
               <Plus className="h-4 w-4" />
               Add New Habit
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full justify-start gap-2"
               onClick={() => router.push('/stats')}
             >
               <TrendingUp className="h-4 w-4" />
               View Statistics
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full justify-start gap-2"
               onClick={() => router.push('/todos')}
             >

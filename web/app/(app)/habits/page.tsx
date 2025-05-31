@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth";
 import type { Habit } from "@/lib/supabase";
-import { useAuth } from "@clerk/nextjs";
 import {
-    CheckCircle,
-    Flame,
-    Plus,
-    Target,
-    Trash2
+  CheckCircle,
+  Flame,
+  Plus,
+  Target,
+  Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -107,19 +107,19 @@ export default function HabitsPage() {
         await fetch(`/api/habits/${habitId}/logs?log_date=${todayStr}`, {
           method: 'DELETE'
         });
-        
+
         // Get remaining logs to recalculate streak
         const logsResponse = await fetch(`/api/habits/${habitId}/logs`);
         const logs = await logsResponse.json();
-        
+
         let newStreak = 0;
         let newLastCheckDate: string | null = null;
-        
+
         if (logs.length > 0) {
           logs.sort((a: LogEntry, b: LogEntry) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
-          
+
           for (let i = logs.length - 2; i >= 0; i--) {
             const currentDate = new Date(logs[i + 1].log_date);
             const previousDate = new Date(logs[i].log_date);
@@ -132,7 +132,7 @@ export default function HabitsPage() {
             }
           }
         }
-        
+
         // Update habit streak details
         await fetch(`/api/habits/${habitId}`, {
           method: 'PATCH',
@@ -150,7 +150,7 @@ export default function HabitsPage() {
           body: JSON.stringify({ log_date: todayStr })
         });
       }
-      
+
       // Refresh habits
       fetchHabits();
     } catch (error) {
@@ -192,7 +192,7 @@ export default function HabitsPage() {
             Track your daily habits with simple emojis. {completedToday}/{habits.length} completed today.
           </p>
         </div>
-        
+
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2">
@@ -213,9 +213,8 @@ export default function HabitsPage() {
                       key={emoji}
                       type="button"
                       onClick={() => setNewHabitEmoji(emoji)}
-                      className={`text-2xl p-2 rounded-lg border hover:bg-accent transition-colors ${
-                        newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
-                      }`}
+                      className={`text-2xl p-2 rounded-lg border hover:bg-accent transition-colors ${newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
+                        }`}
                     >
                       {emoji}
                     </button>
@@ -260,7 +259,7 @@ export default function HabitsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {habits.map((habit) => {
             const isCompletedToday = habit.last_check_date?.startsWith(todayStr);
-            
+
             return (
               <Card key={habit.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
@@ -285,7 +284,7 @@ export default function HabitsPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="gap-1">
@@ -299,7 +298,7 @@ export default function HabitsPage() {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <Button
                     onClick={() => handleHabitToggle(habit.id)}
                     variant={isCompletedToday ? "default" : "outline"}
