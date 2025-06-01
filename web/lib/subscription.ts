@@ -9,7 +9,12 @@ export async function initializeRevenueCat(userId: string): Promise<void> {
     const apiKey = getRevenueCatApiKey();
 
     console.log('[RevenueCat Web] Initializing with user ID:', userId);
-    console.log('[RevenueCat Web] API Key prefix:', apiKey.substring(0, 10) + '...');
+    // More detailed API key logging for production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('[RevenueCat Web] Production API Key being used (first 5, last 5):', apiKey.substring(0, 5) + '...' + apiKey.substring(apiKey.length - 5));
+    } else {
+      console.log('[RevenueCat Web] API Key prefix:', apiKey.substring(0, 10) + '...');
+    }
     console.log('[RevenueCat Web] Environment:', process.env.NODE_ENV);
 
     // Initialize RevenueCat with user ID - correct API for web SDK
@@ -46,9 +51,14 @@ export async function getOfferings(): Promise<Offering[] | null> {
       return [];
     }
 
-    const offerings = await purchasesInstance.getOfferings();
-    console.log('[RevenueCat Web] Offerings retrieved:', Object.keys(offerings.all || {}).length);
-    return Object.values(offerings.all || {});
+    const offeringsResponse = await purchasesInstance.getOfferings();
+    console.log('[RevenueCat Web] Raw Offerings API Response:', JSON.stringify(offeringsResponse, null, 2)); // Log the raw response
+    console.log('[RevenueCat Web] Offerings retrieved:', Object.keys(offeringsResponse.all || {}).length);
+    if (Object.keys(offeringsResponse.all || {}).length === 0) {
+      console.warn('[RevenueCat Web] No offerings found in the response. Current offering:', offeringsResponse.current?.identifier);
+      console.warn('[RevenueCat Web] All offerings object:', offeringsResponse.all);
+    }
+    return Object.values(offeringsResponse.all || {});
   } catch (error) {
     console.error('[RevenueCat Web] Failed to get offerings:', error);
     return [];
