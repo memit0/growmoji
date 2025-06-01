@@ -1,11 +1,11 @@
 'use client';
 
+import { getOAuthRedirectUrl } from '@/lib/auth-config';
 import { createSupabaseBrowserClient } from '@/lib/supabase';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getOAuthRedirectUrl } from '@/lib/auth-config';
 
 export default function SignInPage() {
   const supabase = createSupabaseBrowserClient();
