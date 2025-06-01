@@ -20,7 +20,7 @@ interface UseSubscriptionReturn {
   error: string | null;
   refreshCustomerInfo: () => Promise<void>;
   refreshOfferings: () => Promise<void>;
-  purchase: (packageToPurchase: any) => Promise<boolean>;
+  purchase: (packageToPurchase: Offering['availablePackages'][number]) => Promise<boolean>;
   restore: () => Promise<boolean>;
   isInitialized: boolean;
 }
@@ -104,7 +104,7 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [isInitialized]);
 
-  const purchase = useCallback(async (packageToPurchase: any): Promise<boolean> => {
+  const purchase = useCallback(async (packageToPurchase: Offering['availablePackages'][number]): Promise<boolean> => {
     if (!isInitialized) return false;
 
     try {

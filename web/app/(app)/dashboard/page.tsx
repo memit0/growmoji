@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import type { Habit, Todo } from "@/lib/supabase";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 import {
   Calendar,
   CheckCircle,
@@ -26,7 +27,7 @@ type LogEntry = {
 
 export default function DashboardPage() {
   const supabase = createSupabaseBrowserClient();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);

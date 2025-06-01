@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import type { Habit } from '@/lib/supabase';
+import type { Habit, HabitLog } from '@/lib/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
 export function useHabits() {
@@ -95,7 +95,7 @@ export function useHabits() {
         let newLastCheckDate: string | null = null;
 
         if (logs.length > 0) {
-          logs.sort((a: any, b: any) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
+          logs.sort((a: HabitLog, b: HabitLog) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime());
           newLastCheckDate = logs[logs.length - 1].log_date;
           newStreak = 1;
 

@@ -1,3 +1,4 @@
+import type { CookieOptions } from '@supabase/ssr';
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (code) {
-        const cookieJar: { name: string; value: string; options?: any }[] = [];
+        const cookieJar: { name: string; value: string; options: CookieOptions }[] = [];
 
         const supabase = createServerClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
