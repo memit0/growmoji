@@ -35,7 +35,7 @@ export function validateProductionEnvironment() {
   // Test RevenueCat API key configuration
   try {
     const apiKey = getRevenueCatApiKey();
-    console.log(`✅ RevenueCat API key configured (${isProd ? 'production' : 'sandbox'})`);
+    console.log(`✅ RevenueCat API key configured (${isProd ? 'production' : 'sandbox'}): ${apiKey ? 'present' : 'missing'}`);
   } catch (error) {
     throw new Error(`RevenueCat configuration error: ${error}`);
   }
