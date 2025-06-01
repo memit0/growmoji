@@ -28,7 +28,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co https://api.revenuecat.com https://e.revenue.cat",
               "frame-src 'self' https://js.stripe.com https://challenges.cloudflare.com https://*.hcaptcha.com https://www.google.com/recaptcha/",
               "worker-src 'self' blob:",
               "child-src 'self'",
