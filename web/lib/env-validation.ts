@@ -3,7 +3,7 @@
  * Ensures all required Supabase and other service keys are properly configured
  */
 
-import { APP_URL, isProd, validateEnvVars } from './env';
+import { APP_URL, getRevenueCatApiKey, isProd, validateEnvVars } from './env';
 
 export function validateProductionEnvironment() {
   // Use the new validation function
@@ -12,12 +12,12 @@ export function validateProductionEnvironment() {
   const requiredEnvVars: Record<string, string | undefined> = {
     'NEXT_PUBLIC_SUPABASE_URL': process.env.NEXT_PUBLIC_SUPABASE_URL,
     'NEXT_PUBLIC_SUPABASE_ANON_KEY': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    'NEXT_PUBLIC_REVENUECAT_WEB_API_KEY': process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY,
   };
 
   // Add production-specific required variables
   if (isProd) {
     requiredEnvVars['NEXT_PUBLIC_APP_URL'] = process.env.NEXT_PUBLIC_APP_URL;
+    requiredEnvVars['NEXT_PUBLIC_REVENUECAT_WEB_API_KEY'] = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
   }
 
   const missingVars: string[] = [];
@@ -32,6 +32,14 @@ export function validateProductionEnvironment() {
     throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
+  // Test RevenueCat API key configuration
+  try {
+    const apiKey = getRevenueCatApiKey();
+    console.log(`✅ RevenueCat API key configured (${isProd ? 'production' : 'sandbox'})`);
+  } catch (error) {
+    throw new Error(`RevenueCat configuration error: ${error}`);
+  }
+
   // Production-specific validations
   if (isProd) {
     console.log('🚀 Production environment detected');
@@ -41,6 +49,8 @@ export function validateProductionEnvironment() {
     if (!APP_URL.startsWith('https://')) {
       throw new Error('Production app URL must use HTTPS');
     }
+  } else {
+    console.log('🛠️ Development environment detected');
   }
 
   console.log('✅ Environment validation passed');

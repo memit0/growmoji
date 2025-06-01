@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
+import { getRevenueCatApiKey } from '@/lib/env';
 import { AlertCircle, CheckCircle, Crown, Loader2, Wifi } from 'lucide-react';
 import { useState } from 'react';
 
@@ -178,10 +179,20 @@ export default function DebugPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
+            <p>Environment: {process.env.NODE_ENV}</p>
             <p>Supabase URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing'}</p>
             <p>Supabase Anon Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing'}</p>
             <p>Clerk Publishable Key: {process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? '✅ Set' : '❌ Missing'}</p>
-            <p>RevenueCat Web API Key: {process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY ? '✅ Set' : '❌ Missing'}</p>
+            <p>RevenueCat Production Key: {process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY ? '✅ Set' : '❌ Missing'}</p>
+            <p>RevenueCat Sandbox Key: {process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY_SANDBOX ? '✅ Set' : '❌ Missing'}</p>
+            <p>Active RevenueCat Key: {(() => {
+              try {
+                const apiKey = getRevenueCatApiKey();
+                return `✅ Using ${process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'} key (${apiKey.substring(0, 10)}...)`;
+              } catch (error) {
+                return `❌ Error: ${error}`;
+              }
+            })()}</p>
           </div>
         </CardContent>
       </Card>

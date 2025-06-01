@@ -1,18 +1,16 @@
 // RevenueCat Web SDK integration
 import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
+import { getRevenueCatApiKey } from './env';
 
 let purchasesInstance: Purchases | null = null;
 
 export async function initializeRevenueCat(userId: string): Promise<void> {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('Missing RevenueCat Web API key');
-    }
+    const apiKey = getRevenueCatApiKey();
 
     console.log('[RevenueCat Web] Initializing with user ID:', userId);
     console.log('[RevenueCat Web] API Key prefix:', apiKey.substring(0, 10) + '...');
+    console.log('[RevenueCat Web] Environment:', process.env.NODE_ENV);
 
     // Initialize RevenueCat with user ID - correct API for web SDK
     await Purchases.configure(apiKey, userId);
