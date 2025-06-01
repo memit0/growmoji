@@ -9,7 +9,7 @@ import {
   purchasePackage,
   restorePurchases
 } from '@/lib/subscription';
-import { CustomerInfo, Offering } from '@revenuecat/purchases-js';
+import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
 import { useCallback, useEffect, useState } from 'react';
 
 interface UseSubscriptionReturn {
@@ -26,21 +26,42 @@ interface UseSubscriptionReturn {
 }
 
 export function useSubscription(): UseSubscriptionReturn {
-  const { userId, isLoaded } = useAuth();
+  const { userId, isLoaded, isSignedIn } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<Offering[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [appUserIDForRC, setAppUserIDForRC] = useState<string | null>(null);
 
   // Calculate premium status based on customer info
   const isPremium = checkPremiumStatus(customerInfo);
 
-  // Initialize RevenueCat when user is available
+  // Initialize RevenueCat when user is available or for anonymous users
+  useEffect(() => {
+    if (isLoaded) {
+      if (isSignedIn && userId) {
+        setAppUserIDForRC(userId);
+      } else if (!isSignedIn) {
+        // For anonymous users, generate and set an RC anonymous ID
+        // This ID is generated once and reused for the session by RevenueCat SDK's internal storage
+        // if browser privacy settings allow.
+        const anonymousId = Purchases.generateRevenueCatAnonymousAppUserId();
+        console.log('[useSubscription] Generated anonymous ID for RevenueCat:', anonymousId);
+        setAppUserIDForRC(anonymousId);
+      }
+    }
+  }, [isLoaded, isSignedIn, userId]);
+
   useEffect(() => {
     const initialize = async () => {
-      if (!isLoaded || !userId) {
-        setIsLoading(false);
+      if (!isLoaded || !appUserIDForRC) {
+        if (isLoaded && !appUserIDForRC && !isSignedIn) {
+          // This case implies we are waiting for the anonymous ID to be set.
+          // We might want to show loading until appUserIDForRC is set.
+        } else if (isLoaded) {
+           setIsLoading(false);
+        }
         return;
       }
 
@@ -48,7 +69,7 @@ export function useSubscription(): UseSubscriptionReturn {
         setIsLoading(true);
         setError(null);
 
-        await initializeRevenueCat(userId);
+        await initializeRevenueCat(appUserIDForRC);
         setIsInitialized(true);
 
         // Fetch initial data
@@ -74,7 +95,7 @@ export function useSubscription(): UseSubscriptionReturn {
     };
 
     initialize();
-  }, [userId, isLoaded]);
+  }, [appUserIDForRC, isLoaded, isSignedIn]);
 
   const refreshCustomerInfo = useCallback(async () => {
     if (!isInitialized) return;
