@@ -5,6 +5,7 @@ import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { getOAuthRedirectUrl } from '@/lib/auth-config';
 
 export default function SignUpPage() {
   const supabase = createSupabaseBrowserClient();
@@ -13,6 +14,14 @@ export default function SignUpPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Debug OAuth configuration
+    console.log('[Auth] OAuth Configuration:', {
+      environment: process.env.NODE_ENV,
+      redirectUrl: getOAuthRedirectUrl(),
+      appUrl: process.env.NEXT_PUBLIC_APP_URL,
+      windowOrigin: typeof window !== 'undefined' ? window.location.origin : 'SSR'
+    });
+
     // Check for error from callback
     const error = searchParams.get('error');
     if (error) {
@@ -91,10 +100,10 @@ export default function SignUpPage() {
             }
           }}
           providers={['google', 'apple']}
-          redirectTo={typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : '/auth/callback'}
+          redirectTo={getOAuthRedirectUrl()}
           showLinks={true}
         />
       </div>
     </>
   );
-} 
+}
