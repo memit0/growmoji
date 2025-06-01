@@ -40,9 +40,50 @@ const features = [
   }
 ];
 
-export function PaywallModal({ 
-  isOpen, 
-  onClose, 
+// Helper function to convert period codes to readable text
+const formatPeriod = (period: string | undefined, packageIdentifier?: string): string => {
+  // First, try to determine from package identifier (more reliable)
+  if (packageIdentifier) {
+    const identifier = packageIdentifier.toLowerCase();
+    if (identifier.includes('annual') || identifier.includes('yearly') || identifier.includes('year')) {
+      return 'yearly';
+    }
+    if (identifier.includes('monthly') || identifier.includes('month')) {
+      return 'monthly';
+    }
+  }
+
+  // Fallback to period code if package identifier doesn't help
+  if (!period) return 'period';
+
+  switch (period.toUpperCase()) {
+    case 'P1M':
+      return 'monthly';
+    case 'P1Y':
+    case 'P12M':
+      return 'yearly';
+    case 'P1W':
+      return 'weekly';
+    case 'P1D':
+      return 'daily';
+    default:
+      // Final fallback for any other period format
+      if (period.toLowerCase().includes('month') || period.toLowerCase().includes('m')) {
+        return 'monthly';
+      }
+      if (period.toLowerCase().includes('year') || period.toLowerCase().includes('annual')) {
+        return 'yearly';
+      }
+      if (period.toLowerCase().includes('week')) {
+        return 'weekly';
+      }
+      return period.toLowerCase();
+  }
+};
+
+export function PaywallModal({
+  isOpen,
+  onClose,
   showCloseButton = false, // Hard unskipable by default
   title = "Unlock Premium Features",
   subtitle = "Get unlimited habits and exclusive features"
@@ -64,7 +105,7 @@ export function PaywallModal({
     try {
       setPurchasing(true);
       const success = await purchase(selectedPackage);
-      
+
       if (success) {
         // Close modal on successful purchase
         onClose();
@@ -85,7 +126,7 @@ export function PaywallModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={showCloseButton ? handleClose : undefined}>
-      <DialogContent 
+      <DialogContent
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader className="space-y-4">
@@ -142,18 +183,17 @@ export function PaywallModal({
               <h3 className="text-lg font-semibold text-center">Choose Your Plan</h3>
               <div className="grid gap-3">
                 {offerings[0].availablePackages.map((pkg, index) => {
-                  const isPopular = pkg.identifier.toLowerCase().includes('annual') || 
-                                   pkg.identifier.toLowerCase().includes('yearly');
+                  const isPopular = pkg.identifier.toLowerCase().includes('annual') ||
+                    pkg.identifier.toLowerCase().includes('yearly');
                   const isSelected = selectedPackage?.identifier === pkg.identifier;
-                  
+
                   return (
                     <Card
                       key={index}
-                      className={`cursor-pointer transition-all duration-200 ${
-                        isSelected 
-                          ? 'ring-2 ring-blue-500 bg-blue-50' 
-                          : 'hover:shadow-md'
-                      }`}
+                      className={`cursor-pointer transition-all duration-200 ${isSelected
+                        ? 'ring-2 ring-blue-500 bg-blue-50'
+                        : 'hover:shadow-md'
+                        }`}
                       onClick={() => setSelectedPackage(pkg)}
                     >
                       <CardHeader className="pb-3">
@@ -171,10 +211,10 @@ export function PaywallModal({
                       <CardContent>
                         <div className="flex items-baseline space-x-2">
                           <span className="text-2xl font-bold">
-                            {pkg.webBillingProduct?.title || pkg.identifier}
+                            {pkg.webBillingProduct?.currentPrice?.formattedPrice || 'Price unavailable'}
                           </span>
                           <span className="text-muted-foreground">
-                            /period
+                            /{formatPeriod(pkg.webBillingProduct?.normalPeriodDuration || undefined, pkg.identifier)}
                           </span>
                         </div>
                         {pkg.webBillingProduct?.description && (
@@ -216,7 +256,7 @@ export function PaywallModal({
                 </>
               )}
             </Button>
-            
+
             <p className="text-xs text-muted-foreground text-center">
               Secure payment powered by Stripe. Cancel anytime.
             </p>
