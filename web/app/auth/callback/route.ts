@@ -7,17 +7,36 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
     const next = searchParams.get('next') ?? '/dashboard';
     const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+    const state = searchParams.get('state');
+    const user = searchParams.get('user'); // Apple sends user data
 
     console.log('Auth callback received:', {
         hasCode: !!code,
         error,
+        errorDescription: errorDescription ? decodeURIComponent(errorDescription) : null,
+        state,
+        hasUser: !!user,
         next,
-        fullUrl: request.url
+        fullUrl: request.url,
+        allParams: Object.fromEntries(searchParams.entries())
     });
 
     if (error) {
-        console.error('Auth callback error:', error);
-        return NextResponse.redirect(`${origin}/auth/sign-in?error=${encodeURIComponent(error)}`);
+        console.error('Auth callback error:', {
+            error,
+            errorDescription: errorDescription ? decodeURIComponent(errorDescription) : null,
+            state
+        });
+
+        const errorMessage = errorDescription ?
+            decodeURIComponent(errorDescription) :
+            error === 'access_denied' ? 'Sign-in was cancelled' :
+                error === 'invalid_request' ? 'Invalid authentication request' :
+                    error === 'server_error' ? 'Authentication server error' :
+                        `Authentication error: ${error}`;
+
+        return NextResponse.redirect(`${origin}/auth/sign-in?error=${encodeURIComponent(errorMessage)}`);
     }
 
     if (code) {
@@ -44,7 +63,9 @@ export async function GET(request: NextRequest) {
             console.log('Code exchange result:', {
                 hasSession: !!data?.session,
                 hasUser: !!data?.user,
-                error: exchangeError?.message
+                error: exchangeError?.message,
+                errorCode: exchangeError?.status,
+                errorDetails: exchangeError ? JSON.stringify(exchangeError, null, 2) : null
             });
 
             if (!exchangeError && data?.session) {
@@ -69,8 +90,24 @@ export async function GET(request: NextRequest) {
 
                 return response;
             } else {
-                console.error('Failed to exchange code for session:', exchangeError);
-                return NextResponse.redirect(`${origin}/auth/sign-in?error=Failed to authenticate`);
+                console.error('Failed to exchange code for session:', {
+                    error: exchangeError,
+                    code: code.substring(0, 20) + '...' // Log partial code for debugging
+                });
+
+                // Provide more specific error messages
+                let errorMessage = 'Failed to authenticate';
+                if (exchangeError?.message?.includes('signup')) {
+                    errorMessage = 'Sign up not complete. Please check your Apple ID configuration or try again.';
+                } else if (exchangeError?.message?.includes('invalid')) {
+                    errorMessage = 'Invalid authentication code. Please try signing in again.';
+                } else if (exchangeError?.message?.includes('expired')) {
+                    errorMessage = 'Authentication session expired. Please try signing in again.';
+                } else if (exchangeError?.message) {
+                    errorMessage = exchangeError.message;
+                }
+
+                return NextResponse.redirect(`${origin}/auth/sign-in?error=${encodeURIComponent(errorMessage)}`);
             }
         } catch (err) {
             console.error('Exception during code exchange:', err);
