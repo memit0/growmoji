@@ -51,7 +51,7 @@ export default function TermsPage() {
           </p>
 
           <p className="text-gray-700 leading-relaxed mb-6">
-            If you are using the application outside of a Wi-Fi area, please be aware that your mobile network provider's agreement terms still apply.            Consequently, you may incur charges from your mobile provider for data usage during the connection to the application, or other third-party charges. By using the application, you accept responsibility for any such charges, including roaming data charges if you use the application outside of your home territory (i.e., region or country) without disabling data roaming. If you are not the bill payer for the device on which you are using the application, they assume that you have obtained permission from the bill payer.
+            If you are using the application outside of a Wi-Fi area, please be aware that your mobile network provider&apos;s agreement terms still apply.            Consequently, you may incur charges from your mobile provider for data usage during the connection to the application, or other third-party charges. By using the application, you accept responsibility for any such charges, including roaming data charges if you use the application outside of your home territory (i.e., region or country) without disabling data roaming. If you are not the bill payer for the device on which you are using the application, they assume that you have obtained permission from the bill payer.
           </p>
 
           <p className="text-gray-700 leading-relaxed mb-6">
