@@ -1,52 +1,140 @@
-// TEMPORARY: RevenueCat integration disabled for web version
-// All premium checks bypassed - users get immediate access
+// RevenueCat Web SDK integration
+import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
 
-// Commented out RevenueCat imports since integration is disabled
-// import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
-import { CustomerInfo, Offering } from '@revenuecat/purchases-js';
-
-// RevenueCat instance disabled for web version
-// let purchasesInstance: Purchases | null = null;
+let purchasesInstance: Purchases | null = null;
 
 export async function initializeRevenueCat(userId: string): Promise<void> {
-  // TEMPORARY: RevenueCat initialization disabled for web version
-  console.log('[RevenueCat Web] Initialization bypassed - premium access granted to all users');
-  return Promise.resolve();
+  try {
+    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('Missing RevenueCat Web API key');
+    }
+
+    console.log('[RevenueCat Web] Initializing with user ID:', userId);
+    console.log('[RevenueCat Web] API Key prefix:', apiKey.substring(0, 10) + '...');
+
+    // Initialize RevenueCat with user ID - correct API for web SDK
+    await Purchases.configure(apiKey, userId);
+
+    purchasesInstance = Purchases.getSharedInstance();
+    console.log('[RevenueCat Web] Successfully initialized');
+  } catch (error) {
+    console.error('[RevenueCat Web] Initialization failed:', error);
+    throw error;
+  }
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
-  // TEMPORARY: Return null since RevenueCat is disabled
-  console.log('[RevenueCat Web] getCustomerInfo bypassed - RevenueCat disabled');
-  return null;
+  try {
+    if (!purchasesInstance) {
+      console.warn('[RevenueCat Web] Not initialized, returning null customer info');
+      return null;
+    }
+
+    const customerInfo = await purchasesInstance.getCustomerInfo();
+    console.log('[RevenueCat Web] Customer info retrieved:', customerInfo.entitlements.active);
+    return customerInfo;
+  } catch (error) {
+    console.error('[RevenueCat Web] Failed to get customer info:', error);
+    return null;
+  }
 }
 
 export async function getOfferings(): Promise<Offering[] | null> {
-  // TEMPORARY: Return empty array since RevenueCat is disabled
-  console.log('[RevenueCat Web] getOfferings bypassed - RevenueCat disabled');
-  return [];
+  try {
+    if (!purchasesInstance) {
+      console.warn('[RevenueCat Web] Not initialized, returning empty offerings');
+      return [];
+    }
+
+    const offerings = await purchasesInstance.getOfferings();
+    console.log('[RevenueCat Web] Offerings retrieved:', Object.keys(offerings.all || {}).length);
+    return Object.values(offerings.all || {});
+  } catch (error) {
+    console.error('[RevenueCat Web] Failed to get offerings:', error);
+    return [];
+  }
 }
 
 export function checkPremiumStatus(customerInfo: CustomerInfo | null): boolean {
-  // TEMPORARY: Always return true for premium status
-  console.log('[RevenueCat Web] checkPremiumStatus bypassed - always returning premium status');
-  return true;
+  if (!customerInfo) {
+    console.log('[RevenueCat Web] No customer info, user is not premium');
+    return false;
+  }
+
+  const activeEntitlements = customerInfo.entitlements.active;
+
+  // Check for various entitlement patterns (matching iOS app logic)
+  const hasEntitlement = (
+    activeEntitlements['Growmoji Premium'] !== undefined ||
+    activeEntitlements['pro'] !== undefined ||
+    activeEntitlements['premium'] !== undefined ||
+    activeEntitlements['plus'] !== undefined ||
+    activeEntitlements['Yearly'] !== undefined ||
+    activeEntitlements['Monthly'] !== undefined ||
+    activeEntitlements['yearly'] !== undefined ||
+    activeEntitlements['monthly'] !== undefined
+  );
+
+  console.log('[RevenueCat Web] Premium status check:', {
+    hasEntitlement,
+    activeEntitlements: Object.keys(activeEntitlements)
+  });
+
+  return hasEntitlement;
 }
 
 export async function purchasePackage(packageToPurchase: Offering['availablePackages'][number]): Promise<boolean> {
-  // TEMPORARY: Always return success since RevenueCat is disabled
-  console.log('[RevenueCat Web] purchasePackage bypassed - RevenueCat disabled');
-  return true;
+  try {
+    if (!purchasesInstance) {
+      throw new Error('RevenueCat not initialized');
+    }
+
+    console.log('[RevenueCat Web] Purchasing package:', packageToPurchase.identifier);
+    const { customerInfo } = await purchasesInstance.purchasePackage(packageToPurchase);
+
+    const isPremium = checkPremiumStatus(customerInfo);
+    console.log('[RevenueCat Web] Purchase completed, premium status:', isPremium);
+
+    return isPremium;
+  } catch (error) {
+    console.error('[RevenueCat Web] Purchase failed:', error);
+    return false;
+  }
 }
 
 export async function restorePurchases(): Promise<boolean> {
-  // TEMPORARY: Always return success since RevenueCat is disabled
-  console.log('[RevenueCat Web] restorePurchases bypassed - RevenueCat disabled');
-  return true;
+  try {
+    if (!purchasesInstance) {
+      throw new Error('RevenueCat not initialized');
+    }
+
+    console.log('[RevenueCat Web] Restoring purchases');
+    const customerInfo = await purchasesInstance.getCustomerInfo();
+
+    const isPremium = checkPremiumStatus(customerInfo);
+    console.log('[RevenueCat Web] Restore completed, premium status:', isPremium);
+
+    return isPremium;
+  } catch (error) {
+    console.error('[RevenueCat Web] Restore failed:', error);
+    return false;
+  }
 }
 
 // Paywall utility function
 export async function presentPaywall(): Promise<boolean> {
-  // TEMPORARY: Always return success since RevenueCat is disabled
-  console.log('[RevenueCat Web] presentPaywall bypassed - RevenueCat disabled');
-  return true;
+  try {
+    if (!purchasesInstance) {
+      throw new Error('RevenueCat not initialized');
+    }
+
+    // This is handled by the PaywallModal component
+    console.log('[RevenueCat Web] Paywall presentation requested');
+    return true;
+  } catch (error) {
+    console.error('[RevenueCat Web] Paywall presentation failed:', error);
+    return false;
+  }
 }
