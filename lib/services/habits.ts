@@ -196,7 +196,6 @@ export const habitsService = {
       console.error('Error deleting habit log:', error, { habitId, logDate });
       throw error;
     }
-    console.log('[habitsService.deleteHabitLog] Supabase delete SUCCEEDED.', { habitId, logDate });
   },
 
   async updateHabitStreakDetails(id: string, updates: { current_streak: number; last_check_date: string | null }, userId: string): Promise<Habit> {
@@ -216,7 +215,6 @@ export const habitsService = {
       console.error('Error updating habit streak details:', error, { id, updates });
       throw error;
     }
-    console.log('[habitsService.updateHabitStreakDetails] Supabase update SUCCEEDED.', data);
     return data;
   },
 }; 

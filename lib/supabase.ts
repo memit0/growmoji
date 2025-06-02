@@ -49,7 +49,6 @@ supabase.channel('custom-all-channel')
   })
   .subscribe();
 
-console.log('DEBUG: Supabase client initialized:', supabase ? 'Yes' : 'No');
 debugLog('Supabase Client', 'Initialization Complete', {
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey,

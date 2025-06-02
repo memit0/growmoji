@@ -2,9 +2,9 @@ export const DEBUG_ENABLED = true;
 
 export const debugLog = (component: string, action: string, details: any) => {
   if (DEBUG_ENABLED) {
-    console.log(`[${component}] ${action}:`, details);
+    // console.log(`[${component}] ${action}:`, details);
     if (details instanceof Error) {
-      console.log(`[${component}] Error stack:`, details.stack);
+      // console.log(`[${component}] Error stack:`, details.stack);
     }
   }
 };

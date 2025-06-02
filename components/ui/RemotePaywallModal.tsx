@@ -61,33 +61,33 @@ export function RemotePaywallModal({
   };
 
   const handlePurchaseStarted = () => {
-    console.log('Purchase started');
+    // console.log('Purchase started');
   };
 
   const handlePurchaseCompleted = ({ customerInfo }: any) => {
-    console.log('Purchase completed:', customerInfo);
-    onClose();
+    // console.log('Purchase completed:', customerInfo);
+    onClose(); 
   };
 
   const handlePurchaseError = (error: any) => {
-    console.error('Purchase error:', error);
+    console.error('Purchase error:', error); 
   };
 
   const handlePurchaseCancelled = () => {
-    console.log('Purchase cancelled');
+    // console.log('Purchase cancelled');
   };
 
   const handleRestoreStarted = () => {
-    console.log('Restore started');
+    // console.log('Restore started');
   };
 
   const handleRestoreCompleted = ({ customerInfo }: any) => {
-    console.log('Restore completed:', customerInfo);
-    onClose();
+    // console.log('Restore completed:', customerInfo);
+    onClose(); 
   };
 
   const handleRestoreError = (error: any) => {
-    console.error('Restore error:', error);
+    console.error('Restore error:', error); 
   };
 
   const styles = StyleSheet.create({

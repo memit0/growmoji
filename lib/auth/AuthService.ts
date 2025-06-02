@@ -13,103 +13,135 @@ export class AuthService {
         // Log the deep link received
         OAuthDebugger.logDeepLinkReceived(url);
 
-        console.log('[AuthService] handleAuthRedirect: ===== STARTING REDIRECT HANDLING =====');
-        console.log('[AuthService] handleAuthRedirect: Received URL:', url);
-        console.log('[AuthService] handleAuthRedirect: Timestamp:', new Date().toISOString());
-
         try {
-            // Parse URL components for debugging
-            try {
-                const urlObj = new URL(url);
-                console.log('[AuthService] handleAuthRedirect: URL components:', {
-                    protocol: urlObj.protocol,
-                    host: urlObj.host,
-                    pathname: urlObj.pathname,
-                    search: urlObj.search,
-                    hash: urlObj.hash,
-                    searchParams: Object.fromEntries(urlObj.searchParams.entries())
-                });
-            } catch (parseError) {
-                console.error('[AuthService] handleAuthRedirect: Error parsing URL:', parseError);
+            const params = new URLSearchParams(url.split('#')[1]);
+            const hashParams = new URLSearchParams(url.split('#')[1]);
+
+            // console.log('[AuthService] handleAuthRedirect: URL components:', {
+            //   url,
+            //   pathname: new URL(url).pathname,
+            //   hash: new URL(url).hash,
+            //   params: Object.fromEntries(params.entries()),
+            //   hashParams: Object.fromEntries(hashParams.entries()),
+            // });
+
+            const accessToken = params.get('access_token') || hashParams.get('access_token');
+            const refreshToken = params.get('refresh_token') || hashParams.get('refresh_token');
+            const error = params.get('error') || hashParams.get('error');
+            const errorCode = params.get('error_code') || hashParams.get('error_code');
+            const errorDescription = params.get('error_description') || hashParams.get('error_description');
+
+            if (error || errorCode) {
+                const isAppleSignIn = url.includes('apple') && errorCode === '401';
+                if (isAppleSignIn) {
+                    // console.log('[AuthService] handleAuthRedirect: Apple Sign-In URL detected');
+                    // This specific error for Apple often means the user cancelled or had an issue on Apple's side.
+                    // It might not be a true "error" in the sense of a system failure, but a user action.
+                    // You might want to handle this silently or with a specific user message.
+                    return { error: new Error('Apple Sign-In cancelled or failed.'), session: null, isAppleSignInCancellation: true };
+                }
+                // console.log('[AuthService] handleAuthRedirect: Error detected in URL');
+                // console.log('[AuthService] handleAuthRedirect: Error details:', {
+                //   error,
+                //   errorCode,
+                //   errorDescription,
+                //   url,
+                // });
+                return { error: new Error(errorDescription || errorCode || 'OAuth error'), session: null };
             }
 
-            // Check for Apple-specific URL patterns
-            if (url.includes('apple') || url.includes('appleid')) {
-                console.log('[AuthService] handleAuthRedirect: Apple Sign-In URL detected');
+            // console.log('[AuthService] handleAuthRedirect: Initial getSession attempt', {
+            //   hasAccessToken: !!accessToken,
+            //   hasRefreshToken: !!refreshToken,
+            // });
+
+            // Attempt to get session if tokens are not in URL, maybe it's already set by native flow
+            if (!accessToken || !refreshToken) {
+                const { data: initialSessionData, error: initialSessionError } = await supabase.auth.getSession();
+                // console.log('[AuthService] handleAuthRedirect: Token analysis:', {
+                //   accessTokenInUrl: !!accessToken,
+                //   refreshTokenInUrl: !!refreshToken,
+                //   initialSession: !!initialSessionData.session,
+                //   initialSessionError: initialSessionError?.message,
+                //   currentSupabaseUser: supabase.auth.currentUser?.id
+                // });
+
+                if (initialSessionData.session) {
+                    // console.log('[AuthService] handleAuthRedirect: ✅ Session already active, no need to set manually from URL.');
+                    return { session: initialSessionData.session, error: null };
+                }
+                // console.log('[AuthService] handleAuthRedirect: Setting session with extracted tokens');
+                // If getSession didn't find a session, but we have tokens from the URL, try setSession
+                if (accessToken && refreshToken) {
+                    const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken,
+                    });
+                    // console.log('[AuthService] handleAuthRedirect: setSession result', {
+                    //   setSessionData: setSessionData?.session?.user?.id,
+                    //   setSessionError: setSessionError?.message
+                    // });
+
+                    if (setSessionError) {
+                        // console.error('[AuthService] Error setting session with URL tokens:', setSessionError);
+                        return { error: setSessionError, session: null };
+                    }
+                    if (setSessionData.session) {
+                        // console.log('[AuthService] handleAuthRedirect: ✅ OAuth authentication successful after setSession');
+                        return { session: setSessionData.session, error: null };
+                    }
+                }
+                // console.log('[AuthService] handleAuthRedirect: No tokens found in URL hash, checking for other formats');
+                // If still no session, and no tokens were in the hash, check query parameters (less common for PKCE)
+                const queryAccessToken = params.get('access_token');
+                const queryRefreshToken = params.get('refresh_token');
+
+                // console.log('[AuthService] handleAuthRedirect: Query parameter tokens:', {
+                //   queryAccessToken: !!queryAccessToken,
+                //   queryRefreshToken: !!queryRefreshToken
+                // });
+
+                if (queryAccessToken && queryRefreshToken) {
+                    const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
+                        access_token: queryAccessToken,
+                        refresh_token: queryRefreshToken,
+                    });
+                    // console.log('[AuthService] handleAuthRedirect: Attempting final getSession');
+                    if (setSessionError) {
+                        // console.error('[AuthService] Error setting session with query param tokens:', setSessionError);
+                        return { error: setSessionError, session: null };
+                    }
+                    // Final check if session is established
+                    const { data: finalSessionData, error: finalSessionError } = await supabase.auth.getSession();
+                    if (finalSessionError) {
+                        // console.error('[AuthService] Error in final getSession after query param attempt:', finalSessionError);
+                        return { error: finalSessionError, session: null };
+                    }
+                    if (finalSessionData.session) {
+                        // console.log('[AuthService] handleAuthRedirect: ✅ Session established after query param token handling.');
+                        return { session: finalSessionData.session, error: null };
+                    }
+                }
+
+                // console.warn('[AuthService] handleAuthRedirect: Failed to establish session from URL tokens or existing session.');
+                return { error: new Error('Failed to establish session.'), session: null };
             }
 
-            // Check for error states in URL
-            if (url.includes('error')) {
-                console.log('[AuthService] handleAuthRedirect: Error detected in URL');
-                const errorCode = url.split('error=')[1]?.split('&')[0];
-                const errorDescription = url.split('error_description=')[1]?.split('&')[0];
-                console.log('[AuthService] handleAuthRedirect: Error details:', {
-                    errorCode: errorCode ? decodeURIComponent(errorCode) : null,
-                    errorDescription: errorDescription ? decodeURIComponent(errorDescription) : null
-                });
-            }
-
-            const { data, error } = await supabase.auth.getSession();
-            console.log('[AuthService] handleAuthRedirect: Initial getSession attempt', {
-                hasSession: !!data?.session,
-                hasUser: !!data?.session?.user,
-                userId: data?.session?.user?.id,
-                error
+            // This part handles when tokens ARE present in the URL and we directly use them.
+            // console.log('[AuthService] handleAuthRedirect: Proceeding with tokens found directly in URL (hash or query)');
+            const { data, error: خارجیError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
             });
 
-            // Look for tokens in URL hash
-            const accessToken = url.split('#access_token=')[1]?.split('&')[0];
-            const refreshToken = url.split('#refresh_token=')[1]?.split('&')[0];
-            const tokenType = url.split('#token_type=')[1]?.split('&')[0];
-            const expiresIn = url.split('#expires_in=')[1]?.split('&')[0];
+            if (خارجیError) {
+                // console.error('[AuthService] Error setting session with URL tokens:', خارجیError);
+                return { error: خارجیError, session: null };
+            }
 
-            console.log('[AuthService] handleAuthRedirect: Token analysis:', {
-                hasAccessToken: !!accessToken,
-                hasRefreshToken: !!refreshToken,
-                tokenType,
-                expiresIn,
-                accessTokenLength: accessToken?.length,
-                refreshTokenLength: refreshToken?.length
-            });
-
-            if (accessToken && refreshToken) {
-                console.log('[AuthService] handleAuthRedirect: Setting session with extracted tokens');
-                const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-                    access_token: accessToken,
-                    refresh_token: refreshToken,
-                });
-
-                console.log('[AuthService] handleAuthRedirect: setSession result', {
-                    hasSession: !!sessionData?.session,
-                    hasUser: !!sessionData?.session?.user,
-                    userId: sessionData?.session?.user?.id,
-                    sessionError
-                });
-
-                if (sessionError) {
-                    console.error('[AuthService] handleAuthRedirect: Error setting session:', sessionError);
-                    return { success: false, error: sessionError };
-                }
-                if (sessionData.session) {
-                    console.log('[AuthService] handleAuthRedirect: ✅ OAuth authentication successful after setSession');
-                    return { success: true, session: sessionData.session };
-                }
-            } else if (url.includes('error_description=')) {
-                const errorDescription = decodeURIComponent(url.split('error_description=')[1]?.split('&')[0]);
-                console.error('[AuthService] handleAuthRedirect: ❌ Error in URL:', errorDescription);
-                return { success: false, error: new Error(errorDescription) };
-            } else {
-                console.log('[AuthService] handleAuthRedirect: No tokens found in URL hash, checking for other formats');
-
-                // Check for tokens in query parameters (some providers might use this)
-                const urlObj = new URL(url);
-                const queryAccessToken = urlObj.searchParams.get('access_token');
-                const queryRefreshToken = urlObj.searchParams.get('refresh_token');
-
-                console.log('[AuthService] handleAuthRedirect: Query parameter tokens:', {
-                    hasQueryAccessToken: !!queryAccessToken,
-                    hasQueryRefreshToken: !!queryRefreshToken
-                });
+            if (data.session) {
+                // console.log('[AuthService] handleAuthRedirect: ✅ OAuth authentication successful after setSession');
+                return { session: data.session, error: null };
             }
 
             // Fallback to getSession if tokens aren't in URL hash or if setSession failed silently

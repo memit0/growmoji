@@ -113,68 +113,31 @@ export default function RegisterScreen() {
   };
 
   const handleSocialSignUp = React.useCallback(async (provider: 'google' | 'apple') => {
-    console.log(`[RegisterScreen] handleSocialSignUp: Starting ${provider} sign-up flow`);
-    console.log(`[RegisterScreen] handleSocialSignUp: Current state:`, {
-      isLoading,
-      isNavigating,
-      timestamp: new Date().toISOString()
-    });
-
     if (isLoading) {
-      console.log(`[RegisterScreen] handleSocialSignUp: Skipping ${provider} - already loading`);
       return;
     }
 
     setIsLoading(true);
-    console.log(`[RegisterScreen] handleSocialSignUp: Set loading state for ${provider}`);
 
     try {
-      console.log(`[RegisterScreen] handleSocialSignUp: Calling AuthService.signInWithOAuth for ${provider}`);
       const { success, data, error } = await AuthService.signInWithOAuth(provider);
 
-      console.log(`[RegisterScreen] handleSocialSignUp: AuthService response for ${provider}:`, {
-        success,
-        hasData: !!data,
-        hasError: !!error,
-        dataKeys: data ? Object.keys(data) : [],
-        errorMessage: error?.message
-      });
-
       if (!success || error) {
-        console.error(`[RegisterScreen] handleSocialSignUp: ${provider} sign-up failed:`, {
-          success,
-          error: error?.message || 'Unknown error',
-          fullError: error
-        });
         throw error || new Error('Social sign-up failed');
       }
 
-      console.log(`[RegisterScreen] handleSocialSignUp: ${provider} sign-up initiated successfully`);
-
       // OAuth will handle the redirect. If data.url exists, it's the URL to open.
       if (data && 'url' in data && data.url) {
-        console.log(`[RegisterScreen] handleSocialSignUp: OAuth redirect URL received for ${provider}:`, data.url);
       } else if (data && 'user' in data && data.user) {
-        console.log(`[RegisterScreen] handleSocialSignUp: User signed up directly for ${provider}:`, data.user.id);
         // For native sign-in, user is already authenticated, navigate to home
         router.replace('/');
       } else {
-        console.warn(`[RegisterScreen] handleSocialSignUp: No redirect URL or user in response for ${provider}`);
       }
 
     } catch (err: any) {
-      console.error(`[RegisterScreen] handleSocialSignUp: Exception during ${provider} sign-up:`, {
-        name: err.name,
-        message: err.message,
-        stack: err.stack,
-        fullError: err
-      });
-
       const errorMessage = err.message || "An unexpected error occurred during social sign-up.";
-      console.error(`[RegisterScreen] handleSocialSignUp: Showing error alert for ${provider}:`, errorMessage);
       Alert.alert("Registration Error", errorMessage);
     } finally {
-      console.log(`[RegisterScreen] handleSocialSignUp: Cleaning up loading state for ${provider}`);
       setIsLoading(false);
     }
   }, [isLoading, router]);
