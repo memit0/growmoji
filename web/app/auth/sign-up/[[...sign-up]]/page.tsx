@@ -104,6 +104,18 @@ export default function SignUpPage() {
           showLinks={true}
         />
       </div>
+      <div className="text-center mt-4 text-sm text-gray-600">
+        By registering, you agree to our{
+          ' '}
+        <a href="/terms" className="underline hover:text-gray-800">
+          Terms of Service
+        </a>
+        {' '}and{' '}
+        <a href="/privacy" className="underline hover:text-gray-800">
+          Privacy Policy
+        </a>
+        .
+      </div>
     </>
   );
 }

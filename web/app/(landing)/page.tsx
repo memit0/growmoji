@@ -218,20 +218,20 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               {
-                name: "Sarah Johnson",
-                role: "Product Manager",
+                name: "Abdul Johnson",
+                role: "Field researcher",
                 content: "Growmoji has completely transformed my daily routine. The emoji habits and streak feature keeps me motivated every single day.",
                 rating: 5
               },
               {
                 name: "Can Yuksel",
-                role: "Software Engineer",
+                role: "Writer, intellectual laborer",
                 content: "The most beautiful habit tracker I have ever used. The design is clean and the emoji features are exactly the simplicity I need.",
                 rating: 5
               },
               {
                 name: "Ege Mentes",
-                role: "Student",
+                role: "Futurist",
                 content: "Growmoji has helped me stay on track. It's simple, effective, and helps build lasting behavioral changes with fun emojis.",
                 rating: 5
               }

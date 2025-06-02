@@ -1,9 +1,28 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Drop existing objects to prevent errors on re-run
+DROP FUNCTION IF EXISTS calculate_streak() CASCADE;
+DROP FUNCTION IF EXISTS delete_user_data(user_id_param TEXT) CASCADE;
+
+-- Drop tables (CASCADE handles dependent objects like policies, triggers, indexes, FKs)
+DROP TABLE IF EXISTS habit_logs CASCADE;
+DROP TABLE IF EXISTS habits CASCADE;
+DROP TABLE IF EXISTS todos CASCADE;
+
+-- Drop extensions
+DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE;
+
+-- Drop extensions schema if it exists (for idempotency)
+DROP SCHEMA IF EXISTS extensions CASCADE;
+
+-- Create extensions schema
+CREATE SCHEMA extensions;
+
+-- Recreate database schema from a clean slate
+-- Enable UUID extension in the 'extensions' schema
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 -- Create Habits Table
 CREATE TABLE habits (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id TEXT NOT NULL,
   emoji TEXT NOT NULL,
   start_date DATE NOT NULL,
@@ -14,7 +33,7 @@ CREATE TABLE habits (
 
 -- Create Habit Logs Table
 CREATE TABLE habit_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   habit_id UUID REFERENCES habits(id) ON DELETE CASCADE NOT NULL,
   log_date DATE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -23,7 +42,7 @@ CREATE TABLE habit_logs (
 
 -- Create Todos Table
 CREATE TABLE todos (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   user_id TEXT NOT NULL,
   content TEXT NOT NULL,
   is_completed BOOLEAN DEFAULT FALSE,
@@ -64,7 +83,8 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql
+SET search_path = public, pg_catalog, pg_temp;
 
 -- Create Trigger for Streak Calculation
 CREATE TRIGGER update_habit_streak
@@ -86,38 +106,38 @@ ALTER TABLE todos ENABLE ROW LEVEL SECURITY;
 -- RLS Policies for habits table
 CREATE POLICY "Users can select their own habits"
 ON habits FOR SELECT
-USING (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can insert their own habits"
 ON habits FOR INSERT
-WITH CHECK (auth.uid()::text = user_id);
+WITH CHECK ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can update their own habits"
 ON habits FOR UPDATE
-USING (auth.uid()::text = user_id)
-WITH CHECK (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id)
+WITH CHECK ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can delete their own habits"
 ON habits FOR DELETE
-USING (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id);
 
 -- RLS Policies for todos table
 CREATE POLICY "Users can select their own todos"
 ON todos FOR SELECT
-USING (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can insert their own todos"
 ON todos FOR INSERT
-WITH CHECK (auth.uid()::text = user_id);
+WITH CHECK ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can update their own todos"
 ON todos FOR UPDATE
-USING (auth.uid()::text = user_id)
-WITH CHECK (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id)
+WITH CHECK ((select auth.uid())::text = user_id);
 
 CREATE POLICY "Users can delete their own todos"
 ON todos FOR DELETE
-USING (auth.uid()::text = user_id);
+USING ((select auth.uid())::text = user_id);
 
 -- RLS Policies for habit_logs table
 CREATE POLICY "Users can select logs for their own habits"
@@ -126,7 +146,7 @@ USING (
   EXISTS (
     SELECT 1 FROM habits
     WHERE habits.id = habit_logs.habit_id
-    AND habits.user_id = auth.uid()::text
+    AND habits.user_id = (select auth.uid())::text
   )
 );
 
@@ -136,7 +156,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM habits
     WHERE habits.id = habit_logs.habit_id
-    AND habits.user_id = auth.uid()::text
+    AND habits.user_id = (select auth.uid())::text
   )
 );
 
@@ -146,14 +166,14 @@ USING (
   EXISTS (
     SELECT 1 FROM habits
     WHERE habits.id = habit_logs.habit_id
-    AND habits.user_id = auth.uid()::text
+    AND habits.user_id = (select auth.uid())::text
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM habits
     WHERE habits.id = habit_logs.habit_id
-    AND habits.user_id = auth.uid()::text
+    AND habits.user_id = (select auth.uid())::text
   )
 );
 
@@ -163,7 +183,7 @@ USING (
   EXISTS (
     SELECT 1 FROM habits
     WHERE habits.id = habit_logs.habit_id
-    AND habits.user_id = auth.uid()::text
+    AND habits.user_id = (select auth.uid())::text
   )
 );
 
@@ -179,5 +199,6 @@ BEGIN
   
   -- Any other user-related data cleanup can be added here
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_catalog, pg_temp;
 

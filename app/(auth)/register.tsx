@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   StyleSheet,
   Text,
@@ -249,6 +250,7 @@ export default function RegisterScreen() {
     },
     footerText: {
       color: colors.text,
+      marginHorizontal: spacing.xs,
       fontSize: typography.fontSize.sm,
     },
     footerLink: {
@@ -289,7 +291,33 @@ export default function RegisterScreen() {
       fontSize: typography.fontSize.md,
       fontWeight: 'bold',
     },
+    termsContainer: {
+      marginTop: spacing.lg,
+      alignItems: 'center',
+    },
+    termsText: {
+      color: colors.text,
+      opacity: 0.7,
+      fontSize: typography.fontSize.xs,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    linkText: {
+      color: colors.primary,
+      fontWeight: 'bold',
+      fontSize: typography.fontSize.sm,
+    },
   });
+
+  const openTerms = () => {
+    // Replace with your actual terms and conditions URL
+    Linking.openURL('https://example.com/terms');
+  };
+
+  const openPrivacyPolicy = () => {
+    // Replace with your actual privacy policy URL
+    Linking.openURL('https://example.com/privacy');
+  };
 
   return (
     <KeyboardAvoidingView
@@ -328,6 +356,19 @@ export default function RegisterScreen() {
               secureTextEntry
               editable={!isLoading}
             />
+            <View style={styles.termsContainer}>
+              <Text style={styles.termsText}>
+                By registering, you agree to our{' '}
+                <Text style={styles.linkText} onPress={openTerms}>
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text style={styles.linkText} onPress={openPrivacyPolicy}>
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+            </View>
             <TouchableOpacity style={styles.button} onPress={onSignUpPress} disabled={isLoading}>
               <Text style={styles.buttonText}>{isLoading ? 'Loading...' : 'Create Account'}</Text>
             </TouchableOpacity>
@@ -363,7 +404,7 @@ export default function RegisterScreen() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already have an account?</Text>
               <TouchableOpacity onPress={handleNavigateToLogin} disabled={isNavigating || isLoading}>
-                <Text style={[styles.footerLink, (isNavigating || isLoading) && { opacity: 0.5 }]}>Login</Text>
+                <Text style={styles.linkText}>Login</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -383,7 +424,7 @@ export default function RegisterScreen() {
             <View style={styles.footer}>
               <Text style={styles.footerText}>Already verified?</Text>
               <TouchableOpacity onPress={handleNavigateToLogin} disabled={isNavigating || isLoading}>
-                <Text style={[styles.footerLink, (isNavigating || isLoading) && { opacity: 0.5 }]}>Login</Text>
+                <Text style={styles.linkText}>Login</Text>
               </TouchableOpacity>
             </View>
           </>
