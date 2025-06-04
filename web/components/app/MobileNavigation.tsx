@@ -18,12 +18,11 @@ interface NavigationItem {
 }
 
 interface MobileNavigationProps {
-    user: any;
     navigation: NavigationItem[];
     userEmail?: string;
 }
 
-export function MobileNavigation({ user, navigation, userEmail }: MobileNavigationProps) {
+export function MobileNavigation({ navigation, userEmail }: MobileNavigationProps) {
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
 

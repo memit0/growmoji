@@ -16,9 +16,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+// Define User interface to avoid 'any'
+interface User {
+    email?: string;
+}
+
 interface ResponsiveLayoutProps {
     children: React.ReactNode;
-    user: any;
+    user: User; // Changed from 'any'
 }
 
 export function ResponsiveLayout({ children, user }: ResponsiveLayoutProps) {
@@ -95,7 +100,6 @@ export function ResponsiveLayout({ children, user }: ResponsiveLayoutProps) {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <MobileNavigation
-                            user={user}
                             navigation={navigation}
                             userEmail={user?.email}
                         />
