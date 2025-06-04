@@ -1,6 +1,7 @@
 import { PremiumGuard } from '@/components/app/PremiumGuard';
 import { ResponsiveLayout } from '@/components/app/ResponsiveLayout';
 import { getCurrentUser, requireAuth } from '@/lib/auth';
+import { User } from '@supabase/supabase-js';
 
 export default async function AppLayout({
   children,
@@ -13,7 +14,7 @@ export default async function AppLayout({
 
   return (
     <PremiumGuard>
-      <ResponsiveLayout user={user}>
+      <ResponsiveLayout user={user as User}>
         {children}
       </ResponsiveLayout>
     </PremiumGuard>
