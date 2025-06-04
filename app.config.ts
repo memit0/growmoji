@@ -21,7 +21,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       usesNonExemptEncryption: false
     },
     infoPlist: {
-      NSUserTrackingUsageDescription: 'This app uses tracking to provide personalized habit tracking experience.',
       CFBundleURLTypes: [
         {
           CFBundleURLName: 'com.mebattll.habittracker',

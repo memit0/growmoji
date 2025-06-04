@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import Purchases, { CustomerInfo, PurchasesOffering } from 'react-native-purchases';
@@ -18,6 +19,8 @@ interface SubscriptionContextType {
   // Debug features
   debugPremiumOverride: boolean;
   setDebugPremiumOverride: (override: boolean) => void;
+  // Initialization state
+  isInitialized: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -35,18 +38,50 @@ interface SubscriptionProviderProps {
 }
 
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
-  const { user } = useAuth(); // Get the current user from AuthContext
+  const { user, loading: authLoading } = useAuth(); // Get the current user from AuthContext
   const [isLoading, setIsLoading] = useState(true);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOffering[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugPremiumOverride, setDebugPremiumOverride] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Cache the last known premium status to prevent flickering
+  const [lastKnownPremiumStatus, setLastKnownPremiumStatus] = useState<boolean | null>(null);
+
+  // Load cached premium status on component mount
+  useEffect(() => {
+    const loadCachedPremiumStatus = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(`premium_status_${user?.id}`);
+        if (cached !== null) {
+          setLastKnownPremiumStatus(JSON.parse(cached));
+        }
+      } catch (error) {
+        console.warn('[SubscriptionContext] Failed to load cached premium status:', error);
+      }
+    };
+
+    if (user?.id) {
+      loadCachedPremiumStatus();
+    }
+  }, [user?.id]);
 
   // Check if user has premium subscription - only check for valid premium entitlements
   const isPremium =
     debugPremiumOverride ||
     // ACTUAL entitlement from your RevenueCat dashboard
     customerInfo?.entitlements.active['Growmoji Premium'] !== undefined;
+
+  // Provide a stable premium status that doesn't flicker during loading
+  const stablePremiumStatus = (() => {
+    // If we're loading and have a cached status, use it to prevent flickering
+    if (isLoading && lastKnownPremiumStatus !== null) {
+      return lastKnownPremiumStatus;
+    }
+    // Otherwise use the current premium status
+    return isPremium;
+  })();
 
   // Enhanced logging for debugging
   useEffect(() => {
@@ -63,29 +98,55 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.log('Debug override:', debugPremiumOverride);
       console.log('Final isPremium:', isPremium);
       console.log('========================');
+
+      // Update the cached premium status
+      setLastKnownPremiumStatus(isPremium);
+
+      // Persist to storage for next app launch
+      if (user?.id) {
+        AsyncStorage.setItem(`premium_status_${user.id}`, JSON.stringify(isPremium))
+          .catch(error => console.warn('[SubscriptionContext] Failed to cache premium status:', error));
+      }
     } else {
       console.log('=== RevenueCat Debug Info ===');
       console.log('No customer info available');
+      console.log('Using cached premium status:', lastKnownPremiumStatus);
       console.log('========================');
     }
-  }, [customerInfo, debugPremiumOverride, isPremium]);
+  }, [customerInfo, debugPremiumOverride, isPremium, lastKnownPremiumStatus]);
 
   useEffect(() => {
+    // Wait for auth to complete before initializing RevenueCat
+    // This prevents the flickering by ensuring we don't show free state prematurely
+    if (authLoading) {
+      // Keep loading true while auth is loading
+      setIsLoading(true);
+      return;
+    }
+
     // Only initialize RevenueCat when we have a user
     if (user?.id) {
       initializeRevenueCat();
     } else {
-      // If no user, reset state
+      // If no user, we can safely show non-premium state
       setIsLoading(false);
+      setIsInitialized(false);
       setCustomerInfo(null);
       setOfferings(null);
       setError(null);
     }
-  }, [user?.id]); // Re-initialize when user changes
+  }, [user?.id, authLoading]); // Re-initialize when user changes OR when auth loading completes
 
   const initializeRevenueCat = async () => {
     if (!user?.id) {
       console.log('[RevenueCat] No user ID available, skipping initialization');
+      setIsLoading(false);
+      return;
+    }
+
+    // If already initialized for this user, don't reinitialize
+    if (isInitialized && customerInfo?.originalAppUserId === user.id) {
+      console.log('[RevenueCat] Already initialized for this user');
       setIsLoading(false);
       return;
     }
@@ -129,6 +190,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.log('[RevenueCat] App bundle identifier:', Platform.OS === 'ios' ? 'com.mebattll.habittracker' : 'com.mebattll.habittracker');
 
       setCustomerInfo(customerInfo);
+      setIsInitialized(true);
 
       // Handle offerings
       const offeringsArray = offerings.all ? Object.values(offerings.all) : [];
@@ -353,7 +415,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     isLoading,
     customerInfo,
     offerings,
-    isPremium,
+    isPremium: stablePremiumStatus, // Use stable status instead of raw isPremium
     purchasePackage,
     restorePurchases,
     refreshOfferings,
@@ -364,6 +426,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     // Debug features
     debugPremiumOverride,
     setDebugPremiumOverride,
+    // Initialization state
+    isInitialized,
   };
 
   return (

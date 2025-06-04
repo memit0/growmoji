@@ -227,34 +227,34 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Good morning! 👋</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">Good morning! 👋</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Let&apos;s make today count. You have {totalHabits - completedToday} habits and {pendingTodos} tasks left to complete.
           </p>
         </div>
         <Dialog open={isCreateHabitModalOpen} onOpenChange={setIsCreateHabitModalOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add Habit
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="mx-4 max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Habit</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Choose an Emoji for Your Habit</Label>
-                <div className="grid grid-cols-6 gap-2 mt-2 p-4 border rounded-lg">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-2 p-4 border rounded-lg">
                   {['💧', '🏃', '📚', '🧘', '🍎', '💤', '🚴', '🎯', '🎸', '🧠', '🥗', '☕', '🌅', '🧹', '📝', '💪', '🚶', '🎨'].map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
                       onClick={() => setNewHabitEmoji(emoji)}
-                      className={`text-2xl p-2 rounded-lg border hover:bg-accent transition-colors ${newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
+                      className={`text-xl sm:text-2xl p-2 rounded-lg border hover:bg-accent transition-colors touch-manipulation ${newHabitEmoji === emoji ? 'bg-primary text-primary-foreground' : 'bg-background'
                         }`}
                     >
                       {emoji}
@@ -268,7 +268,7 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={handleCreateHabit} className="flex-1" disabled={!newHabitEmoji.trim()}>
                   Create Habit
                 </Button>
@@ -282,7 +282,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today&apos;s Progress</CardTitle>
@@ -357,18 +357,18 @@ export default function DashboardPage() {
                 const isCompletedToday = habit.last_check_date?.startsWith(todayStr);
 
                 return (
-                  <div key={habit.id} className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div key={habit.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                     <Button
                       variant={isCompletedToday ? "default" : "outline"}
                       size="icon"
-                      className="shrink-0"
+                      className="shrink-0 h-10 w-10 sm:h-12 sm:w-12"
                       onClick={() => handleHabitToggle(habit.id)}
                     >
-                      <span className="text-lg">{habit.emoji}</span>
+                      <span className="text-base sm:text-lg">{habit.emoji}</span>
                     </Button>
 
-                    <div className="flex-1">
-                      <h3 className={`font-medium text-lg ${isCompletedToday ? 'line-through text-muted-foreground' : ''}`}>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-medium text-base sm:text-lg truncate ${isCompletedToday ? 'line-through text-muted-foreground' : ''}`}>
                         {habit.emoji}
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
@@ -391,7 +391,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>

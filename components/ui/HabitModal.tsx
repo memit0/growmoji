@@ -12,7 +12,7 @@ interface HabitModalProps {
 
 const COMMON_EMOJIS = [
   '🧘', '📚', '💪', '🏃', '🎯', '🎨', '🎵', '📝',
-  '💧', '🥗', '😴', '🧠', '🎮', '📱', '🌱', '🎪'
+  '💧', '🥗', '😴', '🧠', '🏊‍♂️', '📱', '🌱', '☕️'
 ];
 
 export function HabitModal({ visible, onClose, onSave }: HabitModalProps) {

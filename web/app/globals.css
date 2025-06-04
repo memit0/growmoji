@@ -57,6 +57,7 @@
 
     --radius: 0.5rem
   }
+
   .dark {
 
     --background: 0 0% 3.9%;
@@ -115,7 +116,100 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Responsive utilities */
+@layer utilities {
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Prevent zoom on iOS double-tap */
+  .no-zoom {
+    touch-action: manipulation;
+  }
+
+  /* Smooth scrolling for better mobile experience */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+
+  /* Ensure touch targets are at least 44px */
+  button,
+  a,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better mobile form inputs */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+    /* Prevents zoom on iOS */
+  }
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 640px) {
+
+  /* Reduce spacing on very small screens */
+  .space-y-6>*+* {
+    margin-top: 1rem !important;
+  }
+
+  /* Ensure dialogs don't overflow on small screens */
+  [role="dialog"] {
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  /* Better card padding on mobile */
+  .card-mobile {
+    padding: 0.75rem;
+  }
+
+  /* Ensure proper text wrapping */
+  .text-wrap-mobile {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Improve focus states for accessibility */
+@layer base {
+
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+/* Prevent horizontal scrolling */
+body {
+  overflow-x: hidden;
+}
+
+/* Better mobile sheet/drawer animations */
+@media (prefers-reduced-motion: no-preference) {
+  .sheet-content {
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
 }

@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, habitsService } from '../../lib/services/habits';
 import { ThemedText } from './ThemedText';
@@ -22,7 +23,8 @@ interface HabitStats {
 
 export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProps) {
   const { colors } = useTheme();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { isLoading: subscriptionLoading, isPremium, isInitialized } = useSubscription();
   const userId = user?.id;
 
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -35,6 +37,9 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     weeklyCompletionRate: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  // Determine if we're still in an overall loading state
+  const isOverallLoading = authLoading || (user && !isInitialized && subscriptionLoading);
 
   const calculateStats = useCallback((habits: Habit[]): HabitStats => {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -98,31 +103,31 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
 
   // Initial load when auth is ready
   useEffect(() => {
-    if (!loading) {
+    if (!authLoading && !isOverallLoading) {
       loadHabits();
     }
-  }, [loadHabits, loading]);
+  }, [loadHabits, authLoading, isOverallLoading]);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      if (!loading && user && userId) {
+      if (!authLoading && !isOverallLoading && user && userId) {
         loadHabits();
       }
-    }, [loadHabits, loading, user, userId])
+    }, [loadHabits, authLoading, isOverallLoading, user, userId])
   );
 
   // Auto-refresh every 30 seconds when screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (loading || !user || !userId) return;
+      if (authLoading || isOverallLoading || !user || !userId) return;
 
       const interval = setInterval(() => {
         loadHabits();
       }, 30000); // 30 seconds
 
       return () => clearInterval(interval);
-    }, [loadHabits, loading, user, userId])
+    }, [loadHabits, authLoading, isOverallLoading, user, userId])
   );
 
   const getMotivationalMessage = () => {
@@ -179,8 +184,8 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
     </View>
   );
 
-  // Show loading while auth is loading
-  if (loading) {
+  // Show loading while auth is loading or subscription is initializing
+  if (isOverallLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ThemedView style={[styles.loadingContainer, { backgroundColor: colors.card }]}>
@@ -270,7 +275,7 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
         />
 
         <ProgressBar
-          progress={stats.longestStreak > 0 ? Math.min((stats.averageStreak / stats.longestStreak) * 100, 100) : 0}
+          progress={stats.longestStreak > 0 ? Math.round(Math.min((stats.averageStreak / stats.longestStreak) * 100, 100)) : 0}
           label="Average Streak Performance"
         />
       </ThemedView>

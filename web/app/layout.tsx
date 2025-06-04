@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
   keywords: ["habit tracker", "productivity", "goals", "habits", "self-improvement", "emoji", "growmoji"],
   authors: [{ name: "Growmoji Team" }],
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   openGraph: {
     title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",

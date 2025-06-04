@@ -165,7 +165,7 @@ export default function HabitsPage() {
           <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
           <div className="h-4 bg-gray-200 rounded w-96"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="animate-pulse">
               <div className="h-48 bg-gray-200 rounded"></div>
@@ -182,25 +182,25 @@ export default function HabitsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="h-8 w-8" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Target className="h-6 w-6 sm:h-8 sm:w-8" />
             My Habits
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Track your daily habits with simple emojis. {completedToday}/{habits.length} completed today.
           </p>
         </div>
 
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add Habit
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-full max-w-md mx-auto">
             <DialogHeader>
               <DialogTitle>Create New Habit</DialogTitle>
             </DialogHeader>
@@ -227,11 +227,11 @@ export default function HabitsPage() {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={handleCreateHabit} className="flex-1" disabled={!newHabitEmoji.trim()}>
                   Create Habit
                 </Button>
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)} className="sm:w-auto">
                   Cancel
                 </Button>
               </div>
@@ -256,7 +256,7 @@ export default function HabitsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {habits.map((habit) => {
             const isCompletedToday = habit.last_check_date?.startsWith(todayStr);
 
@@ -266,10 +266,10 @@ export default function HabitsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div>
-                        <CardTitle className="text-3xl mb-1">
+                        <CardTitle className="text-2xl sm:text-3xl mb-1">
                           {habit.emoji}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Started {new Date(habit.start_date).toLocaleDateString()}
                         </p>
                       </div>
@@ -278,21 +278,21 @@ export default function HabitsPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDeleteHabit(habit.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="gap-1 text-xs">
                       <Flame className="h-3 w-3" />
                       {habit.current_streak} day streak
                     </Badge>
                     {isCompletedToday && (
-                      <Badge variant="default" className="gap-1">
+                      <Badge variant="default" className="gap-1 text-xs">
                         <CheckCircle className="h-3 w-3" />
                         Done today
                       </Badge>
@@ -302,17 +302,17 @@ export default function HabitsPage() {
                   <Button
                     onClick={() => handleHabitToggle(habit.id)}
                     variant={isCompletedToday ? "default" : "outline"}
-                    className="w-full gap-2"
+                    className="w-full gap-2 h-10 sm:h-11"
                   >
                     {isCompletedToday ? (
                       <>
                         <CheckCircle className="h-4 w-4" />
-                        Completed Today
+                        <span className="text-sm sm:text-base">Completed Today</span>
                       </>
                     ) : (
                       <>
                         <Target className="h-4 w-4" />
-                        Mark as Done
+                        <span className="text-sm sm:text-base">Mark as Done</span>
                       </>
                     )}
                   </Button>

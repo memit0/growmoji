@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -24,7 +26,8 @@ export default function LandingLayout({
             </div>
             <span className="font-bold text-xl">Growmoji</span>
           </Link>
-          
+
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link href="#features" className="text-sm font-medium hover:text-blue-600 transition-colors">
               Features
@@ -36,8 +39,9 @@ export default function LandingLayout({
               Pricing
             </Link>
           </nav>
-          
-          <div className="flex items-center space-x-4">
+
+          {/* Desktop Auth Buttons */}
+          <div className="hidden md:flex items-center space-x-4">
             <Link href="/auth/sign-in">
               <Button variant="ghost" size="sm">
                 Sign In
@@ -49,6 +53,40 @@ export default function LandingLayout({
               </Button>
             </Link>
           </div>
+
+          {/* Mobile Menu */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72">
+              <div className="flex flex-col space-y-4 mt-8">
+                <Link href="#features" className="text-lg font-medium hover:text-blue-600 transition-colors">
+                  Features
+                </Link>
+                <Link href="#testimonials" className="text-lg font-medium hover:text-blue-600 transition-colors">
+                  Testimonials
+                </Link>
+                <Link href="#pricing" className="text-lg font-medium hover:text-blue-600 transition-colors">
+                  Pricing
+                </Link>
+                <div className="pt-4 border-t space-y-3">
+                  <Link href="/auth/sign-in" className="block">
+                    <Button variant="ghost" className="w-full">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/auth/sign-up" className="block">
+                    <Button className="w-full">
+                      Get Started
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
@@ -76,7 +114,7 @@ export default function LandingLayout({
                 Build better habits, achieve your goals with emojis.
               </p>
             </div>
-            
+
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -85,7 +123,7 @@ export default function LandingLayout({
                 <li><Link href="/auth/sign-up" className="hover:text-foreground">Get Started</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="font-semibold mb-4">Support</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -94,7 +132,7 @@ export default function LandingLayout({
                 <li><Link href="/privacy" className="hover:text-foreground">Privacy</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="font-semibold mb-4">Download</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -102,7 +140,7 @@ export default function LandingLayout({
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t mt-8 pt-8 text-center text-sm text-muted-foreground">
             <p>&copy; 2024 Growmoji. All rights reserved.</p>
           </div>

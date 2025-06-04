@@ -143,13 +143,13 @@ export default function TodosPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CheckSquare className="h-8 w-8" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <CheckSquare className="h-6 w-6 sm:h-8 sm:w-8" />
             My Tasks
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Organize and track your tasks. {completedCount} completed, {pendingCount} pending. {todos.length}/3 tasks
             {isAtLimit && <span className="text-red-500 font-medium"> • Limit reached</span>}
           </p>
@@ -157,12 +157,12 @@ export default function TodosPage() {
 
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2" disabled={isAtLimit}>
+            <Button className="gap-2 w-full sm:w-auto" disabled={isAtLimit}>
               <Plus className="h-4 w-4" />
               {isAtLimit ? 'Limit Reached' : 'Add Task'}
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-full max-w-md mx-auto">
             <DialogHeader>
               <DialogTitle>Create New Task</DialogTitle>
             </DialogHeader>
@@ -175,13 +175,14 @@ export default function TodosPage() {
                   value={newTodoContent}
                   onChange={(e) => setNewTodoContent(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleCreateTodo()}
+                  className="h-10 sm:h-11"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={handleCreateTodo} className="flex-1" disabled={isAtLimit}>
                   Create Task
                 </Button>
-                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+                <Button variant="outline" onClick={() => setIsCreateModalOpen(false)} className="sm:w-auto">
                   Cancel
                 </Button>
               </div>
@@ -191,11 +192,12 @@ export default function TodosPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant={filter === 'all' ? 'default' : 'outline'}
           onClick={() => setFilter('all')}
           size="sm"
+          className="text-xs sm:text-sm"
         >
           All ({todos.length})
         </Button>
@@ -203,6 +205,7 @@ export default function TodosPage() {
           variant={filter === 'pending' ? 'default' : 'outline'}
           onClick={() => setFilter('pending')}
           size="sm"
+          className="text-xs sm:text-sm"
         >
           Pending ({pendingCount})
         </Button>
@@ -210,13 +213,14 @@ export default function TodosPage() {
           variant={filter === 'completed' ? 'default' : 'outline'}
           onClick={() => setFilter('completed')}
           size="sm"
+          className="text-xs sm:text-sm"
         >
           Completed ({completedCount})
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
@@ -284,12 +288,12 @@ export default function TodosPage() {
         <div className="space-y-3">
           {filteredTodos.map((todo) => (
             <Card key={todo.id} className="hover:shadow-sm transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start sm:items-center gap-3 sm:gap-4">
                   <Checkbox
                     checked={todo.is_completed}
                     onCheckedChange={() => handleToggleTodo(todo.id)}
-                    className="shrink-0"
+                    className="shrink-0 mt-1 sm:mt-0"
                   />
 
                   <div className="flex-1 min-w-0">
@@ -297,7 +301,7 @@ export default function TodosPage() {
                       }`}>
                       {todo.content}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <Badge variant={todo.is_completed ? 'default' : 'secondary'} className="text-xs">
                         {todo.is_completed ? 'Completed' : 'Pending'}
                       </Badge>
@@ -316,9 +320,9 @@ export default function TodosPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleDeleteTodo(todo.id)}
-                    className="text-destructive hover:text-destructive shrink-0"
+                    className="text-destructive hover:text-destructive shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </div>
               </CardContent>

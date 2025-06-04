@@ -17,7 +17,7 @@ import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
-  const { isPremium } = useSubscription();
+  const { isPremium, isLoading: subscriptionLoading, isInitialized } = useSubscription();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -30,17 +30,19 @@ export default function HomeScreen() {
   const [isSubmittingHabit, setIsSubmittingHabit] = useState(false);
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
 
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
 
-  const isTaskLimitReached = todos.length >= 3;
-  const isHabitLimitReached = habits.length >= 3;
+  // Don't make decisions about limits until subscription is initialized
+  const canCheckLimits = !authLoading && (!user || isInitialized);
+  const isTaskLimitReached = canCheckLimits && todos.length >= 3;
+  const isHabitLimitReached = canCheckLimits && habits.length >= 3;
 
   const handleAddTodo = async () => {
     if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) return;
 
-    // Check task limit for free users
-    if (!isPremium && isTaskLimitReached) {
+    // Check task limit for free users (only if we can check limits)
+    if (canCheckLimits && !isPremium && isTaskLimitReached) {
       setShowPaywall(true);
       return;
     }
@@ -133,8 +135,8 @@ export default function HomeScreen() {
       return;
     }
 
-    // Check habit limit for free users
-    if (!isPremium && habits.length >= 3) {
+    // Check habit limit for free users (only if we can check limits)
+    if (canCheckLimits && !isPremium && isHabitLimitReached) {
       console.log('[handleAddHabit] Free user has reached habit limit. Showing paywall.');
       setIsHabitModalVisible(false);
       setShowPaywall(true);
@@ -340,7 +342,7 @@ export default function HomeScreen() {
               <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
               <ThemedText style={[styles.habitCount, { color: colors.secondary }]}>
                 {habits.length}/{isPremium ? '∞' : '3'} habits
-                {!isPremium && habits.length >= 3 && (
+                {canCheckLimits && !isPremium && isHabitLimitReached && (
                   <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • Limit reached</ThemedText>
                 )}
               </ThemedText>
@@ -348,10 +350,10 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={[
                 styles.newHabitButton,
-                { backgroundColor: (!isPremium && habits.length >= 3) ? colors.border : colors.primary }
+                { backgroundColor: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.border : colors.primary }
               ]}
               onPress={() => {
-                if (!isPremium && habits.length >= 3) {
+                if (canCheckLimits && !isPremium && isHabitLimitReached) {
                   setShowPaywall(true);
                 } else {
                   setIsHabitModalVisible(true);
@@ -360,9 +362,9 @@ export default function HomeScreen() {
             >
               <ThemedText style={[
                 styles.newHabitButtonText,
-                { color: (!isPremium && habits.length >= 3) ? colors.secondary : '#FFFFFF' }
+                { color: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.secondary : '#FFFFFF' }
               ]}>
-                {(!isPremium && habits.length >= 3) ? 'Upgrade' : 'New Habit'}
+                {(canCheckLimits && !isPremium && isHabitLimitReached) ? 'Upgrade' : 'New Habit'}
               </ThemedText>
             </TouchableOpacity>
           </View>
