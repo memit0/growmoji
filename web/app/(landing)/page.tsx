@@ -101,7 +101,7 @@ export default function LandingPage() {
 
           {/* App Store Badge */}
           <div className="flex justify-center items-center pt-8">
-            <Link href="https://apps.apple.com/app/growmoji" target="_blank" rel="noopener noreferrer">
+            <Link href="https://apps.apple.com/us/app/growmoji-habit-tracker/id6745781107" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="flex items-center gap-2">
                 <Apple className="h-5 w-5" />
                 Download for iOS
@@ -298,7 +298,7 @@ export default function LandingPage() {
                 </li>
               </ul>
 
-              <Link href="https://apps.apple.com/app/growmoji" target="_blank" rel="noopener noreferrer" className="mt-8 block">
+              <Link href="https://apps.apple.com/us/app/growmoji-habit-tracker/id6745781107" target="_blank" rel="noopener noreferrer" className="mt-8 block">
                 <Button className="w-full h-12 text-lg bg-purple-600 hover:bg-purple-700">
                   Download App
                 </Button>

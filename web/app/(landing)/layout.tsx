@@ -136,7 +136,7 @@ export default function LandingLayout({
             <div>
               <h3 className="font-semibold mb-4">Download</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="#" className="hover:text-foreground">iOS App</Link></li>
+                <li><Link href="https://apps.apple.com/us/app/growmoji-habit-tracker/id6745781107" className="hover:text-foreground">iOS App</Link></li>
               </ul>
             </div>
           </div>
@@ -148,4 +148,4 @@ export default function LandingLayout({
       </footer>
     </div>
   );
-} 
+}
