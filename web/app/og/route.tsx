@@ -3,17 +3,8 @@ import { ImageResponse } from "next/og";
 // Route segment config
 export const runtime = "edge";
 
-// Image metadata
-export const alt = "Growmoji - Build Better Habits";
-export const size = {
-  width: 1200,
-  height: 630,
-};
-
-export const contentType = "image/png";
-
 // Image generation
-export default function Image() {
+export async function GET() {
   return new ImageResponse(
     (
       // ImageResponse JSX element
@@ -108,9 +99,8 @@ export default function Image() {
     ),
     // ImageResponse options
     {
-      // For convenience, we can re-use the exported opengraph-image
-      // size config to also set the ImageResponse's width and height.
-      ...size,
+      width: 1200,
+      height: 630,
     }
   );
 } 
