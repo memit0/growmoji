@@ -10,6 +10,7 @@ import '@/lib/env-validation';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://growmoji.app"),
   title: "Growmoji - Build Better Habits",
   description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
   keywords: ["habit tracker", "productivity", "goals", "habits", "self-improvement", "emoji", "growmoji"],
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
+    images: "/og",
     type: "website",
     url: "https://growmoji.app",
   },
@@ -28,6 +30,9 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Growmoji - Build Better Habits",
     description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
+    site: "@growmoji",
+    creator: "@mebattll",
+    images: "/og",
   },
 };
 
