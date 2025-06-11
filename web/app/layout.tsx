@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   openGraph: {
     title: "Growmoji - Build Better Habits",
-    description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
+    description: "Transform your life with beautiful habit tracking. Build streaks, achieve goals, and grow with emojis! ✨",
     images: "/og",
     type: "website",
     url: "https://growmoji.app",
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Growmoji - Build Better Habits",
-    description: "The beautiful habit tracker that helps you build lasting habits and achieve your goals with emojis.",
+    title: "Growmoji 🌱",
+    description: "Transform your life with beautiful habit tracking. Build streaks, achieve goals, and grow with emojis! ✨",
     site: "@growmoji",
     creator: "@mebattll",
     images: "/og",
