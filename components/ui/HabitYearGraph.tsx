@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, HabitLog, habitsService } from '../../lib/services/habits';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
-interface HabitYearGraphProps {
+interface HabitMonthGraphProps {
   habit: Habit;
   onHabitUpdated?: () => void;
 }
@@ -15,14 +15,16 @@ interface DayData {
   date: string;
   count: number;
   isToday: boolean;
+  dayOfMonth: number;
 }
 
-export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
+export function HabitYearGraph({ habit, onHabitUpdated }: HabitMonthGraphProps) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [yearData, setYearData] = useState<DayData[]>([]);
+  const [monthData, setMonthData] = useState<DayData[]>([]);
+  const [currentMonth, setCurrentMonth] = useState('');
 
   const loadLogs = useCallback(async () => {
     if (!user?.id) return;
@@ -45,17 +47,25 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
 
   useEffect(() => {
     if (logs.length === 0 && !loading) {
-      generateYearData([]);
+      generateMonthData([]);
       return;
     }
-    generateYearData(logs);
+    generateMonthData(logs);
   }, [logs, loading]);
 
-  const generateYearData = (habitLogs: HabitLog[]) => {
+  const generateMonthData = (habitLogs: HabitLog[]) => {
     const today = new Date();
-    const oneYearAgo = new Date(today);
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
-    oneYearAgo.setDate(oneYearAgo.getDate() + 1);
+    const currentYear = today.getFullYear();
+    const currentMonthIndex = today.getMonth();
+    
+    // Set the current month name for display
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
+    setCurrentMonth(monthNames[currentMonthIndex]);
+    
+    // Get first and last day of current month
+    const firstDayOfMonth = new Date(currentYear, currentMonthIndex, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonthIndex + 1, 0);
 
     const data: DayData[] = [];
     const logMap = new Map<string, number>();
@@ -65,18 +75,19 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
       logMap.set(dateStr, (logMap.get(dateStr) || 0) + 1);
     });
 
-    for (let d = new Date(oneYearAgo); d <= today; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(firstDayOfMonth); d <= lastDayOfMonth; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0];
       const isToday = dateStr === today.toISOString().split('T')[0];
       
       data.push({
         date: dateStr,
         count: logMap.get(dateStr) || 0,
-        isToday
+        isToday,
+        dayOfMonth: d.getDate()
       });
     }
 
-    setYearData(data);
+    setMonthData(data);
   };
 
   const handleDayPress = async (day: DayData) => {
@@ -110,27 +121,53 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
 
   const getIntensityColor = (count: number) => {
     if (count === 0) return colors.background;
-    if (count === 1) return '#c6f6d5'; // Light green
-    if (count === 2) return '#68d391'; // Medium green
-    if (count >= 3) return '#38a169'; // Dark green
-    return colors.background;
+    return colors.primary; // Single color for any logged day
   };
 
   const getWeeksArray = () => {
     const weeks: DayData[][] = [];
     let currentWeek: DayData[] = [];
 
-    yearData.forEach((day, index) => {
+    // Add empty days at the beginning of the first week
+    if (monthData.length > 0) {
+      const firstDay = new Date(monthData[0].date);
+      const dayOfWeek = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      
+      for (let i = 0; i < dayOfWeek; i++) {
+        currentWeek.push({
+          date: '',
+          count: 0,
+          isToday: false,
+          dayOfMonth: 0
+        });
+      }
+    }
+
+    monthData.forEach((day, index) => {
       const dayOfWeek = new Date(day.date).getDay();
       
-      if (dayOfWeek === 0 && currentWeek.length > 0) {
+      if (dayOfWeek === 0 && currentWeek.length === 7) {
         weeks.push(currentWeek);
         currentWeek = [];
       }
       
       currentWeek.push(day);
       
-      if (index === yearData.length - 1) {
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+      
+      if (index === monthData.length - 1 && currentWeek.length > 0) {
+        // Fill remaining days of the last week
+        while (currentWeek.length < 7) {
+          currentWeek.push({
+            date: '',
+            count: 0,
+            isToday: false,
+            dayOfMonth: 0
+          });
+        }
         weeks.push(currentWeek);
       }
     });
@@ -138,7 +175,12 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
     return weeks;
   };
 
-  const totalLogs = logs.length;
+  const totalLogs = logs.filter(log => {
+    const logDate = new Date(log.log_date);
+    const today = new Date();
+    return logDate.getMonth() === today.getMonth() && logDate.getFullYear() === today.getFullYear();
+  }).length;
+  
   const currentStreak = habit.current_streak || 0;
   const weeks = getWeeksArray();
   const today = new Date().toISOString().split('T')[0];
@@ -162,51 +204,33 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
         <ThemedText style={styles.emoji}>{habit.emoji}</ThemedText>
         <View style={styles.habitInfo}>
           <ThemedText type="defaultSemiBold" style={[styles.habitTitle, { color: colors.text }]}>
-            Habit Progress
+            {currentMonth} Progress
           </ThemedText>
           <View style={styles.statsRow}>
             <ThemedText style={[styles.statText, { color: colors.secondary }]}>
-              {totalLogs} total • {currentStreak} day streak
+              {totalLogs} this month • {currentStreak} day streak
             </ThemedText>
           </View>
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.graphContainer}>
+      <View style={styles.graphContainer}>
         <View style={styles.graph}>
-          {/* Month labels */}
-          <View style={styles.monthLabels}>
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
-              <ThemedText key={month} style={[styles.monthLabel, { color: colors.secondary }]}>
-                {month}
+          {/* Day labels */}
+          <View style={styles.dayLabels}>
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <ThemedText key={index} style={[styles.dayLabel, { color: colors.secondary }]}>
+                {day}
               </ThemedText>
             ))}
           </View>
 
-          {/* Day labels */}
-          <View style={styles.dayLabelsContainer}>
-            <View style={styles.dayLabels}>
-              <ThemedText style={[styles.dayLabel, { color: colors.secondary }]}>Mon</ThemedText>
-              <ThemedText style={[styles.dayLabel, { color: colors.secondary }]}>Wed</ThemedText>
-              <ThemedText style={[styles.dayLabel, { color: colors.secondary }]}>Fri</ThemedText>
-            </View>
-
-            {/* Graph grid */}
-            <View style={styles.weeksContainer}>
-              {weeks.slice(0, 53).map((week, weekIndex) => (
-                <View key={weekIndex} style={styles.week}>
-                  {/* Fill empty days at beginning */}
-                  {weekIndex === 0 && week.length > 0 && (() => {
-                    const firstDay = new Date(week[0].date);
-                    const dayOfWeek = firstDay.getDay();
-                    const emptyDays = [];
-                    for (let i = 0; i < dayOfWeek; i++) {
-                      emptyDays.push(<View key={`empty-${i}`} style={styles.emptyDay} />);
-                    }
-                    return emptyDays;
-                  })()}
-                  
-                  {week.map((day) => (
+          {/* Graph grid */}
+          <View style={styles.weeksContainer}>
+            {weeks.map((week, weekIndex) => (
+              <View key={weekIndex} style={styles.week}>
+                {week.map((day, dayIndex) => (
+                  day.date ? (
                     <TouchableOpacity
                       key={day.date}
                       style={[
@@ -214,43 +238,31 @@ export function HabitYearGraph({ habit, onHabitUpdated }: HabitYearGraphProps) {
                         { 
                           backgroundColor: getIntensityColor(day.count),
                           borderColor: day.isToday ? colors.primary : 'transparent',
-                          borderWidth: day.isToday ? 2 : 0,
+                          borderWidth: day.isToday ? 2 : 1,
                         }
                       ]}
                       activeOpacity={0.7}
                       onPress={() => handleDayPress(day)}
-                      disabled={day.date !== today} // Only allow logging today
-                    />
-                  ))}
-                  
-                  {/* Fill empty days at end */}
-                  {weekIndex === weeks.length - 1 && week.length > 0 && (() => {
-                    const lastDay = new Date(week[week.length - 1].date);
-                    const dayOfWeek = lastDay.getDay();
-                    const emptyDays = [];
-                    for (let i = dayOfWeek + 1; i < 7; i++) {
-                      emptyDays.push(<View key={`empty-end-${i}`} style={styles.emptyDay} />);
-                    }
-                    return emptyDays;
-                  })()}
-                </View>
-              ))}
-            </View>
+                      disabled={day.date !== today}
+                    >
+                      <ThemedText style={[styles.dayNumber, { 
+                        color: day.count > 0 ? colors.background : colors.text,
+                        fontSize: 10
+                      }]}>
+                        {day.dayOfMonth}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ) : (
+                    <View key={`empty-${weekIndex}-${dayIndex}`} style={styles.emptyDay} />
+                  )
+                ))}
+              </View>
+            ))}
           </View>
 
-          {/* Legend */}
-          <View style={styles.legend}>
-            <ThemedText style={[styles.legendText, { color: colors.secondary }]}>Less</ThemedText>
-            <View style={styles.legendSquares}>
-              <View style={[styles.legendSquare, { backgroundColor: colors.background }]} />
-              <View style={[styles.legendSquare, { backgroundColor: '#c6f6d5' }]} />
-              <View style={[styles.legendSquare, { backgroundColor: '#68d391' }]} />
-              <View style={[styles.legendSquare, { backgroundColor: '#38a169' }]} />
-            </View>
-            <ThemedText style={[styles.legendText, { color: colors.secondary }]}>More</ThemedText>
-          </View>
+
         </View>
-      </ScrollView>
+      </View>
     </ThemedView>
   );
 }
@@ -294,67 +306,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   graphContainer: {
-    maxHeight: 200,
+    alignItems: 'center',
   },
   graph: {
-    minWidth: 700, // Ensure it's scrollable
+    width: '100%',
   },
-  monthLabels: {
+  dayLabels: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 8,
-    paddingLeft: 20,
-  },
-  monthLabel: {
-    fontSize: 12,
-  },
-  dayLabelsContainer: {
-    flexDirection: 'row',
-  },
-  dayLabels: {
-    width: 20,
-    justifyContent: 'space-around',
-    height: 105, // 7 days * 15px
-    marginRight: 4,
+    paddingHorizontal: 4,
   },
   dayLabel: {
-    fontSize: 10,
-  },
-  weeksContainer: {
-    flexDirection: 'row',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
     flex: 1,
   },
+  weeksContainer: {
+    alignItems: 'center',
+  },
   week: {
-    marginRight: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
   daySquare: {
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-    marginBottom: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e1e5e9',
+  },
+  dayNumber: {
+    fontWeight: 'bold',
   },
   emptyDay: {
-    width: 12,
-    height: 12,
-    marginBottom: 2,
+    width: 36,
+    height: 36,
   },
   legend: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 16,
-    paddingHorizontal: 20,
   },
   legendText: {
-    fontSize: 12,
+    fontSize: 10,
   },
   legendSquares: {
     flexDirection: 'row',
+    marginHorizontal: 8,
   },
   legendSquare: {
-    width: 12,
-    height: 12,
+    width: 10,
+    height: 10,
     borderRadius: 2,
-    marginHorizontal: 1,
+    marginHorizontal: 2,
   },
 }); 
