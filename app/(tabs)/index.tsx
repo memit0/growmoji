@@ -29,6 +29,7 @@ export default function HomeScreen() {
   const [isSubmittingTodo, setIsSubmittingTodo] = useState(false);
   const [isSubmittingHabit, setIsSubmittingHabit] = useState(false);
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
+  const [loggingHabits, setLoggingHabits] = useState<Set<string>>(new Set());
 
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
@@ -171,6 +172,12 @@ export default function HomeScreen() {
   const handleHabitLog = async (habitId: string) => {
     if (!user || !userId) return;
 
+    // Prevent multiple simultaneous calls for the same habit
+    if (loggingHabits.has(habitId)) {
+      console.log(`[HomeScreen] handleHabitLog already in progress for habit: ${habitId}`);
+      return;
+    }
+
     console.log(`[HomeScreen] handleHabitLog called for habit: ${habitId}`);
     
     const targetHabit = habits.find(h => h.id === habitId);
@@ -178,6 +185,9 @@ export default function HomeScreen() {
       console.error(`[HomeScreen] Habit not found: ${habitId}`);
       return;
     }
+
+    // Mark this habit as being processed
+    setLoggingHabits(prev => new Set(prev).add(habitId));
 
     const todayStr = new Date().toISOString().split('T')[0];
     const isLoggedToday = targetHabit.last_check_date && targetHabit.last_check_date.startsWith(todayStr);
@@ -191,7 +201,7 @@ export default function HomeScreen() {
       last_check_date: isLoggedToday ? null : todayStr, // Toggle logged state
     };
 
-    // Update UI immediately
+    // Update UI immediately with optimistic state
     setHabits(prevHabits => {
       const newHabits = prevHabits.map(habit => 
         habit.id === habitId ? optimisticHabit : habit
@@ -243,6 +253,13 @@ export default function HomeScreen() {
           return revertedHabits;
         });
       }
+    } finally {
+      // Always remove the habit from the logging set when done
+      setLoggingHabits(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(habitId);
+        return newSet;
+      });
     }
 
     console.log(`[HomeScreen] handleHabitLog finished for habit: ${habitId}`);
@@ -291,8 +308,9 @@ export default function HomeScreen() {
       lastLoggedDate={item.last_check_date || undefined}
       onPress={() => handleHabitLog(item.id)}
       onDelete={() => handleDeleteHabit(item.id)}
+      isLoading={loggingHabits.has(item.id)}
     />
-  ), [handleHabitLog, handleDeleteHabit]);
+  ), [handleHabitLog, handleDeleteHabit, loggingHabits]);
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -387,6 +405,7 @@ export default function HomeScreen() {
                 onDelete={handleDeleteHabit}
                 startDate={habit.start_date}
                 lastLoggedDate={habit.last_check_date === null ? undefined : habit.last_check_date}
+                isLoading={loggingHabits.has(habit.id)}
               />
             ))}
           </View>
