@@ -202,3 +202,125 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_catalog, pg_temp;
 
+-- Optimized habit logging function that handles toggle and streak calculation server-side
+CREATE OR REPLACE FUNCTION toggle_habit_log(
+  habit_id UUID,
+  user_id_param UUID,
+  log_date DATE
+) RETURNS TABLE(
+  id UUID,
+  user_id UUID,
+  emoji TEXT,
+  start_date DATE,
+  current_streak INTEGER,
+  last_check_date DATE,
+  created_at TIMESTAMPTZ
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  habit_record RECORD;
+  log_exists BOOLEAN;
+  new_streak INTEGER;
+  new_last_check_date DATE;
+BEGIN
+  -- Check if habit exists and belongs to user
+  SELECT * INTO habit_record
+  FROM habits h
+  WHERE h.id = habit_id AND h.user_id = user_id_param::text;
+  
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Habit not found or access denied';
+  END IF;
+
+  -- Check if log exists for today
+  SELECT EXISTS(
+    SELECT 1 FROM habit_logs hl 
+    WHERE hl.habit_id = habit_id AND hl.log_date = log_date
+  ) INTO log_exists;
+
+  IF log_exists THEN
+    -- Unlog: Delete today's log
+    DELETE FROM habit_logs 
+    WHERE habit_logs.habit_id = habit_id AND habit_logs.log_date = log_date;
+    
+    -- Recalculate streak after deletion
+    SELECT 
+      COALESCE(calculate_habit_streak(habit_id), 0),
+      (SELECT MAX(hl.log_date) FROM habit_logs hl WHERE hl.habit_id = habit_id)
+    INTO new_streak, new_last_check_date;
+    
+  ELSE
+    -- Log: Insert new log entry
+    INSERT INTO habit_logs (habit_id, log_date) 
+    VALUES (habit_id, log_date);
+    
+    -- Calculate new streak
+    IF habit_record.last_check_date IS NULL THEN
+      new_streak := 1;
+    ELSIF habit_record.last_check_date = log_date - INTERVAL '1 day' THEN
+      new_streak := habit_record.current_streak + 1;
+    ELSE
+      new_streak := 1;
+    END IF;
+    
+    new_last_check_date := log_date;
+  END IF;
+
+  -- Update habit with new streak and last check date
+  UPDATE habits 
+  SET 
+    current_streak = new_streak,
+    last_check_date = new_last_check_date
+  WHERE habits.id = habit_id AND habits.user_id = user_id_param::text;
+
+  -- Return updated habit
+  RETURN QUERY
+  SELECT h.id, h.user_id, h.emoji, h.start_date, h.current_streak, h.last_check_date, h.created_at
+  FROM habits h
+  WHERE h.id = habit_id AND h.user_id = user_id_param::text;
+END;
+$$;
+
+-- Helper function to calculate streak from existing logs
+CREATE OR REPLACE FUNCTION calculate_habit_streak(habit_id UUID)
+RETURNS INTEGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  streak INTEGER := 0;
+  curr_date DATE;
+  prev_date DATE;
+  log_record RECORD;
+BEGIN
+  -- Get logs in descending order
+  FOR log_record IN
+    SELECT log_date 
+    FROM habit_logs 
+    WHERE habit_logs.habit_id = habit_id 
+    ORDER BY log_date DESC
+    LIMIT 100
+  LOOP
+    IF curr_date IS NULL THEN
+      -- First iteration
+      curr_date := log_record.log_date;
+      streak := 1;
+    ELSE
+      prev_date := curr_date;
+      curr_date := log_record.log_date;
+      
+      -- Check if dates are consecutive
+      IF prev_date - curr_date = 1 THEN
+        streak := streak + 1;
+      ELSE
+        -- Break on first gap
+        EXIT;
+      END IF;
+    END IF;
+  END LOOP;
+
+  RETURN COALESCE(streak, 0);
+END;
+$$;
+

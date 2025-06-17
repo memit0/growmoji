@@ -171,73 +171,81 @@ export default function HomeScreen() {
   const handleHabitLog = async (habitId: string) => {
     if (!user || !userId) return;
 
-    setIsUpdatingItem(true);
     console.log(`[HomeScreen] handleHabitLog called for habit: ${habitId}`);
+    
+    const targetHabit = habits.find(h => h.id === habitId);
+    if (!targetHabit) {
+      console.error(`[HomeScreen] Habit not found: ${habitId}`);
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isLoggedToday = targetHabit.last_check_date && targetHabit.last_check_date.startsWith(todayStr);
+
+    // Optimistic UI update - update immediately for better UX
+    const optimisticHabit = {
+      ...targetHabit,
+      current_streak: isLoggedToday 
+        ? Math.max(0, targetHabit.current_streak - 1) // Decrease streak (approximate)
+        : targetHabit.current_streak + 1, // Increase streak
+      last_check_date: isLoggedToday ? null : todayStr, // Toggle logged state
+    };
+
+    // Update UI immediately
+    setHabits(prevHabits => {
+      const newHabits = prevHabits.map(habit => 
+        habit.id === habitId ? optimisticHabit : habit
+      );
+      updateWidgetData(todos, newHabits, theme, isPremium);
+      return newHabits;
+    });
 
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const targetHabit = habits.find(h => h.id === habitId);
+      // Try the optimized server-side function first
+      const updatedHabit = await habitsService.toggleHabitLog(habitId, userId);
+      
+      // Update with the actual server response
+      setHabits(prevHabits => {
+        const newHabits = prevHabits.map(habit => 
+          habit.id === habitId ? updatedHabit : habit
+        );
+        updateWidgetData(todos, newHabits, theme, isPremium);
+        return newHabits;
+      });
 
-      if (!targetHabit) {
-        console.error(`[HomeScreen] Habit not found: ${habitId}`);
-        return;
-      }
-
-      const isLoggedToday = targetHabit.last_check_date && targetHabit.last_check_date.startsWith(todayStr);
-
-      if (isLoggedToday) {
-        // Unlog: Delete the log entry for today
-        console.log(`[HomeScreen] Unlogging habit: ${habitId} for date: ${todayStr}`);
-        await habitsService.deleteHabitLog(habitId, todayStr, userId);
-        console.log(`[HomeScreen] Successfully deleted habit log for: ${habitId}`);
-
-        // Recalculate streak after removing today's log
-        const remainingLogs = await habitsService.getHabitLogs(habitId, userId);
-        let newStreak = 0;
-        let newLastCheckDate: string | null = null;
-
-        if (remainingLogs.length > 0) {
-          // Sort logs by date (newest first)
-          remainingLogs.sort((a, b) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime());
-          newLastCheckDate = remainingLogs[0].log_date;
-          newStreak = 1; // At least 1 if there are any logs
-
-          // Calculate consecutive days from the most recent log backwards
-          for (let i = 1; i < remainingLogs.length; i++) {
-            const currentDate = new Date(remainingLogs[i - 1].log_date);
-            const previousDate = new Date(remainingLogs[i].log_date);
-            const diffTime = currentDate.getTime() - previousDate.getTime();
-            const diffDays = diffTime / (1000 * 3600 * 24);
-            if (diffDays === 1) {
-              newStreak++;
-            } else {
-              break;
-            }
-          }
-        }
-
-        await habitsService.updateHabitStreakDetails(habitId, { current_streak: newStreak, last_check_date: newLastCheckDate }, userId);
-        console.log(`[HomeScreen] Successfully updated habit streak details for ${habitId}`);
-
-      } else {
-        // Log: Add a new log entry
-        console.log(`[HomeScreen] Logging habit: ${habitId} for date: ${todayStr}`);
-        await habitsService.logHabitCompletion(habitId, todayStr, userId);
-        console.log(`[HomeScreen] Successfully logged habit completion for: ${habitId}`);
-      }
-
-      // Refresh all habits to update UI
-      const refreshedHabits = await habitsService.getHabits(userId);
-      setHabits(refreshedHabits);
-      updateWidgetData(todos, refreshedHabits, theme, isPremium);
-      console.log('[HomeScreen] Refreshed habits list.');
-
+      console.log(`[HomeScreen] Successfully toggled habit log for: ${habitId}`);
     } catch (error) {
-      console.error('[HomeScreen] Error in handleHabitLog:', error);
-    } finally {
-      setIsUpdatingItem(false);
-      console.log(`[HomeScreen] handleHabitLog finished for habit: ${habitId}`);
+      console.warn('[HomeScreen] Server-side toggle failed, falling back to client-side method:', error);
+      
+      try {
+        // Fallback to optimized client-side method
+        const updatedHabit = await habitsService.toggleHabitLogFallback(habitId, userId);
+        
+        // Update with the actual server response
+        setHabits(prevHabits => {
+          const newHabits = prevHabits.map(habit => 
+            habit.id === habitId ? updatedHabit : habit
+          );
+          updateWidgetData(todos, newHabits, theme, isPremium);
+          return newHabits;
+        });
+
+        console.log(`[HomeScreen] Successfully toggled habit log (fallback) for: ${habitId}`);
+      } catch (fallbackError) {
+        console.error('[HomeScreen] Error in handleHabitLog (both methods failed):', fallbackError);
+        
+        // Revert optimistic update on error
+        setHabits(prevHabits => {
+          const revertedHabits = prevHabits.map(habit => 
+            habit.id === habitId ? targetHabit : habit
+          );
+          updateWidgetData(todos, revertedHabits, theme, isPremium);
+          return revertedHabits;
+        });
+      }
     }
+
+    console.log(`[HomeScreen] handleHabitLog finished for habit: ${habitId}`);
   };
 
   useEffect(() => {

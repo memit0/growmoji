@@ -217,4 +217,168 @@ export const habitsService = {
     }
     return data;
   },
+
+  // Optimized habit logging that handles both log/unlog and streak calculation in one call
+  async toggleHabitLog(habitId: string, userId: string): Promise<Habit> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Try the stored procedure first, but catch errors and fallback
+    try {
+      const { data, error } = await supabase.rpc('toggle_habit_log', {
+        habit_id: habitId,
+        user_id_param: userId,
+        log_date: today
+      });
+
+      if (error) {
+        console.warn('RPC function not available, using fallback:', error);
+        return await this.toggleHabitLogFallback(habitId, userId);
+      }
+
+      return data;
+    } catch (error) {
+      console.warn('RPC function failed, using fallback:', error);
+      return await this.toggleHabitLogFallback(habitId, userId);
+    }
+  },
+
+  // Fallback function for when RPC is not available - still optimized
+  async toggleHabitLogFallback(habitId: string, userId: string): Promise<Habit> {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get habit and check if logged today in a single query
+    const { data: habit, error: habitError } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('id', habitId)
+      .eq('user_id', userId)
+      .single();
+
+    if (habitError || !habit) {
+      throw new Error('Habit not found or access denied');
+    }
+
+    // Check if already logged today
+    const { data: todayLog, error: logError } = await supabase
+      .from('habit_logs')
+      .select('id')
+      .eq('habit_id', habitId)
+      .eq('log_date', today)
+      .maybeSingle();
+
+    if (logError) {
+      console.error('Error checking today\'s log:', logError);
+      throw logError;
+    }
+
+    const isLoggedToday = !!todayLog;
+
+    if (isLoggedToday) {
+      // Unlog: Delete today's log
+      await this.deleteHabitLog(habitId, today, userId);
+      
+      // Get the most recent log after deletion to update streak
+      const { data: recentLog } = await supabase
+        .from('habit_logs')
+        .select('log_date')
+        .eq('habit_id', habitId)
+        .order('log_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const newLastCheckDate = recentLog?.log_date || null;
+      let newStreak = 0;
+      
+      if (newLastCheckDate) {
+        // Simple streak calculation for fallback
+        const lastDate = new Date(newLastCheckDate);
+        const currentDate = new Date();
+        const diffTime = currentDate.getTime() - lastDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+        
+        if (diffDays <= 1) {
+          // Recent log, calculate streak more accurately
+          newStreak = await this.calculateStreakFromDate(habitId, newLastCheckDate, userId);
+        } else {
+          newStreak = 1; // Old log, reset to 1
+        }
+      }
+      
+      return await this.updateHabitStreakDetails(habitId, {
+        current_streak: newStreak,
+        last_check_date: newLastCheckDate
+      }, userId);
+    } else {
+      // Log: Add new log entry
+      await this.logHabitCompletion(habitId, today, userId);
+      
+      // Calculate new streak
+      const newStreak = this.calculateNewStreak(habit.current_streak, habit.last_check_date, today);
+      
+      return await this.updateHabitStreakDetails(habitId, {
+        current_streak: newStreak,
+        last_check_date: today
+      }, userId);
+    }
+  },
+
+  // Helper function to calculate streak more efficiently
+  calculateNewStreak(currentStreak: number, lastCheckDate: string | null, newLogDate: string): number {
+    if (!lastCheckDate) {
+      return 1; // First log
+    }
+
+    const lastDate = new Date(lastCheckDate);
+    const newDate = new Date(newLogDate);
+    const diffTime = newDate.getTime() - lastDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+
+    if (diffDays === 1) {
+      return currentStreak + 1; // Consecutive day
+    } else if (diffDays === 0) {
+      return currentStreak; // Same day (shouldn't happen but handle gracefully)
+    } else {
+      return 1; // Gap in streak, restart
+    }
+  },
+
+  // Helper function to calculate streak from a specific date
+  async calculateStreakFromDate(habitId: string, fromDate: string, userId: string): Promise<number> {
+    // This is a simplified version - in a real implementation, you'd want to
+    // fetch logs in descending order and count consecutive days
+    const { data: logs } = await supabase
+      .from('habit_logs')
+      .select('log_date')
+      .eq('habit_id', habitId)
+      .order('log_date', { ascending: false })
+      .limit(100); // Reasonable limit for streak calculation
+
+    if (!logs || logs.length === 0) return 0;
+
+    let streak = 1;
+    let currentDate = new Date(fromDate);
+
+    for (let i = 1; i < logs.length; i++) {
+      const prevDate = new Date(logs[i].log_date);
+      const diffTime = currentDate.getTime() - prevDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
+
+      if (diffDays === 1) {
+        streak++;
+        currentDate = prevDate;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  },
 }; 
