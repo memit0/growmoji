@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Habit, habitsService } from '../../lib/services/habits';
+import { HabitYearGraph } from './HabitYearGraph';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 
@@ -283,28 +284,15 @@ export function HabitProgressDashboard({ onRefresh }: HabitProgressDashboardProp
       {habits.length > 0 && (
         <ThemedView style={[styles.habitsSection, { backgroundColor: colors.card }]}>
           <ThemedText type="subtitle" style={[styles.sectionTitle, { color: colors.text }]}>
-            Recent Habits
+            Habit Progress
           </ThemedText>
-          {habits.slice(0, 3).map((habit) => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const isCompletedToday = habit.last_check_date && habit.last_check_date.startsWith(todayStr);
-
-            return (
-              <View key={habit.id} style={styles.habitItem}>
-                <View style={styles.habitInfo}>
-                  <ThemedText style={styles.habitEmoji}>{habit.emoji}</ThemedText>
-                  <View style={styles.habitDetails}>
-                    <ThemedText style={[styles.habitStreak, { color: colors.primary }]}>
-                      🔥 {habit.current_streak} days
-                    </ThemedText>
-                    <ThemedText style={[styles.habitStatus, { color: colors.secondary }]}>
-                      {isCompletedToday ? '✅ Completed today' : '⏳ Pending today'}
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
+          {habits.map((habit) => (
+            <HabitYearGraph
+              key={habit.id}
+              habit={habit}
+              onHabitUpdated={loadHabits}
+            />
+          ))}
         </ThemedView>
       )}
     </ScrollView>
@@ -442,30 +430,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
-  habitItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  habitInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  habitEmoji: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  habitDetails: {
-    flex: 1,
-  },
-  habitStreak: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  habitStatus: {
-    fontSize: 14,
   },
   loadingContainer: {
     margin: 16,
