@@ -13,6 +13,7 @@ interface HabitCardProps {
   onDelete?: (id: string) => void;
   startDate: string;
   lastLoggedDate?: string;
+  isLoading?: boolean;
 }
 
 export function HabitCard({ 
@@ -22,7 +23,8 @@ export function HabitCard({
   onPress, 
   onDelete,
   startDate,
-  lastLoggedDate 
+  lastLoggedDate,
+  isLoading = false
 }: HabitCardProps) {
   const { colors } = useTheme();
   const translateX = new Animated.Value(0);
@@ -66,10 +68,15 @@ export function HabitCard({
       onGestureEvent={onGestureEvent}
       onHandlerStateChange={onHandlerStateChange}
       activeOffsetX={[-20, 20]}
+      enabled={!isLoading}
     >
       <Animated.View style={{ transform: [{ translateX }] }}>
-        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-          <ThemedView style={[styles.card, { backgroundColor: colors.card }]}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={isLoading}>
+          <ThemedView style={[
+            styles.card, 
+            { backgroundColor: colors.card },
+            isLoading && { opacity: 0.6 }
+          ]}>
             <View style={[
               styles.emojiContainer, 
               { backgroundColor: colors.background },
