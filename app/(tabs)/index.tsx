@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -18,6 +19,7 @@ import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
   const { isPremium, isLoading: subscriptionLoading, isInitialized } = useSubscription();
+  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -421,6 +423,8 @@ export default function HomeScreen() {
           visible={showPaywall}
           onClose={() => setShowPaywall(false)}
         />
+
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -509,13 +513,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  // Add a new style for disabled button/input elements if needed
-  // For example:
-  // disabledInput: {
-  //   backgroundColor: '#e0e0e0', // Lighter grey for disabled state
-  //   color: '#a0a0a0',
-  // },
-  // disabledButton: {
-  //   backgroundColor: '#cccccc',
-  // },
 });
