@@ -49,6 +49,29 @@ function RootNavigation() {
     checkOnboardingStatus();
   }, []);
 
+  // Re-check onboarding status when segments change (e.g., when returning from onboarding)
+  useEffect(() => {
+    const recheckOnboardingStatus = async () => {
+      if (!onboardingLoading) {
+        try {
+          const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+          const currentStatus = seen === 'true';
+          if (currentStatus !== hasSeenOnboarding) {
+            console.log('[RootNavigation] Onboarding status changed:', { from: hasSeenOnboarding, to: currentStatus });
+            setHasSeenOnboarding(currentStatus);
+          }
+        } catch (error) {
+          console.error('Error rechecking onboarding status:', error);
+        }
+      }
+    };
+
+    // Only recheck if we're navigating away from onboarding
+    if (segments[0] !== 'onboarding' && !onboardingLoading) {
+      recheckOnboardingStatus();
+    }
+  }, [segments, onboardingLoading, hasSeenOnboarding]);
+
   // Deep link debugging
   useEffect(() => {
     console.log('[RootNavigation] Setting up deep link debugging');
@@ -125,9 +148,10 @@ function RootNavigation() {
           console.log('[RootNavigation] Returning user, redirecting to login');
           router.replace('/(auth)/login');
         }
+        // Don't redirect if user is already in auth or onboarding
       } else {
         // User is authenticated
-        if (!inTabsGroup && !inOnboarding) {
+        if (!inTabsGroup) {
           console.log('[RootNavigation] User authenticated, redirecting to main app');
           router.replace('/(tabs)');
         }

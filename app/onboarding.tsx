@@ -151,8 +151,18 @@ export default function OnboardingScreen() {
   const markOnboardingAsSeen = async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      console.log('[OnboardingScreen] Successfully saved onboarding status to AsyncStorage');
+      
+      // Verify the save was successful
+      const saved = await AsyncStorage.getItem('hasSeenOnboarding');
+      console.log('[OnboardingScreen] Verification - hasSeenOnboarding value:', saved);
+      
+      if (saved !== 'true') {
+        throw new Error('Failed to save onboarding status properly');
+      }
     } catch (error) {
-      console.error('Error saving onboarding status:', error);
+      console.error('[OnboardingScreen] Error saving onboarding status:', error);
+      throw error; // Re-throw to be caught by handleStartFree
     }
   };
 
@@ -189,8 +199,18 @@ export default function OnboardingScreen() {
   };
 
   const handleStartFree = async () => {
-    await markOnboardingAsSeen();
-    router.replace('/(auth)/login');
+    try {
+      await markOnboardingAsSeen();
+      console.log('[OnboardingScreen] Onboarding marked as seen, navigating to login');
+      // Use a small delay to ensure AsyncStorage write is complete
+      setTimeout(() => {
+        router.replace('/(auth)/login');
+      }, 100);
+    } catch (error) {
+      console.error('[OnboardingScreen] Error completing onboarding:', error);
+      // Still navigate even if there's an error saving
+      router.replace('/(auth)/login');
+    }
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {

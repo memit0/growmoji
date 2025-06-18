@@ -1,14 +1,14 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthService } from '../../lib/auth/AuthService';
@@ -77,7 +77,7 @@ export default function LoginScreen() {
       }
 
       if (data.user) {
-        router.replace('/');
+        router.replace('/(tabs)');
       }
     } catch (err: any) {
       console.error("Supabase SignIn Error:", err);
@@ -133,7 +133,7 @@ export default function LoginScreen() {
       } else if (data && 'user' in data && data.user) {
         console.log(`[LoginScreen] handleSocialSignIn: User signed in directly for ${provider}:`, data.user.id);
         // For native sign-in, user is already authenticated, navigate to home
-        router.replace('/');
+        router.replace('/(tabs)');
       } else {
         console.warn(`[LoginScreen] handleSocialSignIn: No redirect URL or user in response for ${provider}`);
       }
