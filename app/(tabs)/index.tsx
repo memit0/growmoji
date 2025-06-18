@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { HabitCard } from '@/components/ui/HabitCard';
 import { HabitModal } from '@/components/ui/HabitModal';
+import { InteractiveWalkthrough } from '@/components/ui/InteractiveWalkthrough';
 import { RemotePaywallModal } from '@/components/ui/RemotePaywallModal';
 import { ThemedText } from '@/components/ui/ThemedText';
 import { TodoCard } from '@/components/ui/TodoCard';
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // Refactored loading states
   const [isScreenLoading, setIsScreenLoading] = useState(false);
@@ -36,6 +38,30 @@ export default function HomeScreen() {
 
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
+
+  // Check if user has seen the walkthrough
+  useEffect(() => {
+    const checkWalkthroughStatus = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const hasSeenWalkthrough = await AsyncStorage.getItem(`app_walkthrough_seen_${user.id}`);
+        if (!hasSeenWalkthrough) {
+          // Show walkthrough after a short delay to let the UI load
+          setTimeout(() => {
+            setShowWalkthrough(true);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error checking walkthrough status:', error);
+      }
+    };
+
+    // Only check after data has loaded to ensure UI is ready
+    if (user?.id && !isScreenLoading) {
+      checkWalkthroughStatus();
+    }
+  }, [user?.id, isScreenLoading]);
 
   // Check if this is a new user and show paywall
   useEffect(() => {
@@ -58,6 +84,17 @@ export default function HomeScreen() {
       checkNewUser();
     }
   }, [user?.id, isInitialized, subscriptionLoading, isPremium]);
+
+  const handleWalkthroughComplete = async () => {
+    setShowWalkthrough(false);
+    if (user?.id) {
+      try {
+        await AsyncStorage.setItem(`app_walkthrough_seen_${user.id}`, 'true');
+      } catch (error) {
+        console.error('Error saving walkthrough status:', error);
+      }
+    }
+  };
 
   // Don't make decisions about limits until subscription is initialized
   const canCheckLimits = !authLoading && (!user || isInitialized);
@@ -341,6 +378,18 @@ export default function HomeScreen() {
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={[styles.bg]} contentContainerStyle={styles.container}>
 
+        {/* Header with help button */}
+        <View style={styles.header}>
+          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            style={[styles.helpButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => setShowWalkthrough(true)}
+          >
+            <ThemedText style={[styles.helpButtonText, { color: colors.primary }]}>
+              ❓ Help
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
         
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
@@ -449,6 +498,10 @@ export default function HomeScreen() {
           onClose={() => setShowPaywall(false)}
         />
 
+        <InteractiveWalkthrough
+          visible={showWalkthrough}
+          onClose={handleWalkthroughComplete}
+        />
 
       </ScrollView>
     </SafeAreaView>
@@ -538,5 +591,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  helpButton: {
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+  },
+  helpButtonText: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
 });
