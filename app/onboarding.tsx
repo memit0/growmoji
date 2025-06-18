@@ -2,8 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Animated, Dimensions, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { RemotePaywallModal } from '../components/ui/RemotePaywallModal';
-import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -143,10 +141,9 @@ const onboardingSlides: OnboardingSlide[] = [
 
 export default function OnboardingScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
-  const { isPremium } = useSubscription();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showPaywall, setShowPaywall] = useState(false);
+
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const flatListRef = useRef<FlatList>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -177,8 +174,8 @@ export default function OnboardingScreen() {
     if (currentIndex < onboardingSlides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      // On last slide, show paywall
-      setShowPaywall(true);
+      // On last slide, go to auth
+      handleStartFree();
     }
   };
 
@@ -193,20 +190,7 @@ export default function OnboardingScreen() {
 
   const handleStartFree = async () => {
     await markOnboardingAsSeen();
-    setShowPaywall(false);
     router.replace('/(auth)/login');
-  };
-
-  const handlePaywallClose = async () => {
-    await markOnboardingAsSeen();
-    setShowPaywall(false);
-    // If they subscribed, go to auth to sign up/login, otherwise offer free option
-    if (isPremium) {
-      router.replace('/(auth)/login');
-    } else {
-      // They closed the paywall without subscribing, offer free option
-      router.replace('/(auth)/login');
-    }
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -466,8 +450,8 @@ export default function OnboardingScreen() {
 
       {item.type === 'paywall-lead' && (
         <View style={styles.paywallLeadButtons}>
-          <TouchableOpacity style={styles.premiumButton} onPress={() => setShowPaywall(true)}>
-            <Text style={styles.premiumButtonText}>🚀 Unlock Full Potential</Text>
+          <TouchableOpacity style={styles.premiumButton} onPress={handleStartFree}>
+            <Text style={styles.premiumButtonText}>🚀 Create Account & Unlock Premium</Text>
           </TouchableOpacity>
           <Text style={styles.freeSubtext}>or</Text>
           <TouchableOpacity style={styles.freeButton} onPress={handleStartFree}>
@@ -524,10 +508,7 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      <RemotePaywallModal
-        visible={showPaywall}
-        onClose={handlePaywallClose}
-      />
+
     </SafeAreaView>
   );
 } 
