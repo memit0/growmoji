@@ -47,12 +47,12 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
-          name="timer"
+          name="Dashboard"
           options={{
             title: 'Dashboard',
             headerTitle: '',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="analytics-outline" size={size} color={color} />
+              <Ionicons name="speedometer-outline" size={size} color={color} />
             ),
           }}
         />

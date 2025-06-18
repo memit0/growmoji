@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ProfileModal } from '../components';
 
-export default function TimerScreen() {
+export default function DashboardScreen() {
   const { colors } = useTheme();
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
 
