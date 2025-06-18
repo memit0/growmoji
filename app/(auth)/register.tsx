@@ -99,8 +99,8 @@ export default function RegisterScreen() {
             "We've sent you a confirmation link. Please check your email and click the link to verify your account."
           );
         } else {
-          // User is automatically signed in
-          router.replace('/');
+          // User is automatically signed in - redirect to main app
+          router.replace('/(tabs)');
         }
       }
     } catch (err: any) {
@@ -129,8 +129,8 @@ export default function RegisterScreen() {
       // OAuth will handle the redirect. If data.url exists, it's the URL to open.
       if (data && 'url' in data && data.url) {
       } else if (data && 'user' in data && data.user) {
-        // For native sign-in, user is already authenticated, navigate to home
-        router.replace('/');
+        // For native sign-in, user is already authenticated, navigate to main app
+        router.replace('/(tabs)');
       } else {
       }
 

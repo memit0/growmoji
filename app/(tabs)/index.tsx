@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
@@ -18,6 +20,7 @@ import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
   const { isPremium, isLoading: subscriptionLoading, isInitialized } = useSubscription();
+  const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [newTodoTitle, setNewTodoTitle] = useState('');
@@ -33,6 +36,28 @@ export default function HomeScreen() {
 
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
+
+  // Check if this is a new user and show paywall
+  useEffect(() => {
+    const checkNewUser = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const hasSeenWelcome = await AsyncStorage.getItem(`welcome_shown_${user.id}`);
+        if (!hasSeenWelcome && !isPremium) {
+          setShowPaywall(true);
+          await AsyncStorage.setItem(`welcome_shown_${user.id}`, 'true');
+        }
+      } catch (error) {
+        console.error('Error checking welcome status:', error);
+      }
+    };
+
+    // Only check after subscription is initialized to avoid showing for premium users
+    if (isInitialized && !subscriptionLoading) {
+      checkNewUser();
+    }
+  }, [user?.id, isInitialized, subscriptionLoading, isPremium]);
 
   // Don't make decisions about limits until subscription is initialized
   const canCheckLimits = !authLoading && (!user || isInitialized);
@@ -315,6 +340,8 @@ export default function HomeScreen() {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={[styles.bg]} contentContainerStyle={styles.container}>
+
+        
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
             <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
@@ -421,6 +448,8 @@ export default function HomeScreen() {
           visible={showPaywall}
           onClose={() => setShowPaywall(false)}
         />
+
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -509,13 +538,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  // Add a new style for disabled button/input elements if needed
-  // For example:
-  // disabledInput: {
-  //   backgroundColor: '#e0e0e0', // Lighter grey for disabled state
-  //   color: '#a0a0a0',
-  // },
-  // disabledButton: {
-  //   backgroundColor: '#cccccc',
-  // },
+
 });
