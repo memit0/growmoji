@@ -1,8 +1,8 @@
 import { HabitProgressDashboard } from '@/components/ui/HabitProgressDashboard';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ProfileModal } from '../../app/components';
 import { useTheme } from '../../contexts/ThemeContext';
+import { ProfileModal } from '../components';
 
 export default function TimerScreen() {
   const { colors } = useTheme();

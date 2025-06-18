@@ -1,21 +1,21 @@
 'use client';
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { HabitYearGraph } from "@/components/ui/HabitYearGraph";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import type { Habit, Todo } from "@/lib/supabase";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 import {
-  Calendar,
-  CheckCircle,
-  Flame,
-  Plus,
-  Target,
-  TrendingUp
+    Calendar,
+    CheckCircle,
+    Flame,
+    Plus,
+    Target,
+    TrendingUp
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -337,51 +337,77 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Today's Habits */}
+      {/* Habit Year Graphs */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Habit Progress Overview</h2>
+          <p className="text-sm text-muted-foreground">
+            {habits.length} active habit{habits.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        {habits.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center">
+                <div className="text-4xl mb-4">📊</div>
+                <h3 className="text-lg font-medium mb-2">No habits to display</h3>
+                <p className="text-muted-foreground mb-4">
+                  Create your first habit to see your progress visualization
+                </p>
+                <Button onClick={() => setIsCreateHabitModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Habit
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {habits.map((habit) => (
+              <HabitYearGraph key={habit.id} habit={habit} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Today's Habits - Quick Toggle */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
-            Today&apos;s Habits
+            Quick Toggle - Today&apos;s Habits
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {habits.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
+              <div className="col-span-full text-center py-8 text-muted-foreground">
                 No habits yet. Create your first habit to get started!
-              </p>
+              </div>
             ) : (
               habits.map((habit) => {
                 const todayStr = new Date().toISOString().split('T')[0];
                 const isCompletedToday = habit.last_check_date?.startsWith(todayStr);
 
                 return (
-                  <div key={habit.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <div key={habit.id} className="flex flex-col items-center gap-2">
                     <Button
                       variant={isCompletedToday ? "default" : "outline"}
                       size="icon"
-                      className="shrink-0 h-10 w-10 sm:h-12 sm:w-12"
+                      className="h-12 w-12 rounded-xl"
                       onClick={() => handleHabitToggle(habit.id)}
                     >
-                      <span className="text-base sm:text-lg">{habit.emoji}</span>
+                      <span className="text-lg">{habit.emoji}</span>
                     </Button>
-
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`font-medium text-base sm:text-lg truncate ${isCompletedToday ? 'line-through text-muted-foreground' : ''}`}>
-                        {habit.emoji}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-xs">
-                          <Flame className="h-3 w-3 mr-1" />
-                          {habit.current_streak} day streak
-                        </Badge>
+                    <div className="text-center">
+                      <div className="text-xs font-medium">
+                        🔥 {habit.current_streak}
                       </div>
+                      {isCompletedToday && (
+                        <div className="text-xs text-green-600">✅ Done</div>
+                      )}
                     </div>
-
-                    {isCompletedToday && (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                    )}
                   </div>
                 );
               })

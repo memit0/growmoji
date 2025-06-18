@@ -305,7 +305,7 @@ export default function HomeScreen() {
       emoji={item.emoji}
       streak={item.current_streak}
       startDate={item.start_date}
-      lastLoggedDate={item.last_check_date || undefined}
+      lastLoggedDate={item.last_check_date === null ? undefined : item.last_check_date}
       onPress={() => handleHabitLog(item.id)}
       onDelete={() => handleDeleteHabit(item.id)}
       isLoading={loggingHabits.has(item.id)}
