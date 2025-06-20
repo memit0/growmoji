@@ -1,6 +1,7 @@
 import React from 'react';
 import { Dimensions, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ThemedText } from './ThemedText';
 
@@ -52,42 +53,65 @@ export function RemotePaywallModal({
   visible, 
   onClose, 
   showCloseButton = true,
-  requiredEntitlementIdentifier = "pro"
+  requiredEntitlementIdentifier = "Growmoji Premium"
 }: RemotePaywallModalProps) {
   const { colors, spacing, borderRadius } = useTheme();
+  const { offerings, customerInfo, isInitialized } = useSubscription();
+
+  // Debug logging
+  React.useEffect(() => {
+    if (visible) {
+      console.log('[RemotePaywallModal] Modal visible, debugging info:', {
+        isInitialized,
+        offeringsCount: offerings?.length || 0,
+        customerInfo: !!customerInfo,
+        requiredEntitlementIdentifier
+      });
+      
+      if (offerings && offerings.length > 0) {
+        console.log('[RemotePaywallModal] Available offerings:', offerings.map(o => ({
+          identifier: o.identifier,
+          packagesCount: o.availablePackages.length
+        })));
+      } else {
+        console.warn('[RemotePaywallModal] No offerings available! Paywall may not display properly.');
+      }
+    }
+  }, [visible, offerings, customerInfo, isInitialized, requiredEntitlementIdentifier]);
 
   const handleDismiss = () => {
+    console.log('[RemotePaywallModal] Paywall dismissed');
     onClose();
   };
 
   const handlePurchaseStarted = () => {
-    // console.log('Purchase started');
+    console.log('[RemotePaywallModal] Purchase started');
   };
 
   const handlePurchaseCompleted = ({ customerInfo }: any) => {
-    // console.log('Purchase completed:', customerInfo);
+    console.log('[RemotePaywallModal] Purchase completed:', customerInfo);
     onClose(); 
   };
 
   const handlePurchaseError = (error: any) => {
-    console.error('Purchase error:', error); 
+    console.error('[RemotePaywallModal] Purchase error:', error); 
   };
 
   const handlePurchaseCancelled = () => {
-    // console.log('Purchase cancelled');
+    console.log('[RemotePaywallModal] Purchase cancelled');
   };
 
   const handleRestoreStarted = () => {
-    // console.log('Restore started');
+    console.log('[RemotePaywallModal] Restore started');
   };
 
   const handleRestoreCompleted = ({ customerInfo }: any) => {
-    // console.log('Restore completed:', customerInfo);
+    console.log('[RemotePaywallModal] Restore completed:', customerInfo);
     onClose(); 
   };
 
   const handleRestoreError = (error: any) => {
-    console.error('Restore error:', error); 
+    console.error('[RemotePaywallModal] Restore error:', error); 
   };
 
   const styles = StyleSheet.create({
@@ -130,7 +154,104 @@ export function RemotePaywallModal({
     paywallContainer: {
       flex: 1,
     },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    errorText: {
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+    debugButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      marginTop: spacing.md,
+    },
   });
+
+  // Show error state if RevenueCat is not properly initialized
+  if (!isInitialized) {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {showCloseButton && (
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                  <ThemedText style={{ color: colors.secondary }}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <View style={styles.errorContainer}>
+              <ThemedText style={[styles.errorText, { color: colors.text }]}>
+                💭 Setting up your subscription options...
+              </ThemedText>
+              <ThemedText style={[styles.errorText, { color: colors.secondary, fontSize: 14 }]}>
+                Please wait while we initialize RevenueCat
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Show error state if no offerings are available
+  if (!offerings || offerings.length === 0) {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            {showCloseButton && (
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.closeButton} onPress={handleDismiss}>
+                  <ThemedText style={{ color: colors.secondary }}>✕</ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            <View style={styles.errorContainer}>
+              <ThemedText style={[styles.errorText, { color: colors.text }]}>
+                🚧 Subscription options temporarily unavailable
+              </ThemedText>
+              <ThemedText style={[styles.errorText, { color: colors.secondary, fontSize: 14 }]}>
+                No offerings found from RevenueCat. This usually means:
+                {'\n'}• Paywall not published in RevenueCat dashboard
+                {'\n'}• Products not configured in App Store Connect
+                {'\n'}• Bundle ID mismatch
+              </ThemedText>
+              <TouchableOpacity 
+                style={styles.debugButton} 
+                onPress={() => {
+                  console.log('[RemotePaywallModal] Debug info requested');
+                  console.log('Offerings:', offerings);
+                  console.log('Customer Info:', customerInfo);
+                  console.log('Entitlement:', requiredEntitlementIdentifier);
+                }}
+              >
+                <ThemedText style={{ color: '#FFFFFF' }}>Log Debug Info</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal

@@ -419,10 +419,31 @@ export default function OnboardingScreen() {
       fontSize: typography.fontSize.sm,
       color: colors.secondary,
     },
+    skipButton: {
+      position: 'absolute',
+      top: spacing.xl,
+      left: spacing.lg,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.card,
+      borderRadius: borderRadius.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+      opacity: 0.7,
+    },
+    skipButtonText: {
+      fontSize: typography.fontSize.xs,
+      color: colors.secondary,
+      fontWeight: '500',
+    },
   });
 
   const renderItem = ({ item }: { item: OnboardingSlide }) => (
     <View style={styles.slide}>
+      <TouchableOpacity style={styles.skipButton} onPress={handleStartFree}>
+        <Text style={styles.skipButtonText}>Skip</Text>
+      </TouchableOpacity>
+      
       <Text style={styles.progressText}>
         {currentIndex + 1} / {onboardingSlides.length}
       </Text>
@@ -482,8 +503,8 @@ export default function OnboardingScreen() {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
+      return (
+      <SafeAreaView style={styles.safeArea}>
       <FlatList
         ref={flatListRef}
         data={onboardingSlides}

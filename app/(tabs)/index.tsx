@@ -27,6 +27,11 @@ export default function HomeScreen() {
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+
+  // Debug logging for paywall state changes
+  useEffect(() => {
+    console.log('[HomeScreen] showPaywall state changed:', showPaywall);
+  }, [showPaywall]);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
 
   // Refactored loading states
@@ -90,6 +95,15 @@ export default function HomeScreen() {
     if (user?.id) {
       try {
         await AsyncStorage.setItem(`app_walkthrough_seen_${user.id}`, 'true');
+        
+        // Show paywall for new users after walkthrough completion
+        // Only show if user is not already premium and subscription is initialized
+        if (isInitialized && !isPremium) {
+          // Small delay to ensure walkthrough modal is fully closed before showing paywall
+          setTimeout(() => {
+            setShowPaywall(true);
+          }, 300);
+        }
       } catch (error) {
         console.error('Error saving walkthrough status:', error);
       }
@@ -97,9 +111,22 @@ export default function HomeScreen() {
   };
 
   // Don't make decisions about limits until subscription is initialized
-  const canCheckLimits = !authLoading && (!user || isInitialized);
-  const isTaskLimitReached = canCheckLimits && todos.length >= 3;
-  const isHabitLimitReached = canCheckLimits && habits.length >= 3;
+  // FIXED: Improved logic to enforce limits for free users even during subscription loading
+  const canCheckLimits = !authLoading && !!user; // Simplified: if user is authenticated, we can check limits
+  const isTaskLimitReached = canCheckLimits && !isPremium && todos.length >= 3;
+  const isHabitLimitReached = canCheckLimits && !isPremium && habits.length >= 3;
+
+  // Debug logging to help verify the fix
+  console.log('[HomeScreen] Habit limit debug:', {
+    authLoading,
+    userExists: !!user,
+    isPremium,
+    isInitialized,
+    canCheckLimits,
+    habitsCount: habits.length,
+    isHabitLimitReached,
+    shouldShowUpgradeButton: canCheckLimits && !isPremium && isHabitLimitReached
+  });
 
   const handleAddTodo = async () => {
     if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) return;
@@ -378,9 +405,23 @@ export default function HomeScreen() {
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={[styles.bg]} contentContainerStyle={styles.container}>
 
-        {/* Header with help button */}
+        {/* Header with upgrade and help buttons */}
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
+          {/* Upgrade to Premium button for free users */}
+          {canCheckLimits && !isPremium && (
+            <TouchableOpacity
+              style={[styles.helpButton, { backgroundColor: colors.primary, borderColor: colors.primary, marginRight: 8 }]}
+              onPress={() => {
+                console.log('[HomeScreen] Upgrade to Premium button pressed');
+                setShowPaywall(true);
+              }}
+            >
+              <ThemedText style={[styles.helpButtonText, { color: '#FFFFFF' }]}>
+                ⭐ Upgrade to Premium
+              </ThemedText>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.helpButton, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => setShowWalkthrough(true)}
@@ -495,7 +536,10 @@ export default function HomeScreen() {
 
         <RemotePaywallModal
           visible={showPaywall}
-          onClose={() => setShowPaywall(false)}
+          onClose={() => {
+            console.log('[HomeScreen] Paywall modal closed');
+            setShowPaywall(false);
+          }}
         />
 
         <InteractiveWalkthrough

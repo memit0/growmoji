@@ -76,8 +76,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   // Provide a stable premium status that doesn't flicker during loading
   const stablePremiumStatus = (() => {
     // If we're loading and have a cached status, use it to prevent flickering
+    // BUT: Only use cached premium status if it's false (free), never if it's true (premium)
+    // This prevents edge cases where a cached premium status might bypass limits
     if (isLoading && lastKnownPremiumStatus !== null) {
-      return lastKnownPremiumStatus;
+      // Only trust cached status if it's false (free user)
+      // If cached status is true (premium), wait for actual verification
+      return lastKnownPremiumStatus === false ? false : isPremium;
     }
     // Otherwise use the current premium status
     return isPremium;
@@ -97,6 +101,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.log('--- Final Result ---');
       console.log('Debug override:', debugPremiumOverride);
       console.log('Final isPremium:', isPremium);
+      console.log('Stable premium status:', stablePremiumStatus);
+      console.log('IsLoading:', isLoading);
+      console.log('IsInitialized:', isInitialized);
       console.log('========================');
 
       // Update the cached premium status
