@@ -28,9 +28,11 @@ export default function HomeScreen() {
   const [isHabitModalVisible, setIsHabitModalVisible] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
 
-  // Debug logging for paywall state changes
+  // Track paywall state changes (dev only)
   useEffect(() => {
-    console.log('[HomeScreen] showPaywall state changed:', showPaywall);
+    if (process.env.NODE_ENV === 'development' && showPaywall) {
+      console.log('[HomeScreen] Paywall shown');
+    }
   }, [showPaywall]);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
 
@@ -116,17 +118,15 @@ export default function HomeScreen() {
   const isTaskLimitReached = canCheckLimits && !isPremium && todos.length >= 3;
   const isHabitLimitReached = canCheckLimits && !isPremium && habits.length >= 3;
 
-  // Debug logging to help verify the fix
-  console.log('[HomeScreen] Habit limit debug:', {
-    authLoading,
-    userExists: !!user,
-    isPremium,
-    isInitialized,
-    canCheckLimits,
-    habitsCount: habits.length,
-    isHabitLimitReached,
-    shouldShowUpgradeButton: canCheckLimits && !isPremium && isHabitLimitReached
-  });
+  // Simplified debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[HomeScreen] Status:', {
+      userExists: !!user,
+      isPremium,
+      habitsCount: habits.length,
+      canCheckLimits
+    });
+  }
 
   const handleAddTodo = async () => {
     if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) return;

@@ -116,15 +116,15 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       return isPremium;
     }
     
-    // If we're still loading but have cached status, use it
+    // If we're still loading but have cached status, use it (but be conservative)
     if (isLoading && lastKnownPremiumStatus !== null) {
-      // Only trust cached premium status if it's false (free), never if it's true (premium)
-      // This prevents edge cases where a cached premium status might bypass limits
-      return lastKnownPremiumStatus === false ? false : isPremium;
+      // Only trust cached premium status if it's false (free)
+      // For premium cached status, wait for confirmation unless we're initializing for the first time
+      return lastKnownPremiumStatus === false ? false : (isInitialized ? isPremium : false);
     }
     
-    // Default to cached status or false
-    return lastKnownPremiumStatus ?? false;
+    // Default to false (free) to ensure buttons work during initialization
+    return false;
   })();
 
   // Cache management - save data when updated
@@ -133,18 +133,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       const activeEntitlements = Object.keys(customerInfo.entitlements.active);
       const growmojiPremiumActive = customerInfo.entitlements.active['Growmoji Premium'];
 
-      console.log('=== RevenueCat Debug Info ===');
-      console.log('Active entitlements:', activeEntitlements);
-      console.log('All entitlements (active):', customerInfo.entitlements.active);
-      console.log('--- Main Entitlement Check ---');
-      console.log('✓ Growmoji Premium:', growmojiPremiumActive ? 'ACTIVE' : 'INACTIVE');
-      console.log('--- Final Result ---');
-      console.log('Debug override:', debugPremiumOverride);
-      console.log('Final isPremium:', isPremium);
-      console.log('Stable premium status:', stablePremiumStatus);
-      console.log('IsLoading:', isLoading);
-      console.log('IsInitialized:', isInitialized);
-      console.log('========================');
+      // Simplified logging for production
+      console.log('[SubscriptionContext] Premium status updated:', {
+        isPremium,
+        isInitialized,
+        hasCustomerInfo: !!customerInfo
+      });
 
       // Update the cached premium status
       setLastKnownPremiumStatus(isPremium);
@@ -178,6 +172,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setCustomerInfo(null);
       setOfferings(null);
       setError(null);
+      setLastKnownPremiumStatus(null);
+      setLastKnownCustomerInfo(null);
     }
   }, [user?.id, authLoading, isQuickCacheLoaded]);
 
@@ -194,8 +190,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
 
     try {
-      // Only show loading if we don't have cached data
-      if (!lastKnownCustomerInfo) {
+      // Only show loading if we don't have cached data - minimize UI blocking
+      if (!lastKnownCustomerInfo && !isQuickCacheLoaded) {
         setIsLoading(true);
       }
       setError(null);
@@ -253,6 +249,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       } else {
         setError(`Failed to initialize subscription system: ${error.message}`);
       }
+
+      // Don't block UI functionality even if RevenueCat fails
+      // Users should still be able to use free features
+      setIsInitialized(false);
+      setCustomerInfo(null);
+      setOfferings(null);
     } finally {
       setIsLoading(false);
     }
