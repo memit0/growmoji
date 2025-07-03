@@ -21,6 +21,8 @@ interface SubscriptionContextType {
   setDebugPremiumOverride: (override: boolean) => void;
   // Initialization state
   isInitialized: boolean;
+  // Quick cache state for instant UI
+  isQuickCacheLoaded: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -38,32 +40,66 @@ interface SubscriptionProviderProps {
 }
 
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
-  const { user, loading: authLoading } = useAuth(); // Get the current user from AuthContext
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false); // Start with false for better UX
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<PurchasesOffering[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugPremiumOverride, setDebugPremiumOverride] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isQuickCacheLoaded, setIsQuickCacheLoaded] = useState(false);
 
   // Cache the last known premium status to prevent flickering
   const [lastKnownPremiumStatus, setLastKnownPremiumStatus] = useState<boolean | null>(null);
+  const [lastKnownCustomerInfo, setLastKnownCustomerInfo] = useState<CustomerInfo | null>(null);
 
-  // Load cached premium status on component mount
+  // Load cached data immediately on mount for instant UI
   useEffect(() => {
-    const loadCachedPremiumStatus = async () => {
+    const loadCachedData = async () => {
+      if (!user?.id) return;
+      
       try {
-        const cached = await AsyncStorage.getItem(`premium_status_${user?.id}`);
-        if (cached !== null) {
-          setLastKnownPremiumStatus(JSON.parse(cached));
+        const [cachedPremiumStatus, cachedCustomerInfo] = await Promise.all([
+          AsyncStorage.getItem(`premium_status_${user.id}`),
+          AsyncStorage.getItem(`customer_info_${user.id}`)
+        ]);
+
+        if (cachedPremiumStatus !== null) {
+          const premiumStatus = JSON.parse(cachedPremiumStatus);
+          setLastKnownPremiumStatus(premiumStatus);
+          console.log('[SubscriptionContext] Loaded cached premium status:', premiumStatus);
         }
+
+        if (cachedCustomerInfo !== null) {
+          try {
+            const customerInfoData = JSON.parse(cachedCustomerInfo);
+            // Only use cached customer info if it's recent (within last 24 hours)
+            const cacheAge = Date.now() - (customerInfoData.cachedAt || 0);
+            const isStale = cacheAge > 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (!isStale) {
+              setLastKnownCustomerInfo(customerInfoData.data);
+              setCustomerInfo(customerInfoData.data);
+              console.log('[SubscriptionContext] Loaded cached customer info');
+            } else {
+              console.log('[SubscriptionContext] Cached customer info is stale, will refresh');
+            }
+          } catch (error) {
+            console.warn('[SubscriptionContext] Failed to parse cached customer info:', error);
+          }
+        }
+
+        setIsQuickCacheLoaded(true);
       } catch (error) {
-        console.warn('[SubscriptionContext] Failed to load cached premium status:', error);
+        console.warn('[SubscriptionContext] Failed to load cached data:', error);
+        setIsQuickCacheLoaded(true);
       }
     };
 
     if (user?.id) {
-      loadCachedPremiumStatus();
+      loadCachedData();
+    } else {
+      setIsQuickCacheLoaded(true);
     }
   }, [user?.id]);
 
@@ -75,21 +111,25 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
   // Provide a stable premium status that doesn't flicker during loading
   const stablePremiumStatus = (() => {
-    // If we're loading and have a cached status, use it to prevent flickering
-    // BUT: Only use cached premium status if it's false (free), never if it's true (premium)
-    // This prevents edge cases where a cached premium status might bypass limits
+    // If we have real customer info, use that
+    if (customerInfo) {
+      return isPremium;
+    }
+    
+    // If we're still loading but have cached status, use it
     if (isLoading && lastKnownPremiumStatus !== null) {
-      // Only trust cached status if it's false (free user)
-      // If cached status is true (premium), wait for actual verification
+      // Only trust cached premium status if it's false (free), never if it's true (premium)
+      // This prevents edge cases where a cached premium status might bypass limits
       return lastKnownPremiumStatus === false ? false : isPremium;
     }
-    // Otherwise use the current premium status
-    return isPremium;
+    
+    // Default to cached status or false
+    return lastKnownPremiumStatus ?? false;
   })();
 
-  // Enhanced logging for debugging
+  // Cache management - save data when updated
   useEffect(() => {
-    if (customerInfo) {
+    if (customerInfo && user?.id) {
       const activeEntitlements = Object.keys(customerInfo.entitlements.active);
       const growmojiPremiumActive = customerInfo.entitlements.active['Growmoji Premium'];
 
@@ -109,31 +149,28 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       // Update the cached premium status
       setLastKnownPremiumStatus(isPremium);
 
-      // Persist to storage for next app launch
-      if (user?.id) {
-        AsyncStorage.setItem(`premium_status_${user.id}`, JSON.stringify(isPremium))
-          .catch(error => console.warn('[SubscriptionContext] Failed to cache premium status:', error));
-      }
-    } else {
-      console.log('=== RevenueCat Debug Info ===');
-      console.log('No customer info available');
-      console.log('Using cached premium status:', lastKnownPremiumStatus);
-      console.log('========================');
+      // Persist both premium status and customer info to storage for next app launch
+      Promise.all([
+        AsyncStorage.setItem(`premium_status_${user.id}`, JSON.stringify(isPremium)),
+        AsyncStorage.setItem(`customer_info_${user.id}`, JSON.stringify({
+          data: customerInfo,
+          cachedAt: Date.now()
+        }))
+      ]).catch(error => console.warn('[SubscriptionContext] Failed to cache data:', error));
     }
-  }, [customerInfo, debugPremiumOverride, isPremium, lastKnownPremiumStatus]);
+  }, [customerInfo, debugPremiumOverride, isPremium, stablePremiumStatus, isLoading, isInitialized, user?.id]);
 
+  // Background initialization - don't block UI
   useEffect(() => {
-    // Wait for auth to complete before initializing RevenueCat
-    // This prevents the flickering by ensuring we don't show free state prematurely
-    if (authLoading) {
-      // Keep loading true while auth is loading
-      setIsLoading(true);
+    // Don't initialize until auth is complete and cache is loaded
+    if (authLoading || !isQuickCacheLoaded) {
       return;
     }
 
     // Only initialize RevenueCat when we have a user
     if (user?.id) {
-      initializeRevenueCat();
+      // Initialize in background without blocking UI
+      initializeRevenueCatInBackground();
     } else {
       // If no user, we can safely show non-premium state
       setIsLoading(false);
@@ -142,24 +179,25 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setOfferings(null);
       setError(null);
     }
-  }, [user?.id, authLoading]); // Re-initialize when user changes OR when auth loading completes
+  }, [user?.id, authLoading, isQuickCacheLoaded]);
 
-  const initializeRevenueCat = async () => {
+  const initializeRevenueCatInBackground = async () => {
     if (!user?.id) {
       console.log('[RevenueCat] No user ID available, skipping initialization');
-      setIsLoading(false);
       return;
     }
 
     // If already initialized for this user, don't reinitialize
     if (isInitialized && customerInfo?.originalAppUserId === user.id) {
       console.log('[RevenueCat] Already initialized for this user');
-      setIsLoading(false);
       return;
     }
 
     try {
-      setIsLoading(true);
+      // Only show loading if we don't have cached data
+      if (!lastKnownCustomerInfo) {
+        setIsLoading(true);
+      }
       setError(null);
 
       // Configure RevenueCat with user ID
@@ -181,59 +219,24 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       });
 
       console.log('[RevenueCat] Configuration successful with user ID:', user.id);
+      setIsInitialized(true);
 
-      // Get customer info and offerings
-      const [customerInfo, offerings] = await Promise.all([
+      // Get customer info and offerings in parallel for better performance
+      const [freshCustomerInfo, freshOfferings] = await Promise.all([
         Purchases.getCustomerInfo(),
         Purchases.getOfferings()
       ]);
 
-      console.log('[RevenueCat] Customer info retrieved:', customerInfo.entitlements.active);
-      console.log('[RevenueCat] Raw offerings response:', offerings);
-      console.log('[RevenueCat] Available offerings count:', Object.keys(offerings.all || {}).length);
-      console.log('[RevenueCat] Current offering:', offerings.current);
+      console.log('[RevenueCat] Customer info retrieved:', freshCustomerInfo.entitlements.active);
+      console.log('[RevenueCat] Raw offerings response:', freshOfferings);
+      console.log('[RevenueCat] Available offerings count:', Object.keys(freshOfferings.all || {}).length);
+      console.log('[RevenueCat] Current offering:', freshOfferings.current);
 
-      // Log app identifier for debugging
-      console.log('[RevenueCat] App bundle identifier:', Platform.OS === 'ios' ? 'com.mebattll.habittracker' : 'com.mebattll.habittracker');
+      // Update state with fresh data
+      setCustomerInfo(freshCustomerInfo);
+      setOfferings(freshOfferings.current ? [freshOfferings.current] : []);
 
-      setCustomerInfo(customerInfo);
-      setIsInitialized(true);
-
-      // Handle offerings
-      const offeringsArray = offerings.all ? Object.values(offerings.all) : [];
-      setOfferings(offeringsArray);
-
-      if (offeringsArray.length === 0) {
-        console.warn('[RevenueCat] No offerings found. Possible reasons:');
-        console.warn('1. Offering not created in RevenueCat dashboard');
-        console.warn('2. Products not configured in App Store Connect/Google Play Console');
-        console.warn('3. Bundle identifier mismatch between app and RevenueCat dashboard');
-        console.warn('4. Offering configuration still propagating (can take up to 24 hours)');
-        console.warn('5. API key might be for wrong project');
-        setError('No subscription plans available. Please check RevenueCat dashboard configuration and ensure bundle identifiers match.');
-      } else {
-        console.log('[RevenueCat] Found offerings:', offeringsArray.length);
-        offeringsArray.forEach((offering, index) => {
-          console.log(`[RevenueCat] Offering ${index + 1}:`, {
-            identifier: offering.identifier,
-            serverDescription: offering.serverDescription,
-            availablePackages: offering.availablePackages.length
-          });
-          offering.availablePackages.forEach((pkg, pkgIndex) => {
-            console.log(`[RevenueCat] Package ${pkgIndex + 1}:`, {
-              identifier: pkg.identifier,
-              productId: pkg.product.identifier,
-              price: pkg.product.priceString
-            });
-          });
-        });
-      }
-
-      // Set up listener for customer info updates
-      Purchases.addCustomerInfoUpdateListener((customerInfo) => {
-        console.log('[RevenueCat] Customer info updated:', customerInfo.entitlements.active);
-        setCustomerInfo(customerInfo);
-      });
+      console.log('[RevenueCat] Initialization complete');
 
     } catch (error: any) {
       console.error('Error initializing RevenueCat:', error);
@@ -435,6 +438,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     setDebugPremiumOverride,
     // Initialization state
     isInitialized,
+    // Quick cache state for instant UI
+    isQuickCacheLoaded,
   };
 
   return (

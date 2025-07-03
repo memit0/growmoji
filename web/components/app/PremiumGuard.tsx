@@ -7,37 +7,50 @@ import React, { useEffect, useState } from 'react';
 
 interface PremiumGuardProps {
   children: React.ReactNode;
+  /**
+   * Whether to show content immediately based on cached data
+   * Set to false for critical premium-only features that should never show for free users
+   */
+  allowCachedContent?: boolean;
+  /**
+   * Fallback content to show while loading (instead of blocking the entire UI)
+   */
+  loadingFallback?: React.ReactNode;
 }
 
-export function PremiumGuard({ children }: PremiumGuardProps) {
-  const { isPremium, isLoading, error } = useSubscription();
+export function PremiumGuard({ 
+  children, 
+  allowCachedContent = true,
+  loadingFallback 
+}: PremiumGuardProps) {
+  const { isPremium, isLoading, error, isInitialized } = useSubscription();
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
-    // Show paywall if user is not premium and not loading
-    if (!isLoading && !isPremium) {
+    // Show paywall if user is not premium and subscription check is complete
+    if (isInitialized && !isPremium) {
       setShowPaywall(true);
     } else {
       setShowPaywall(false);
     }
-  }, [isPremium, isLoading]);
+  }, [isPremium, isInitialized]);
 
-  // Show loading spinner while checking subscription status
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
+  // For critical premium features, still block if not initialized and no cached content allowed
+  if (!allowCachedContent && isLoading && !isInitialized) {
+    return loadingFallback || (
+      <div className="flex items-center justify-center min-h-[200px]">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-6 w-6 animate-spin" />
           <p className="text-sm text-muted-foreground">Checking subscription status...</p>
         </div>
       </div>
     );
   }
 
-  // Show error state if there's an error and user is not premium
-  if (error && !isPremium) {
+  // Show error state if there's an error and user is definitely not premium
+  if (error && isInitialized && !isPremium) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[200px]">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
           <div className="text-destructive text-sm">
             Failed to check subscription status: {error}
@@ -50,7 +63,7 @@ export function PremiumGuard({ children }: PremiumGuardProps) {
     );
   }
 
-  // Show paywall if user is not premium
+  // Show paywall if user is confirmed not premium
   if (showPaywall) {
     return (
       <PaywallModal
@@ -63,6 +76,6 @@ export function PremiumGuard({ children }: PremiumGuardProps) {
     );
   }
 
-  // User is premium, show the app
+  // Show content - either user is premium or we're allowing cached content
   return <>{children}</>;
 } 

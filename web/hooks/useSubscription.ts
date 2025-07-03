@@ -2,12 +2,12 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import {
-  checkPremiumStatus,
-  getCustomerInfo,
-  getOfferings,
-  initializeRevenueCat,
-  purchasePackage,
-  restorePurchases
+    checkPremiumStatus,
+    getCustomerInfo,
+    getOfferings,
+    initializeRevenueCat,
+    purchasePackage,
+    restorePurchases
 } from '@/lib/subscription';
 import { CustomerInfo, Offering, Purchases } from '@revenuecat/purchases-js';
 import { useCallback, useEffect, useState } from 'react';
@@ -23,19 +23,94 @@ interface UseSubscriptionReturn {
   purchase: (packageToPurchase: Offering['availablePackages'][number]) => Promise<boolean>;
   restore: () => Promise<boolean>;
   isInitialized: boolean;
+  isQuickCacheLoaded: boolean;
 }
 
 export function useSubscription(): UseSubscriptionReturn {
   const { userId, isLoaded, isSignedIn } = useAuth();
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
   const [offerings, setOfferings] = useState<Offering[] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Start with false for better UX
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isQuickCacheLoaded, setIsQuickCacheLoaded] = useState(false);
   const [appUserIDForRC, setAppUserIDForRC] = useState<string | null>(null);
+  
+  // Cache for faster loading
+  const [cachedPremiumStatus, setCachedPremiumStatus] = useState<boolean | null>(null);
+  const [lastKnownCustomerInfo, setLastKnownCustomerInfo] = useState<CustomerInfo | null>(null);
 
   // Calculate premium status based on customer info
-  const isPremium = checkPremiumStatus(customerInfo);
+  const isPremium = customerInfo ? checkPremiumStatus(customerInfo) : (cachedPremiumStatus ?? false);
+
+  // Load cached data immediately on mount for instant UI
+  useEffect(() => {
+    const loadCachedData = () => {
+      if (typeof window === 'undefined') return;
+      
+      try {
+        const cacheKey = userId ? `premium_status_${userId}` : 'premium_status_anonymous';
+        const customerInfoKey = userId ? `customer_info_${userId}` : 'customer_info_anonymous';
+        
+        const cachedStatus = localStorage.getItem(cacheKey);
+        const cachedCustomerInfo = localStorage.getItem(customerInfoKey);
+
+        if (cachedStatus !== null) {
+          const premiumStatus = JSON.parse(cachedStatus);
+          setCachedPremiumStatus(premiumStatus);
+          console.log('[useSubscription Web] Loaded cached premium status:', premiumStatus);
+        }
+
+        if (cachedCustomerInfo !== null) {
+          try {
+            const customerInfoData = JSON.parse(cachedCustomerInfo);
+            // Only use cached customer info if it's recent (within last 24 hours)
+            const cacheAge = Date.now() - (customerInfoData.cachedAt || 0);
+            const isStale = cacheAge > 24 * 60 * 60 * 1000; // 24 hours
+            
+            if (!isStale) {
+              setLastKnownCustomerInfo(customerInfoData.data);
+              setCustomerInfo(customerInfoData.data);
+              console.log('[useSubscription Web] Loaded cached customer info');
+            } else {
+              console.log('[useSubscription Web] Cached customer info is stale, will refresh');
+            }
+          } catch (error) {
+            console.warn('[useSubscription Web] Failed to parse cached customer info:', error);
+          }
+        }
+
+        setIsQuickCacheLoaded(true);
+      } catch (error) {
+        console.warn('[useSubscription Web] Failed to load cached data:', error);
+        setIsQuickCacheLoaded(true);
+      }
+    };
+
+    if (isLoaded) {
+      loadCachedData();
+    }
+  }, [isLoaded, userId]);
+
+  // Cache management - save data when updated
+  useEffect(() => {
+    if (typeof window === 'undefined' || !customerInfo) return;
+
+    const cacheKey = userId ? `premium_status_${userId}` : 'premium_status_anonymous';
+    const customerInfoKey = userId ? `customer_info_${userId}` : 'customer_info_anonymous';
+    const premium = checkPremiumStatus(customerInfo);
+
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify(premium));
+      localStorage.setItem(customerInfoKey, JSON.stringify({
+        data: customerInfo,
+        cachedAt: Date.now()
+      }));
+      setCachedPremiumStatus(premium);
+    } catch (error) {
+      console.warn('[useSubscription Web] Failed to cache data:', error);
+    }
+  }, [customerInfo, userId]);
 
   // Initialize RevenueCat when user is available or for anonymous users
   useEffect(() => {
@@ -47,32 +122,30 @@ export function useSubscription(): UseSubscriptionReturn {
         // This ID is generated once and reused for the session by RevenueCat SDK's internal storage
         // if browser privacy settings allow.
         const anonymousId = Purchases.generateRevenueCatAnonymousAppUserId();
-        console.log('[useSubscription] Generated anonymous ID for RevenueCat:', anonymousId);
+        console.log('[useSubscription Web] Generated anonymous ID for RevenueCat:', anonymousId);
         setAppUserIDForRC(anonymousId);
       }
     }
   }, [isLoaded, isSignedIn, userId]);
 
+  // Background initialization - don't block UI
   useEffect(() => {
     const initialize = async () => {
-      if (!isLoaded || !appUserIDForRC) {
-        if (isLoaded && !appUserIDForRC && !isSignedIn) {
-          // This case implies we are waiting for the anonymous ID to be set.
-          // We might want to show loading until appUserIDForRC is set.
-        } else if (isLoaded) {
-           setIsLoading(false);
-        }
+      if (!isLoaded || !appUserIDForRC || !isQuickCacheLoaded) {
         return;
       }
 
       try {
-        setIsLoading(true);
+        // Only show loading if we don't have cached data
+        if (!lastKnownCustomerInfo) {
+          setIsLoading(true);
+        }
         setError(null);
 
         await initializeRevenueCat(appUserIDForRC);
         setIsInitialized(true);
 
-        // Fetch initial data
+        // Fetch initial data in parallel
         const [customerInfoResult, offeringsResult] = await Promise.all([
           getCustomerInfo(),
           getOfferings()
@@ -81,13 +154,13 @@ export function useSubscription(): UseSubscriptionReturn {
         setCustomerInfo(customerInfoResult);
         setOfferings(offeringsResult);
 
-        console.log('[useSubscription] Initialization complete', {
+        console.log('[useSubscription Web] Initialization complete', {
           customerInfo: customerInfoResult,
           offerings: offeringsResult?.length || 0,
           isPremium: checkPremiumStatus(customerInfoResult)
         });
       } catch (err) {
-        console.error('[useSubscription] Initialization failed:', err);
+        console.error('[useSubscription Web] Initialization failed:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize subscription');
       } finally {
         setIsLoading(false);
@@ -95,7 +168,7 @@ export function useSubscription(): UseSubscriptionReturn {
     };
 
     initialize();
-  }, [appUserIDForRC, isLoaded, isSignedIn]);
+  }, [appUserIDForRC, isLoaded, isSignedIn, isQuickCacheLoaded]);
 
   const refreshCustomerInfo = useCallback(async () => {
     if (!isInitialized) return;
@@ -183,6 +256,7 @@ export function useSubscription(): UseSubscriptionReturn {
     refreshOfferings,
     purchase,
     restore,
-    isInitialized
+    isInitialized,
+    isQuickCacheLoaded
   };
 }

@@ -20,7 +20,7 @@ import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
 
 export default function HomeScreen() {
   const { colors, theme } = useTheme();
-  const { isPremium, isLoading: subscriptionLoading, isInitialized } = useSubscription();
+  const { isPremium, isLoading: subscriptionLoading, isInitialized, isQuickCacheLoaded } = useSubscription();
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -84,11 +84,11 @@ export default function HomeScreen() {
       }
     };
 
-    // Only check after subscription is initialized to avoid showing for premium users
-    if (isInitialized && !subscriptionLoading) {
+    // Check after cache is loaded - don't wait for full initialization
+    if (isQuickCacheLoaded && !subscriptionLoading) {
       checkNewUser();
     }
-  }, [user?.id, isInitialized, subscriptionLoading, isPremium]);
+  }, [user?.id, isQuickCacheLoaded, subscriptionLoading, isPremium]);
 
   const handleWalkthroughComplete = async () => {
     setShowWalkthrough(false);
@@ -97,8 +97,8 @@ export default function HomeScreen() {
         await AsyncStorage.setItem(`app_walkthrough_seen_${user.id}`, 'true');
         
         // Show paywall for new users after walkthrough completion
-        // Only show if user is not already premium and subscription is initialized
-        if (isInitialized && !isPremium) {
+        // Only show if user is not already premium and cache is loaded
+        if (isQuickCacheLoaded && !isPremium) {
           // Small delay to ensure walkthrough modal is fully closed before showing paywall
           setTimeout(() => {
             setShowPaywall(true);
