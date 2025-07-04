@@ -31,9 +31,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('[AuthContext] Auth state change:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
-      // setLoading(false); // Keep loading true initially until getSession completes
+      setLoading(false); // Set loading to false when auth state changes
     });
 
     return () => {

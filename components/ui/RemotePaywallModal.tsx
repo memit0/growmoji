@@ -58,26 +58,15 @@ export function RemotePaywallModal({
   const { colors, spacing, borderRadius } = useTheme();
   const { offerings, customerInfo, isInitialized } = useSubscription();
 
-  // Debug logging
+  // Simplified logging for production
   React.useEffect(() => {
-    if (visible) {
-      console.log('[RemotePaywallModal] Modal visible, debugging info:', {
+    if (visible && process.env.NODE_ENV === 'development') {
+      console.log('[RemotePaywallModal] Paywall opened:', {
         isInitialized,
-        offeringsCount: offerings?.length || 0,
-        customerInfo: !!customerInfo,
-        requiredEntitlementIdentifier
+        hasOfferings: !!(offerings && offerings.length > 0)
       });
-      
-      if (offerings && offerings.length > 0) {
-        console.log('[RemotePaywallModal] Available offerings:', offerings.map(o => ({
-          identifier: o.identifier,
-          packagesCount: o.availablePackages.length
-        })));
-      } else {
-        console.warn('[RemotePaywallModal] No offerings available! Paywall may not display properly.');
-      }
     }
-  }, [visible, offerings, customerInfo, isInitialized, requiredEntitlementIdentifier]);
+  }, [visible, offerings, isInitialized]);
 
   const handleDismiss = () => {
     console.log('[RemotePaywallModal] Paywall dismissed');
@@ -227,25 +216,11 @@ export function RemotePaywallModal({
             
             <View style={styles.errorContainer}>
               <ThemedText style={[styles.errorText, { color: colors.text }]}>
-                🚧 Subscription options temporarily unavailable
+                🎯 Premium Features Available Soon
               </ThemedText>
               <ThemedText style={[styles.errorText, { color: colors.secondary, fontSize: 14 }]}>
-                No offerings found from RevenueCat. This usually means:
-                {'\n'}• Paywall not published in RevenueCat dashboard
-                {'\n'}• Products not configured in App Store Connect
-                {'\n'}• Bundle ID mismatch
+                We're setting up premium subscriptions. Please try again in a few minutes, or continue enjoying the free features!
               </ThemedText>
-              <TouchableOpacity 
-                style={styles.debugButton} 
-                onPress={() => {
-                  console.log('[RemotePaywallModal] Debug info requested');
-                  console.log('Offerings:', offerings);
-                  console.log('Customer Info:', customerInfo);
-                  console.log('Entitlement:', requiredEntitlementIdentifier);
-                }}
-              >
-                <ThemedText style={{ color: '#FFFFFF' }}>Log Debug Info</ThemedText>
-              </TouchableOpacity>
             </View>
           </View>
         </View>

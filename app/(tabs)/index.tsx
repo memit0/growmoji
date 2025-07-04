@@ -70,28 +70,6 @@ export default function HomeScreen() {
     }
   }, [user?.id, isScreenLoading]);
 
-  // Check if this is a new user and show paywall
-  useEffect(() => {
-    const checkNewUser = async () => {
-      if (!user?.id) return;
-      
-      try {
-        const hasSeenWelcome = await AsyncStorage.getItem(`welcome_shown_${user.id}`);
-        if (!hasSeenWelcome && !isPremium) {
-          setShowPaywall(true);
-          await AsyncStorage.setItem(`welcome_shown_${user.id}`, 'true');
-        }
-      } catch (error) {
-        console.error('Error checking welcome status:', error);
-      }
-    };
-
-    // Check after cache is loaded - don't wait for full initialization
-    if (isQuickCacheLoaded && !subscriptionLoading) {
-      checkNewUser();
-    }
-  }, [user?.id, isQuickCacheLoaded, subscriptionLoading, isPremium]);
-
   const handleWalkthroughComplete = async () => {
     setShowWalkthrough(false);
     if (user?.id) {
@@ -129,7 +107,18 @@ export default function HomeScreen() {
   }
 
   const handleAddTodo = async () => {
-    if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) return;
+    if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[handleAddTodo] Blocked:', { 
+          isSubmittingTodo, 
+          hasTitle: !!newTodoTitle.trim(), 
+          hasUser: !!user, 
+          hasUserId: !!userId,
+          authLoading 
+        });
+      }
+      return;
+    }
 
     // Check task limit for free users (only if we can check limits)
     if (canCheckLimits && !isPremium && isTaskLimitReached) {
@@ -218,10 +207,16 @@ export default function HomeScreen() {
   }
 
   const handleAddHabit = async (emoji: string) => {
-    console.log(`[handleAddHabit] Called. Emoji: "${emoji}", isSubmittingHabit: ${isSubmittingHabit}, user: ${user ? 'present' : 'null'}, userId: ${userId}`);
     if (isSubmittingHabit || !emoji || !user || !userId) {
-      if (isSubmittingHabit) console.log('[handleAddHabit] Guard: Add habit already in progress. Bailing out.');
-      else console.log(`[handleAddHabit] Guard: No emoji, not signed in, or no userId. Emoji: "${emoji}", user: ${user ? 'present' : 'null'}, userId: ${userId}. Bailing out.`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[handleAddHabit] Blocked:', { 
+          isSubmittingHabit, 
+          hasEmoji: !!emoji, 
+          hasUser: !!user, 
+          hasUserId: !!userId,
+          authLoading 
+        });
+      }
       return;
     }
 
@@ -233,7 +228,9 @@ export default function HomeScreen() {
       return;
     }
 
-    console.log('[handleAddHabit] Proceeding: Setting isSubmittingHabit to true.');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[handleAddHabit] Creating habit:', emoji);
+    }
     setIsSubmittingHabit(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -241,9 +238,7 @@ export default function HomeScreen() {
         emoji: emoji,
         start_date: today,
       };
-      console.log('[handleAddHabit] Calling habitsService.createHabit with:', newHabitDetails);
       const createdHabit = await habitsService.createHabit(newHabitDetails, userId);
-      console.log('[handleAddHabit] habitsService.createHabit SUCCEEDED. Response:', createdHabit);
       setHabits(prevHabits => {
         const newHabits = [...prevHabits, createdHabit];
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -251,9 +246,8 @@ export default function HomeScreen() {
       });
       setIsHabitModalVisible(false);
     } catch (error) {
-      console.error('[handleAddHabit] habitsService.createHabit FAILED. Error:', error);
+      console.error('[handleAddHabit] Error creating habit:', error);
     } finally {
-      console.log('[handleAddHabit] Finally: Setting isSubmittingHabit to false.');
       setIsSubmittingHabit(false);
     }
   };

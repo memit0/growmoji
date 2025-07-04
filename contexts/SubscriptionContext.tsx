@@ -56,7 +56,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   // Load cached data immediately on mount for instant UI
   useEffect(() => {
     const loadCachedData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsQuickCacheLoaded(true);
+        return;
+      }
       
       try {
         const [cachedPremiumStatus, cachedCustomerInfo] = await Promise.all([
@@ -67,7 +70,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         if (cachedPremiumStatus !== null) {
           const premiumStatus = JSON.parse(cachedPremiumStatus);
           setLastKnownPremiumStatus(premiumStatus);
-          console.log('[SubscriptionContext] Loaded cached premium status:', premiumStatus);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[SubscriptionContext] Loaded cached premium status:', premiumStatus);
+          }
         }
 
         if (cachedCustomerInfo !== null) {
@@ -80,27 +85,25 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
             if (!isStale) {
               setLastKnownCustomerInfo(customerInfoData.data);
               setCustomerInfo(customerInfoData.data);
-              console.log('[SubscriptionContext] Loaded cached customer info');
-            } else {
+              if (process.env.NODE_ENV === 'development') {
+                console.log('[SubscriptionContext] Loaded cached customer info');
+              }
+            } else if (process.env.NODE_ENV === 'development') {
               console.log('[SubscriptionContext] Cached customer info is stale, will refresh');
             }
           } catch (error) {
             console.warn('[SubscriptionContext] Failed to parse cached customer info:', error);
           }
         }
-
-        setIsQuickCacheLoaded(true);
       } catch (error) {
         console.warn('[SubscriptionContext] Failed to load cached data:', error);
+      } finally {
+        // Always set cache as loaded to avoid blocking UI
         setIsQuickCacheLoaded(true);
       }
     };
 
-    if (user?.id) {
-      loadCachedData();
-    } else {
-      setIsQuickCacheLoaded(true);
-    }
+    loadCachedData();
   }, [user?.id]);
 
   // Check if user has premium subscription - only check for valid premium entitlements
