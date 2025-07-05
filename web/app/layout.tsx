@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     url: "https://growmoji.app",
   },
   icons: {
-    icon: "/favicon.jpg",
+    icon: "/favicon.ico",
   },
   twitter: {
     card: "summary_large_image",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     description: "Transform your life with beautiful habit tracking. Build streaks, achieve goals, and grow with emojis! ✨",
     site: "@growmoji",
     creator: "@mebattll",
-    images: "/og",
+    images: "/og-logo.png",
   },
 };
 
