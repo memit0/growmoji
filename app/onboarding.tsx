@@ -202,13 +202,11 @@ export default function OnboardingScreen() {
     try {
       await markOnboardingAsSeen();
       console.log('[OnboardingScreen] Onboarding marked as seen, navigating to login');
-      // Use a small delay to ensure AsyncStorage write is complete
-      setTimeout(() => {
-        router.replace('/(auth)/login');
-      }, 100);
+      // Navigate immediately to prevent user confusion
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('[OnboardingScreen] Error completing onboarding:', error);
-      // Still navigate even if there's an error saving
+      // If there's an error, still try to navigate manually
       router.replace('/(auth)/login');
     }
   };

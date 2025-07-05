@@ -15,17 +15,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialCheckComplete, setInitialCheckComplete] = useState(false);
 
   useEffect(() => {
     const getSession = async () => {
+      console.log('[AuthContext] Getting initial session...');
       setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error.message);
+      
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error.message);
+        }
+        
+        console.log('[AuthContext] Initial session check complete:', {
+          hasSession: !!session,
+          userId: session?.user?.id
+        });
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setInitialCheckComplete(true);
+      } catch (error) {
+        console.error('[AuthContext] Error in initial session check:', error);
+        setSession(null);
+        setUser(null);
+        setInitialCheckComplete(true);
+      } finally {
+        setLoading(false);
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
     };
 
     getSession();
@@ -34,32 +52,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('[AuthContext] Auth state change:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false); // Set loading to false when auth state changes
+      
+      // Only set loading to false if initial check is complete
+      if (initialCheckComplete) {
+        setLoading(false);
+      }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [initialCheckComplete]);
 
   const signOut = async () => {
+    console.log('[AuthContext] Signing out...');
     setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error signing out:', error.message);
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error.message);
+      }
+    } catch (error) {
+      console.error('[AuthContext] Error during sign out:', error);
+    } finally {
+      setLoading(false);
     }
-    // Session and user will be set to null by onAuthStateChange
-    setLoading(false);
   };
-  
-  // Ensure loading is false only after initial session check AND auth state is stable
-  useEffect(() => {
-    if (session !== undefined) { // or some other condition to know initial check is done
-        // If using onAuthStateChange to also set loading = false, ensure it doesn't prematurely set it.
-        // The initial getSession() should be the primary controller for the first loading state.
-    }
-  }, [session]);
-
 
   return (
     <AuthContext.Provider value={{ session, user, loading, signOut }}>
