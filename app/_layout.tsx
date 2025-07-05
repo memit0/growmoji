@@ -43,9 +43,8 @@ function RootNavigation() {
   const router = useRouter();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [onboardingLoading, setOnboardingLoading] = useState(true);
-  const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Check if user has seen onboarding
+  // Check if user has seen onboarding - only once on app start
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       console.log('[RootNavigation] Checking onboarding status...');
@@ -65,33 +64,9 @@ function RootNavigation() {
     checkOnboardingStatus();
   }, []);
 
-  // Listen for onboarding completion - only for state sync, not navigation
+  // Deep link handling
   useEffect(() => {
-    const checkOnboardingCompletion = async () => {
-      if (segments[0] === 'onboarding' && !onboardingLoading && hasSeenOnboarding === false) {
-        try {
-          const seen = await AsyncStorage.getItem('hasSeenOnboarding');
-          if (seen === 'true') {
-            console.log('[RootNavigation] Onboarding completed, updating state only');
-            setHasSeenOnboarding(true);
-            // Don't navigate here - let the onboarding screen handle it
-          }
-        } catch (error) {
-          console.error('[RootNavigation] Error checking onboarding completion:', error);
-        }
-      }
-    };
-
-    // Only check when on onboarding screen
-    if (segments[0] === 'onboarding') {
-      const interval = setInterval(checkOnboardingCompletion, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [segments, onboardingLoading, hasSeenOnboarding]);
-
-  // Deep link debugging
-  useEffect(() => {
-    console.log('[RootNavigation] Setting up deep link debugging');
+    console.log('[RootNavigation] Setting up deep link handling');
 
     // Handle initial URL if app was opened via deep link
     Linking.getInitialURL().then((url) => {
@@ -101,8 +76,6 @@ function RootNavigation() {
           console.log('[RootNavigation] Auth-related URL - handling with AuthService');
           AuthService.handleAuthRedirect(url);
         }
-      } else {
-        console.log('[RootNavigation] No initial URL');
       }
     }).catch((error) => {
       console.error('[RootNavigation] Error getting initial URL:', error);
@@ -123,7 +96,7 @@ function RootNavigation() {
     };
   }, []);
 
-  // Main navigation effect - only for initial navigation
+  // Main navigation effect
   useEffect(() => {
     console.log('[RootNavigation] Navigation effect triggered:', {
       loading,
@@ -132,13 +105,12 @@ function RootNavigation() {
       userId: user?.id,
       hasSeenOnboarding,
       segments,
-      hasNavigated,
       timestamp: new Date().toISOString()
     });
 
-    // Wait for both loading states to complete before any navigation
-    if (loading || onboardingLoading || hasNavigated) {
-      console.log('[RootNavigation] Still loading or already navigated, skipping navigation');
+    // Wait for both loading states to complete
+    if (loading || onboardingLoading) {
+      console.log('[RootNavigation] Still loading, skipping navigation');
       return;
     }
 
@@ -155,37 +127,49 @@ function RootNavigation() {
       currentSegments: segments
     });
 
-    // Only navigate if we're not already in the correct place
     if (!user) {
       // User is not authenticated
       if (!hasSeenOnboarding && !inOnboarding) {
         // First time user - show onboarding
         console.log('[RootNavigation] First time user, showing onboarding');
-        setHasNavigated(true);
         router.replace('/onboarding');
-      } else if (hasSeenOnboarding && !inAuthGroup && !inOnboarding) {
+      } else if (hasSeenOnboarding && !inAuthGroup) {
         // Returning user who has seen onboarding - go to auth
         console.log('[RootNavigation] Returning user, redirecting to login');
-        setHasNavigated(true);
         router.replace('/(auth)/login');
       }
-      // Don't redirect if user is already in auth or onboarding
     } else {
-      // User is authenticated
+      // User is authenticated - go to main app
       if (!inTabsGroup) {
         console.log('[RootNavigation] User authenticated, redirecting to main app');
-        setHasNavigated(true);
         router.replace('/(tabs)');
       }
     }
-  }, [loading, onboardingLoading, user, hasSeenOnboarding, segments, router, hasNavigated]);
+  }, [loading, onboardingLoading, user, hasSeenOnboarding, segments, router]);
 
-  // Reset navigation flag when segments change (user manually navigated)
+  // Listen for onboarding completion to update local state
   useEffect(() => {
-    if (segments.length > 0) {
-      setHasNavigated(false);
+    if (segments[0] === 'onboarding' && !onboardingLoading && hasSeenOnboarding === false) {
+      // Set up a listener for when onboarding is completed
+      const checkCompletion = async () => {
+        try {
+          const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+          if (seen === 'true' && hasSeenOnboarding === false) {
+            console.log('[RootNavigation] Onboarding completed, updating state');
+            setHasSeenOnboarding(true);
+          }
+        } catch (error) {
+          console.error('[RootNavigation] Error checking onboarding completion:', error);
+        }
+      };
+
+      // Check immediately and then periodically
+      checkCompletion();
+      const interval = setInterval(checkCompletion, 500);
+      
+      return () => clearInterval(interval);
     }
-  }, [segments]);
+  }, [segments, onboardingLoading, hasSeenOnboarding]);
 
   // Show loading screen while initializing
   if (loading || onboardingLoading) {
