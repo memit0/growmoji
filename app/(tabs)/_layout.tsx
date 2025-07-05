@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native-gesture-handler';
-import { SubscriptionProvider } from '../../contexts/SubscriptionContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ProfileModal } from '../components/ProfileModal';
 
@@ -11,7 +10,7 @@ export default function TabsLayout() {
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
 
   return (
-    <SubscriptionProvider>
+    <>
       <Tabs
         screenOptions={{
           headerTitle: '',
@@ -61,6 +60,6 @@ export default function TabsLayout() {
         isVisible={isProfileModalVisible}
         onClose={() => setIsProfileModalVisible(false)}
       />
-    </SubscriptionProvider>
+    </>
   );
 }
