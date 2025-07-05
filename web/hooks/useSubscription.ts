@@ -39,9 +39,12 @@ export function useSubscription(): UseSubscriptionReturn {
   // Cache for faster loading
   const [cachedPremiumStatus, setCachedPremiumStatus] = useState<boolean | null>(null);
   const [lastKnownCustomerInfo, setLastKnownCustomerInfo] = useState<CustomerInfo | null>(null);
+  
+  // Track recent purchase completion to ensure immediate UI updates
+  const [recentPurchaseCompleted, setRecentPurchaseCompleted] = useState(false);
 
   // Calculate premium status based on customer info
-  const isPremium = customerInfo ? checkPremiumStatus(customerInfo) : (cachedPremiumStatus ?? false);
+  const isPremium = customerInfo ? checkPremiumStatus(customerInfo) : (recentPurchaseCompleted || cachedPremiumStatus || false);
 
   // Load cached data immediately on mount for instant UI
   useEffect(() => {
@@ -208,6 +211,14 @@ export function useSubscription(): UseSubscriptionReturn {
       const success = await purchasePackage(packageToPurchase);
 
       if (success) {
+        // Immediately show premium status in UI
+        setRecentPurchaseCompleted(true);
+        
+        // Clear the flag after a short delay to allow UI to update
+        setTimeout(() => {
+          setRecentPurchaseCompleted(false);
+        }, 2000);
+        
         // Refresh customer info to get updated entitlements
         await refreshCustomerInfo();
       }
@@ -232,6 +243,14 @@ export function useSubscription(): UseSubscriptionReturn {
       const success = await restorePurchases();
 
       if (success) {
+        // Immediately show premium status in UI
+        setRecentPurchaseCompleted(true);
+        
+        // Clear the flag after a short delay to allow UI to update
+        setTimeout(() => {
+          setRecentPurchaseCompleted(false);
+        }, 2000);
+        
         // Refresh customer info to get updated entitlements
         await refreshCustomerInfo();
       }
