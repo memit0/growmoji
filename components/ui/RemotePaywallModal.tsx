@@ -56,7 +56,7 @@ export function RemotePaywallModal({
   requiredEntitlementIdentifier = "Growmoji Premium"
 }: RemotePaywallModalProps) {
   const { colors, spacing, borderRadius } = useTheme();
-  const { offerings, customerInfo, isInitialized } = useSubscription();
+  const { offerings, customerInfo, isInitialized, refreshCustomerInfo } = useSubscription();
 
   // Simplified logging for production
   React.useEffect(() => {
@@ -79,7 +79,18 @@ export function RemotePaywallModal({
 
   const handlePurchaseCompleted = ({ customerInfo }: any) => {
     console.log('[RemotePaywallModal] Purchase completed:', customerInfo);
-    onClose(); 
+    // CRITICAL FIX: Update the subscription context with the new customer info
+    // This forces the context to immediately recognize the premium status
+    
+    // Immediately refresh the customer info in the context
+    refreshCustomerInfo().then(() => {
+      console.log('[RemotePaywallModal] Context refreshed after purchase');
+      onClose();
+    }).catch((error) => {
+      console.error('[RemotePaywallModal] Failed to refresh context after purchase:', error);
+      // Still close the modal even if refresh fails
+      onClose();
+    });
   };
 
   const handlePurchaseError = (error: any) => {
@@ -96,7 +107,17 @@ export function RemotePaywallModal({
 
   const handleRestoreCompleted = ({ customerInfo }: any) => {
     console.log('[RemotePaywallModal] Restore completed:', customerInfo);
-    onClose(); 
+    // CRITICAL FIX: Update the subscription context with the restored customer info
+    
+    // Immediately refresh the customer info in the context
+    refreshCustomerInfo().then(() => {
+      console.log('[RemotePaywallModal] Context refreshed after restore');
+      onClose();
+    }).catch((error) => {
+      console.error('[RemotePaywallModal] Failed to refresh context after restore:', error);
+      // Still close the modal even if refresh fails
+      onClose();
+    });
   };
 
   const handleRestoreError = (error: any) => {

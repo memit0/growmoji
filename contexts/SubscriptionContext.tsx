@@ -52,6 +52,9 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   // Cache the last known premium status to prevent flickering
   const [lastKnownPremiumStatus, setLastKnownPremiumStatus] = useState<boolean | null>(null);
   const [lastKnownCustomerInfo, setLastKnownCustomerInfo] = useState<CustomerInfo | null>(null);
+  
+  // Track recent purchase completion to ensure immediate UI updates
+  const [recentPurchaseCompleted, setRecentPurchaseCompleted] = useState(false);
 
   // Load cached data immediately on mount for instant UI
   useEffect(() => {
@@ -114,8 +117,15 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
   // Provide a stable premium status that doesn't flicker during loading
   const stablePremiumStatus = (() => {
-    // If we have real customer info, use that
+    // If a purchase was just completed, show premium immediately (highest priority)
+    if (recentPurchaseCompleted) {
+      console.log('[SubscriptionContext] Using recentPurchaseCompleted: true');
+      return true;
+    }
+    
+    // If we have real customer info, use that immediately (this fixes the post-purchase issue)
     if (customerInfo) {
+      console.log('[SubscriptionContext] Using customerInfo premium status:', isPremium);
       return isPremium;
     }
     
@@ -123,10 +133,19 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     if (isLoading && lastKnownPremiumStatus !== null) {
       // Only trust cached premium status if it's false (free)
       // For premium cached status, wait for confirmation unless we're initializing for the first time
-      return lastKnownPremiumStatus === false ? false : (isInitialized ? isPremium : false);
+      const result = lastKnownPremiumStatus === false ? false : (isInitialized ? lastKnownPremiumStatus : false);
+      console.log('[SubscriptionContext] Using cached status while loading:', result);
+      return result;
+    }
+    
+    // If we have last known status from cache while not loading, use it
+    if (lastKnownPremiumStatus !== null) {
+      console.log('[SubscriptionContext] Using cached status:', lastKnownPremiumStatus);
+      return lastKnownPremiumStatus;
     }
     
     // Default to false (free) to ensure buttons work during initialization
+    console.log('[SubscriptionContext] Using default status: false');
     return false;
   })();
 
@@ -155,7 +174,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         }))
       ]).catch(error => console.warn('[SubscriptionContext] Failed to cache data:', error));
     }
-  }, [customerInfo, debugPremiumOverride, isPremium, stablePremiumStatus, isLoading, isInitialized, user?.id]);
+  }, [customerInfo, debugPremiumOverride, user?.id]);
 
   // Background initialization - don't block UI
   useEffect(() => {
@@ -266,9 +285,28 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   const purchasePackage = async (packageToPurchase: any): Promise<boolean> => {
     try {
       setError(null);
+      console.log('[SubscriptionContext] Starting purchase for package:', packageToPurchase.identifier);
+      
       const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
+      console.log('[SubscriptionContext] Purchase completed, updating customer info:', customerInfo.entitlements.active);
+      
       setCustomerInfo(customerInfo);
-      return customerInfo.entitlements.active['Growmoji Premium'] !== undefined;
+      
+      const hasPremium = customerInfo.entitlements.active['Growmoji Premium'] !== undefined;
+      console.log('[SubscriptionContext] Premium status after purchase:', hasPremium);
+      
+      // If purchase was successful, immediately show premium status
+      if (hasPremium) {
+        console.log('[SubscriptionContext] Setting recentPurchaseCompleted to true');
+        setRecentPurchaseCompleted(true);
+        // Clear the flag after a short delay to allow UI to update
+        setTimeout(() => {
+          console.log('[SubscriptionContext] Clearing recentPurchaseCompleted flag');
+          setRecentPurchaseCompleted(false);
+        }, 2000);
+      }
+      
+      return hasPremium;
     } catch (error: any) {
       console.error('Error purchasing package:', error);
       if (error.userCancelled) {
@@ -285,7 +323,19 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setError(null);
       const customerInfo = await Purchases.restorePurchases();
       setCustomerInfo(customerInfo);
-      return customerInfo.entitlements.active['Growmoji Premium'] !== undefined;
+      
+      const hasPremium = customerInfo.entitlements.active['Growmoji Premium'] !== undefined;
+      
+      // If restore was successful and user has premium, immediately show premium status
+      if (hasPremium) {
+        setRecentPurchaseCompleted(true);
+        // Clear the flag after a short delay to allow UI to update
+        setTimeout(() => {
+          setRecentPurchaseCompleted(false);
+        }, 2000);
+      }
+      
+      return hasPremium;
     } catch (error) {
       console.error('Error restoring purchases:', error);
       setError('Failed to restore purchases');
