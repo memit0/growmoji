@@ -143,6 +143,7 @@ export default function OnboardingScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const flatListRef = useRef<FlatList>(null);
@@ -150,6 +151,7 @@ export default function OnboardingScreen() {
 
   const markOnboardingAsSeen = async () => {
     try {
+      console.log('[OnboardingScreen] Saving onboarding status to AsyncStorage');
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
       console.log('[OnboardingScreen] Successfully saved onboarding status to AsyncStorage');
       
@@ -158,11 +160,11 @@ export default function OnboardingScreen() {
       console.log('[OnboardingScreen] Verification - hasSeenOnboarding value:', saved);
       
       if (saved !== 'true') {
-        throw new Error('Failed to save onboarding status properly');
+        console.warn('[OnboardingScreen] Warning: AsyncStorage verification failed, but continuing anyway');
       }
     } catch (error) {
       console.error('[OnboardingScreen] Error saving onboarding status:', error);
-      throw error; // Re-throw to be caught by handleStartFree
+      // Don't throw - just log the error and continue
     }
   };
 
@@ -199,17 +201,25 @@ export default function OnboardingScreen() {
   };
 
   const handleStartFree = async () => {
+    if (isCompleting) {
+      console.log('[OnboardingScreen] Already completing, ignoring duplicate call');
+      return;
+    }
+
     try {
+      setIsCompleting(true);
+      console.log('[OnboardingScreen] Starting completion process...');
       await markOnboardingAsSeen();
       console.log('[OnboardingScreen] Onboarding marked as seen, navigating to login');
       
-      // Add a small delay to ensure AsyncStorage write completes
+      // Small delay to ensure AsyncStorage write is completed
       setTimeout(() => {
+        console.log('[OnboardingScreen] Navigating to login screen');
         router.replace('/(auth)/login');
-      }, 100);
+      }, 150);
     } catch (error) {
       console.error('[OnboardingScreen] Error completing onboarding:', error);
-      // If there's an error, still try to navigate
+      // Still navigate even if there's an error to prevent getting stuck
       router.replace('/(auth)/login');
     }
   };
@@ -441,8 +451,10 @@ export default function OnboardingScreen() {
 
   const renderItem = ({ item }: { item: OnboardingSlide }) => (
     <View style={styles.slide}>
-      <TouchableOpacity style={styles.skipButton} onPress={handleStartFree}>
-        <Text style={styles.skipButtonText}>Skip</Text>
+      <TouchableOpacity style={styles.skipButton} onPress={handleStartFree} disabled={isCompleting}>
+        <Text style={[styles.skipButtonText, isCompleting && { opacity: 0.5 }]}>
+          {isCompleting ? 'Loading...' : 'Skip'}
+        </Text>
       </TouchableOpacity>
       
       <Text style={styles.progressText}>
@@ -492,12 +504,24 @@ export default function OnboardingScreen() {
 
       {item.type === 'paywall-lead' && (
         <View style={styles.paywallLeadButtons}>
-          <TouchableOpacity style={styles.premiumButton} onPress={handleStartFree}>
-            <Text style={styles.premiumButtonText}>🚀 Create Account & Unlock Premium</Text>
+          <TouchableOpacity 
+            style={[styles.premiumButton, isCompleting && { opacity: 0.7 }]} 
+            onPress={handleStartFree}
+            disabled={isCompleting}
+          >
+            <Text style={styles.premiumButtonText}>
+              {isCompleting ? '🚀 Setting up your account...' : '🚀 Create Account & Unlock Premium'}
+            </Text>
           </TouchableOpacity>
           <Text style={styles.freeSubtext}>or</Text>
-          <TouchableOpacity style={styles.freeButton} onPress={handleStartFree}>
-            <Text style={styles.freeButtonText}>Continue with Basic (3 habits)</Text>
+          <TouchableOpacity 
+            style={[styles.freeButton, isCompleting && { opacity: 0.7 }]} 
+            onPress={handleStartFree}
+            disabled={isCompleting}
+          >
+            <Text style={styles.freeButtonText}>
+              {isCompleting ? 'Continue with Basic...' : 'Continue with Basic (3 habits)'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

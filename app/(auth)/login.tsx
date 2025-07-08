@@ -1,21 +1,22 @@
+import { AntDesign } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthService } from '../../lib/auth/AuthService';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
-  const { colors, spacing, typography, borderRadius } = useTheme();
+  const { colors, spacing, typography, borderRadius, isDark } = useTheme();
   const router = useRouter();
 
   const [emailAddress, setEmailAddress] = useState('');
@@ -55,40 +56,23 @@ export default function LoginScreen() {
   );
 
   const onSignInPress = async () => {
-    if (isLoading) {
-      return;
-    }
-
-    if (!emailAddress || !password) {
-      Alert.alert("Error", "Please enter both email and password");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: emailAddress,
         password: password,
       });
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        router.replace('/(tabs)');
-      }
-    } catch (err: any) {
-      console.error("Supabase SignIn Error:", err);
-      const errorMessage = err.message || "An unexpected error occurred. Please try again.";
-      Alert.alert("Login Error", errorMessage);
+      if (error) Alert.alert(error.message);
+    } catch (error: any) {
+      Alert.alert(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialSignIn = React.useCallback(async (provider: 'google' | 'apple') => {
+  const handleSocialSignIn = useCallback(async (provider: 'google' | 'apple') => {
     console.log(`[LoginScreen] handleSocialSignIn: Starting ${provider} sign-in flow`);
     console.log(`[LoginScreen] handleSocialSignIn: Current state:`, {
       isLoading,
@@ -226,19 +210,66 @@ export default function LoginScreen() {
       marginHorizontal: spacing.sm,
       fontSize: typography.fontSize.sm,
     },
-    socialButton: {
-      backgroundColor: colors.card,
-      borderRadius: borderRadius.md,
-      padding: spacing.md,
+    // Apple Sign in with Apple button - theme-aware following Apple's design guidelines
+    appleSignInButton: {
+      backgroundColor: isDark ? '#FFFFFF' : '#000000', // White in dark mode, black in light mode (inverse)
+      borderRadius: 8, // Apple's recommended corner radius
+      paddingVertical: 12,
+      paddingHorizontal: 16,
       alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
       marginTop: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.primary,
+      minHeight: 44, // Apple's minimum touch target
+      borderWidth: isDark ? 1 : 0, // Add border in dark mode for contrast
+      borderColor: isDark ? colors.border : 'transparent',
+      shadowColor: isDark ? colors.text : '#000',
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
     },
-    socialButtonText: {
-      color: colors.primary,
-      fontSize: typography.fontSize.md,
-      fontWeight: 'bold',
+    appleSignInButtonText: {
+      color: isDark ? '#000000' : '#FFFFFF', // Black in dark mode, white in light mode (inverse)
+      fontSize: 16, // Apple's recommended font size
+      fontWeight: '600', // Semi-bold as per Apple guidelines
+      marginLeft: 8, // Space between logo and text
+      letterSpacing: -0.32, // Apple's system font letter spacing
+    },
+    // Google button - theme-aware while maintaining Google branding
+    googleSignInButton: {
+      backgroundColor: isDark ? colors.card : '#FFFFFF',
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      marginTop: spacing.md,
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: isDark ? colors.border : '#DADCE0', // Adapt border color to theme
+      shadowColor: isDark ? '#000' : colors.text,
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    googleSignInButtonText: {
+      color: isDark ? colors.text : '#3C4043', // Use theme text color in dark mode
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+      letterSpacing: -0.32,
+    },
+    socialButtonDisabled: {
+      opacity: 0.6,
     },
   });
 
@@ -282,20 +313,24 @@ export default function LoginScreen() {
           {isGoogleSignInAvailable && (
             <TouchableOpacity
               onPress={() => handleSocialSignIn('google')}
-              style={styles.socialButton}
+              style={[styles.googleSignInButton, isLoading && styles.socialButtonDisabled]}
               disabled={isLoading}
+              activeOpacity={0.8}
             >
-              <Text style={styles.socialButtonText}>Sign In with Google</Text>
+              <AntDesign name="google" size={18} color="#4285F4" />
+              <Text style={styles.googleSignInButtonText}>Continue with Google</Text>
             </TouchableOpacity>
           )}
 
           {isAppleSignInAvailable && (
             <TouchableOpacity
               onPress={() => handleSocialSignIn('apple')}
-              style={styles.socialButton}
+              style={[styles.appleSignInButton, isLoading && styles.socialButtonDisabled]}
               disabled={isLoading}
+              activeOpacity={0.8}
             >
-              <Text style={styles.socialButtonText}>Sign In with Apple</Text>
+              <AntDesign name="apple1" size={18} color={isDark ? "#000000" : "#FFFFFF"} />
+              <Text style={styles.appleSignInButtonText}>Continue with Apple</Text>
             </TouchableOpacity>
           )}
         </View>

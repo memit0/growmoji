@@ -43,20 +43,68 @@ function RootNavigation() {
   const router = useRouter();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
   const [onboardingLoading, setOnboardingLoading] = useState(true);
+  const [navigationInProgress, setNavigationInProgress] = useState(false);
+
+  // Debug function to reset onboarding - accessible globally for debugging
+  React.useEffect(() => {
+    (global as any).resetOnboarding = async () => {
+      try {
+        await AsyncStorage.removeItem('hasSeenOnboarding');
+        console.log('🔄 [DEBUG] Onboarding status reset! Restart the app to see onboarding.');
+        setHasSeenOnboarding(false);
+        // Force reload by navigating to onboarding
+        router.replace('/onboarding');
+      } catch (error) {
+        console.error('❌ [DEBUG] Error resetting onboarding:', error);
+      }
+    };
+    
+    (global as any).checkOnboardingStatus = async () => {
+      try {
+        const seen = await AsyncStorage.getItem('hasSeenOnboarding');
+        console.log('📊 [DEBUG] Current onboarding status:', seen);
+        console.log('📊 [DEBUG] hasSeenOnboarding state:', hasSeenOnboarding);
+      } catch (error) {
+        console.error('❌ [DEBUG] Error checking onboarding status:', error);
+      }
+    };
+    
+    console.log('🛠️ [DEBUG] Debug functions available:');
+    console.log('   - resetOnboarding() - Reset onboarding status');
+    console.log('   - checkOnboardingStatus() - Check current status');
+  }, [hasSeenOnboarding, router]);
 
   // Check if user has seen onboarding - only once on app start
   useEffect(() => {
     const checkOnboardingStatus = async () => {
+      console.log('[RootNavigation] ===== ONBOARDING STATUS CHECK =====');
       console.log('[RootNavigation] Checking onboarding status...');
       
       try {
         const seen = await AsyncStorage.getItem('hasSeenOnboarding');
-        console.log('[RootNavigation] Onboarding check result:', seen);
-        setHasSeenOnboarding(seen === 'true');
+        console.log('[RootNavigation] Raw AsyncStorage value for hasSeenOnboarding:', seen);
+        console.log('[RootNavigation] Type of value:', typeof seen);
+        console.log('[RootNavigation] Value === "true":', seen === 'true');
+        
+        const hasSeenOnboarding = seen === 'true';
+        console.log('[RootNavigation] Final hasSeenOnboarding value:', hasSeenOnboarding);
+        
+        // For debugging: show what will happen next
+        if (hasSeenOnboarding) {
+          console.log('[RootNavigation] 🚨 ONBOARDING WILL BE SKIPPED - User has seen onboarding before');
+        } else {
+          console.log('[RootNavigation] ✅ ONBOARDING WILL BE SHOWN - First time user or reset');
+        }
+        
+        setHasSeenOnboarding(hasSeenOnboarding);
       } catch (error) {
-        console.error('Error checking onboarding status:', error);
+        console.error('[RootNavigation] Error checking onboarding status:', error);
+        // Default to false if there's an error - show onboarding to be safe
+        console.log('[RootNavigation] Defaulting to hasSeenOnboarding: false due to error');
         setHasSeenOnboarding(false);
       } finally {
+        console.log('[RootNavigation] Onboarding check complete, setting onboardingLoading to false');
+        console.log('[RootNavigation] ===== END ONBOARDING STATUS CHECK =====');
         setOnboardingLoading(false);
       }
     };
@@ -105,12 +153,13 @@ function RootNavigation() {
       userId: user?.id,
       hasSeenOnboarding,
       segments,
+      navigationInProgress,
       timestamp: new Date().toISOString()
     });
 
-    // Wait for both loading states to complete
-    if (loading || onboardingLoading) {
-      console.log('[RootNavigation] Still loading, skipping navigation');
+    // Wait for both loading states to complete and prevent navigation conflicts
+    if (loading || onboardingLoading || navigationInProgress) {
+      console.log('[RootNavigation] Still loading or navigation in progress, skipping navigation');
       return;
     }
 
@@ -132,44 +181,29 @@ function RootNavigation() {
       if (!hasSeenOnboarding && !inOnboarding) {
         // First time user - show onboarding
         console.log('[RootNavigation] First time user, showing onboarding');
+        setNavigationInProgress(true);
         router.replace('/onboarding');
-      } else if (hasSeenOnboarding && !inAuthGroup) {
+        // Reset navigation guard after successful navigation
+        setTimeout(() => setNavigationInProgress(false), 1000);
+      } else if (hasSeenOnboarding && !inAuthGroup && !inOnboarding) {
         // Returning user who has seen onboarding - go to auth
         console.log('[RootNavigation] Returning user, redirecting to login');
+        setNavigationInProgress(true);
         router.replace('/(auth)/login');
+        // Reset navigation guard after successful navigation
+        setTimeout(() => setNavigationInProgress(false), 1000);
       }
     } else {
       // User is authenticated - go to main app
       if (!inTabsGroup) {
         console.log('[RootNavigation] User authenticated, redirecting to main app');
+        setNavigationInProgress(true);
         router.replace('/(tabs)');
+        // Reset navigation guard after successful navigation
+        setTimeout(() => setNavigationInProgress(false), 1000);
       }
     }
-  }, [loading, onboardingLoading, user, hasSeenOnboarding, segments, router]);
-
-  // Listen for onboarding completion to update local state
-  useEffect(() => {
-    if (segments[0] === 'onboarding' && !onboardingLoading && hasSeenOnboarding === false) {
-      // Set up a listener for when onboarding is completed
-      const checkCompletion = async () => {
-        try {
-          const seen = await AsyncStorage.getItem('hasSeenOnboarding');
-          if (seen === 'true' && hasSeenOnboarding === false) {
-            console.log('[RootNavigation] Onboarding completed, updating state');
-            setHasSeenOnboarding(true);
-          }
-        } catch (error) {
-          console.error('[RootNavigation] Error checking onboarding completion:', error);
-        }
-      };
-
-      // Check immediately and then periodically
-      checkCompletion();
-      const interval = setInterval(checkCompletion, 500);
-      
-      return () => clearInterval(interval);
-    }
-  }, [segments, onboardingLoading, hasSeenOnboarding]);
+  }, [loading, onboardingLoading, user, hasSeenOnboarding, navigationInProgress]);
 
   // Show loading screen while initializing
   if (loading || onboardingLoading) {
