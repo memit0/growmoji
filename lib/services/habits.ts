@@ -21,6 +21,22 @@ export interface HabitLog {
   created_at?: string;
 }
 
+// Feature limits for habit creation
+const FEATURE_LIMITS = {
+  anonymous: { maxHabits: 3 },
+  free: { maxHabits: 3 },
+  premium: { maxHabits: Infinity }
+};
+
+function getUserType(userId: string, useLocalStorage: boolean): 'anonymous' | 'free' | 'premium' {
+  if (useLocalStorage || userId.startsWith('anon_')) {
+    return 'anonymous';
+  }
+  // For now, assume all authenticated users are free unless we have premium status
+  // This could be enhanced to check actual subscription status
+  return 'free';
+}
+
 // Helper function to get current user ID
 const getCurrentUserId = async (): Promise<string> => {
   // This will be called from components that have access to useUser hook
@@ -58,10 +74,22 @@ export const habitsService = {
   async createHabit(
     habit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'>, 
     userId: string,
-    useLocalStorage = false
+    useLocalStorage = false,
+    isPremium = false
   ): Promise<Habit> {
     if (!userId) {
       throw new Error('User ID is required');
+    }
+
+    // Check feature limits before creating
+    const userType = isPremium ? 'premium' : getUserType(userId, useLocalStorage);
+    const maxHabits = FEATURE_LIMITS[userType].maxHabits;
+    
+    if (maxHabits !== Infinity) {
+      const existingHabits = await this.getHabits(userId, useLocalStorage);
+      if (existingHabits.length >= maxHabits) {
+        throw new Error(`Maximum of ${maxHabits} habits allowed. Upgrade to premium for unlimited habits.`);
+      }
     }
 
     const newHabit: Habit = {

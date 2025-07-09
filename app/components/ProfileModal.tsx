@@ -54,7 +54,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
         isAnonymous,
         anonymousUserId,
         willShowAnonymousContent: isAnonymous,
-        willShowAuthenticatedContent: !isAnonymous
+        willShowAuthenticatedContent: !isAnonymous,
+        // Additional debugging
+        userObject: user,
+        sessionState: 'Check auth context for session details'
       });
     }
   }, [isVisible, user, isAnonymous, anonymousUserId]);
@@ -212,18 +215,30 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     modalContent: {
-      flex: 1,
       backgroundColor: colors.background,
-      marginTop: 60,
+      position: 'absolute',
+      top: 60,
+      right: spacing.md,
+      borderRadius: borderRadius.lg,
+      maxHeight: '80%',
+      maxWidth: 350,
+      minWidth: 280,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
     profileContent: {
       backgroundColor: colors.card,
-      marginTop: 60,
-      marginHorizontal: spacing.md,
-      alignSelf: 'flex-end',
-      width: '60%',
-      maxWidth: 300,
-      maxHeight: '75%', // Limit height to allow for scrolling
+      position: 'absolute',
+      top: 60,
+      right: spacing.md,
+      minWidth: 280,
+      maxWidth: 350,
       borderRadius: borderRadius.lg,
       padding: spacing.lg,
       shadowColor: '#000',
@@ -234,7 +249,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       shadowOpacity: 0.25,
       shadowRadius: 3.84,
       elevation: 5,
-      marginBottom: spacing.lg,
     },
 
     header: {
@@ -478,14 +492,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
   });
 
   const renderAnonymousProfileContent = () => (
-    <TouchableOpacity
+    <TouchableOpacity 
       style={styles.modalOverlay}
       activeOpacity={1}
       onPress={onClose}
     >
-      <TouchableOpacity
-        activeOpacity={1}
+      <TouchableOpacity 
         style={styles.profileContent}
+        activeOpacity={1}
         onPress={e => e.stopPropagation()}
       >
         <View style={styles.profileHeader}>
@@ -498,7 +512,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
         <ScrollView 
           showsVerticalScrollIndicator={false}
           bounces={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
         >
           <View style={styles.anonymousInfoContainer}>
             <View style={styles.anonymousIcon}>
@@ -543,23 +557,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
             <Ionicons name="settings-outline" size={24} color={colors.text} />
             <Text style={styles.menuItemText}>Settings</Text>
           </TouchableOpacity>
-          
-          {/* Add some bottom padding */}
-          <View style={{ height: spacing.lg }} />
         </ScrollView>
       </TouchableOpacity>
     </TouchableOpacity>
   );
 
   const renderAuthenticatedProfileContent = () => (
-    <TouchableOpacity
+    <TouchableOpacity 
       style={styles.modalOverlay}
       activeOpacity={1}
       onPress={onClose}
     >
-      <TouchableOpacity
-        activeOpacity={1}
+      <TouchableOpacity 
         style={styles.profileContent}
+        activeOpacity={1}
         onPress={e => e.stopPropagation()}
       >
         <View style={styles.profileHeader}>
@@ -572,7 +583,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
         <ScrollView 
           showsVerticalScrollIndicator={false}
           bounces={false}
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
         >
           {user && (
             <View style={styles.userInfoContainer}>
@@ -604,17 +615,23 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
             <Ionicons name="log-out-outline" size={24} color={colors.text} />
             <Text style={styles.menuItemText}>{isSigningOut ? 'Signing Out...' : 'Sign Out'}</Text>
           </TouchableOpacity>
-          
-          {/* Add some bottom padding to ensure logout button is fully accessible */}
-          <View style={{ height: spacing.lg }} />
         </ScrollView>
       </TouchableOpacity>
     </TouchableOpacity>
   );
 
   const renderSettingsContent = () => (
-    <View style={styles.modalContent}>
-      <View style={styles.header}>
+    <TouchableOpacity 
+      style={styles.modalOverlay}
+      activeOpacity={1}
+      onPress={() => setShowSettings(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalContent}
+        activeOpacity={1}
+        onPress={e => e.stopPropagation()}
+      >
+        <View style={styles.header}>
         <TouchableOpacity onPress={() => setShowSettings(false)} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -726,7 +743,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
 
         <View style={{ height: spacing.xl * 2 }} />
       </ScrollView>
-    </View>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 
   return (

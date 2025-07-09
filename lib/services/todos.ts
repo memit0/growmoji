@@ -14,6 +14,22 @@ export interface Todo {
   completed_at?: string | null;
 }
 
+// Feature limits for todo creation
+const FEATURE_LIMITS = {
+  anonymous: { maxTodos: 3 },
+  free: { maxTodos: 3 },
+  premium: { maxTodos: Infinity }
+};
+
+function getUserType(userId: string, useLocalStorage: boolean): 'anonymous' | 'free' | 'premium' {
+  if (useLocalStorage || userId.startsWith('anon_')) {
+    return 'anonymous';
+  }
+  // For now, assume all authenticated users are free unless we have premium status
+  // This could be enhanced to check actual subscription status
+  return 'free';
+}
+
 export const todosService = {
   async getTodos(userId: string, useLocalStorage = false): Promise<Todo[]> {
     if (!userId) {
@@ -44,10 +60,22 @@ export const todosService = {
   async createTodo(
     todo: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'completed_at'>, 
     userId: string,
-    useLocalStorage = false
+    useLocalStorage = false,
+    isPremium = false
   ): Promise<Todo> {
     if (!userId) {
       throw new Error('User ID is required');
+    }
+
+    // Check feature limits before creating
+    const userType = isPremium ? 'premium' : getUserType(userId, useLocalStorage);
+    const maxTodos = FEATURE_LIMITS[userType].maxTodos;
+    
+    if (maxTodos !== Infinity) {
+      const existingTodos = await this.getTodos(userId, useLocalStorage);
+      if (existingTodos.length >= maxTodos) {
+        throw new Error(`Maximum of ${maxTodos} tasks allowed. Upgrade to premium for unlimited tasks.`);
+      }
     }
 
     const newTodo: Todo = {

@@ -33,10 +33,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [anonymousUserId, setAnonymousUserIdState] = useState<string | null>(null);
 
-  // Initialize anonymous user if exists
+  // Initialize anonymous user if exists (but only if no real session)
   useEffect(() => {
     const initializeAnonymousUser = async () => {
       try {
+        // Check for existing session first
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Real user is signed in, don't set anonymous mode
+          console.log('[AuthContext] Real user session found, skipping anonymous initialization');
+          return;
+        }
+        
+        // Only set anonymous mode if no real session exists
         const existingAnonymousId = await getAnonymousUserId();
         if (existingAnonymousId) {
           setAnonymousUserIdState(existingAnonymousId);
@@ -129,11 +139,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     getSession();
+  }, []);
 
+  // Separate useEffect for auth listener to avoid dependency issues
+  useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('[AuthContext] Auth state change:', _event, session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // If user signs in, clear anonymous state
+      if (session?.user) {
+        setIsAnonymous((currentIsAnonymous) => {
+          if (currentIsAnonymous) {
+            console.log('[AuthContext] User signed in, clearing anonymous state');
+            setAnonymousUserIdState(null);
+            return false;
+          }
+          return currentIsAnonymous;
+        });
+      }
+      
+      // If user signs out, check if we should restore anonymous mode
+      if (!session?.user) {
+        getAnonymousUserId().then((storedAnonymousId) => {
+          if (storedAnonymousId) {
+            console.log('[AuthContext] User signed out, restoring anonymous mode');
+            setIsAnonymous(true);
+            setAnonymousUserIdState(storedAnonymousId);
+          }
+        });
+      }
       
       // Only set loading to false if initial check is complete
       if (initialCheckComplete) {

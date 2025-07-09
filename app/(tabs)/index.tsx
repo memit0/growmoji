@@ -14,6 +14,7 @@ import { TodoCard } from '@/components/ui/TodoCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCanCreateHabits, useCanCreateTodos, useFeatureLimits } from '@/hooks/useFeatureLimits';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
 import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
@@ -45,6 +46,11 @@ export default function HomeScreen() {
 
   const { user, loading: authLoading, isAnonymous, anonymousUserId } = useAuth();
   const userId = user?.id || anonymousUserId;
+
+  // Feature limits for current user type
+  const featureLimits = useFeatureLimits();
+  const canCreateHabits = useCanCreateHabits(habits.length);
+  const canCreateTodos = useCanCreateTodos(todos.length);
 
   // Check if user has seen the walkthrough
   useEffect(() => {
@@ -90,19 +96,24 @@ export default function HomeScreen() {
     }
   };
 
-  // Don't make decisions about limits until subscription is initialized
-  // FIXED: Improved logic to enforce limits for free users even during subscription loading
-  const canCheckLimits = !authLoading && !!user; // Simplified: if user is authenticated, we can check limits
-  const isTaskLimitReached = canCheckLimits && !isPremium && todos.length >= 3;
-  const isHabitLimitReached = canCheckLimits && !isPremium && habits.length >= 3;
+  // Feature limits enforcement for both anonymous and authenticated users
+  const shouldEnforceLimits = !authLoading && (user || isAnonymous);
+  const isTaskLimitReached = shouldEnforceLimits && !canCreateTodos;
+  const isHabitLimitReached = shouldEnforceLimits && !canCreateHabits;
 
-  // Simplified debug logging
+  // Enhanced debug logging
   if (process.env.NODE_ENV === 'development') {
     console.log('[HomeScreen] Status:', {
       userExists: !!user,
+      isAnonymous,
       isPremium,
       habitsCount: habits.length,
-      canCheckLimits
+      todosCount: todos.length,
+      canCreateHabits,
+      canCreateTodos,
+      maxHabits: featureLimits.maxHabits,
+      maxTodos: featureLimits.maxTodos,
+      shouldEnforceLimits
     });
   }
 
@@ -121,9 +132,11 @@ export default function HomeScreen() {
       return;
     }
 
-    // Check task limit for free users (only if we can check limits)
-    if (canCheckLimits && !isPremium && isTaskLimitReached) {
-      setShowPaywall(true);
+    // Check task limit - for anonymous users just block, for authenticated users show paywall
+    if (isTaskLimitReached) {
+      if (!isAnonymous) {
+        setShowPaywall(true);
+      }
       return;
     }
 
@@ -132,7 +145,8 @@ export default function HomeScreen() {
       const newTodo = await todosService.createTodo(
         { content: newTodoTitle.trim(), is_completed: false },
         userId!,
-        isAnonymous || userId?.startsWith('anon_')
+        isAnonymous || userId?.startsWith('anon_'),
+        isPremium
       );
       setTodos(prevTodos => {
         const newTodos = [newTodo, ...prevTodos];
@@ -223,11 +237,13 @@ export default function HomeScreen() {
       return;
     }
 
-    // Check habit limit for free users (only if we can check limits)
-    if (canCheckLimits && !isPremium && isHabitLimitReached) {
-      console.log('[handleAddHabit] Free user has reached habit limit. Showing paywall.');
+    // Check habit limit - for anonymous users just block, for authenticated users show paywall
+    if (isHabitLimitReached) {
       setIsHabitModalVisible(false);
-      setShowPaywall(true);
+      if (!isAnonymous) {
+        console.log('[handleAddHabit] User has reached habit limit. Showing paywall.');
+        setShowPaywall(true);
+      }
       return;
     }
 
@@ -241,7 +257,7 @@ export default function HomeScreen() {
         emoji: emoji,
         start_date: today,
       };
-      const createdHabit = await habitsService.createHabit(newHabitDetails, userId!, isAnonymous || userId?.startsWith('anon_'));
+      const createdHabit = await habitsService.createHabit(newHabitDetails, userId!, isAnonymous || userId?.startsWith('anon_'), isPremium);
       setHabits(prevHabits => {
         const newHabits = [...prevHabits, createdHabit];
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -457,8 +473,8 @@ export default function HomeScreen() {
         {/* Header with upgrade and help buttons */}
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
-          {/* Upgrade to Premium button for free users */}
-          {canCheckLimits && !isPremium && (
+          {/* Upgrade to Premium button for non-premium authenticated users only */}
+          {shouldEnforceLimits && !isPremium && !isAnonymous && (
             <TouchableOpacity
               style={[styles.helpButton, { backgroundColor: colors.primary, borderColor: colors.primary, marginRight: 8 }]}
               onPress={() => {
@@ -484,11 +500,11 @@ export default function HomeScreen() {
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
             <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
-            <ThemedText style={[styles.taskCount, { color: colors.secondary }]}>{todos.length}/3 tasks</ThemedText>
+            <ThemedText style={[styles.taskCount, { color: colors.secondary }]}>{todos.length}/{isPremium ? '∞' : featureLimits.maxTodos} tasks</ThemedText>
           </View>
           <View style={styles.inputRow}>
             <TextInput
-              placeholder={isTaskLimitReached ? "Task limit reached" : "Add task..."}
+              placeholder={isTaskLimitReached ? (isAnonymous ? "3 task limit reached" : "Task limit reached") : "Add task..."}
               style={[styles.input, {
                 backgroundColor: colors.background,
                 borderColor: colors.border,
@@ -510,7 +526,7 @@ export default function HomeScreen() {
               disabled={isTaskLimitReached} // Disable button if limit reached
             >
               <ThemedText style={[styles.addButtonText, { color: '#FFFFFF' }]}>
-                {isTaskLimitReached ? 'Limit' : 'Add'}
+                {isTaskLimitReached ? (isAnonymous ? 'Locked' : 'Limit') : 'Add'}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -533,30 +549,34 @@ export default function HomeScreen() {
             <View style={styles.habitHeaderLeft}>
               <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
               <ThemedText style={[styles.habitCount, { color: colors.secondary }]}>
-                {habits.length}/{isPremium ? '∞' : '3'} habits
-                {canCheckLimits && !isPremium && isHabitLimitReached && (
-                  <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • Limit reached</ThemedText>
+                {habits.length}/{isPremium ? '∞' : featureLimits.maxHabits} habits
+                {shouldEnforceLimits && !isPremium && isHabitLimitReached && (
+                  <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • {isAnonymous ? 'Limit reached' : 'Limit reached'}</ThemedText>
                 )}
               </ThemedText>
             </View>
             <TouchableOpacity
               style={[
                 styles.newHabitButton,
-                { backgroundColor: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.border : colors.primary }
+                { backgroundColor: isHabitLimitReached ? colors.border : colors.primary }
               ]}
               onPress={() => {
-                if (canCheckLimits && !isPremium && isHabitLimitReached) {
-                  setShowPaywall(true);
+                if (isHabitLimitReached) {
+                  if (!isAnonymous) {
+                    setShowPaywall(true);
+                  }
+                  // For anonymous users, do nothing (button is disabled)
                 } else {
                   setIsHabitModalVisible(true);
                 }
               }}
+              disabled={isAnonymous && isHabitLimitReached} // Disable for anonymous users when limit reached
             >
               <ThemedText style={[
                 styles.newHabitButtonText,
-                { color: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.secondary : '#FFFFFF' }
+                { color: isHabitLimitReached ? colors.secondary : '#FFFFFF' }
               ]}>
-                {(canCheckLimits && !isPremium && isHabitLimitReached) ? 'Upgrade' : 'New Habit'}
+                {isHabitLimitReached ? (isAnonymous ? 'Locked' : 'Upgrade') : 'New Habit'}
               </ThemedText>
             </TouchableOpacity>
           </View>
