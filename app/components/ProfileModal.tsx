@@ -6,8 +6,10 @@ import { habitsService } from '@/lib/services/habits';
 import { todosService } from '@/lib/services/todos';
 import { updateWidgetData } from '@/lib/services/widgetData';
 import { supabase } from '@/lib/supabase';
+import { validateMigrationData } from '@/lib/utils/dataMigration';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
@@ -40,44 +42,87 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     appearanceMode: contextAppearanceMode, // User's preference ('system', 'light', 'dark')
     setAppearanceMode: setContextAppearanceMode // Function to update preference
   } = useTheme();
-  const { signOut, user } = useAuth();
+  const { signOut, user, isAnonymous, anonymousUserId } = useAuth();
+  
+  // Debug user state when modal opens
+  useEffect(() => {
+    if (isVisible) {
+      console.log('[ProfileModal] Modal opened with state:', {
+        hasUser: !!user,
+        userId: user?.id,
+        userEmail: user?.email,
+        isAnonymous,
+        anonymousUserId,
+        willShowAnonymousContent: isAnonymous,
+        willShowAuthenticatedContent: !isAnonymous
+      });
+    }
+  }, [isVisible, user, isAnonymous, anonymousUserId]);
   const { isPremium } = useSubscription();
+  const router = useRouter();
   const [showSettings, setShowSettings] = useState(false);
   const systemColorScheme = useColorScheme(); // Still needed for widget logic if mode is system
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [anonymousDataStats, setAnonymousDataStats] = useState({ habits: 0, todos: 0 });
+
+  // Load anonymous data stats for display
+  useEffect(() => {
+    const loadAnonymousDataStats = async () => {
+      if (isAnonymous && anonymousUserId) {
+        try {
+          const validation = await validateMigrationData(anonymousUserId);
+          setAnonymousDataStats(validation.dataStats);
+        } catch (error) {
+          console.error('[ProfileModal] Error loading anonymous data stats:', error);
+        }
+      }
+    };
+
+    if (isVisible && isAnonymous) {
+      loadAnonymousDataStats();
+    }
+  }, [isVisible, isAnonymous, anonymousUserId]);
 
   // Update widget data when theme changes
   useEffect(() => {
     const updateWidgetWithCurrentData = async () => {
-      // Check if user is available and has an ID
-      if (!user?.id) {
-        console.log('ProfileModal useEffect: User not available, skipping widget update');
-        return;
-      }
-
       try {
-        console.log('ProfileModal useEffect: Fetching data for user:', user.id);
-        const [todos, habits] = await Promise.all([
-          todosService.getTodos(user.id),
-          habitsService.getHabits(user.id)
-        ]);
-        console.log(
-          'ProfileModal useEffect: Updating widget with isPremium:',
-          isPremium,
-          'and theme:',
-          theme
-        );
-        updateWidgetData(todos || [], habits || [], theme, isPremium);
+        if (isAnonymous && anonymousUserId) {
+          // For anonymous users, get data from local storage
+          const [todos, habits] = await Promise.all([
+            todosService.getTodos(anonymousUserId, true),
+            habitsService.getHabits(anonymousUserId, true)
+          ]);
+          console.log(
+            'ProfileModal useEffect: Updating widget for anonymous user with theme:',
+            theme
+          );
+          updateWidgetData(todos || [], habits || [], theme, false);
+        } else if (user?.id) {
+          // For authenticated users, get data from Supabase
+          console.log('ProfileModal useEffect: Fetching data for user:', user.id);
+          const [todos, habits] = await Promise.all([
+            todosService.getTodos(user.id),
+            habitsService.getHabits(user.id)
+          ]);
+          console.log(
+            'ProfileModal useEffect: Updating widget with isPremium:',
+            isPremium,
+            'and theme:',
+            theme
+          );
+          updateWidgetData(todos || [], habits || [], theme, isPremium);
+        }
       } catch (error) {
         console.error('ProfileModal: Error updating widget data with theme change:', error);
       }
     };
 
-    if (theme && user?.id) {
+    if (theme && (user?.id || (isAnonymous && anonymousUserId))) {
       updateWidgetWithCurrentData();
     }
-  }, [theme, isPremium, user?.id]);
+  }, [theme, isPremium, user?.id, isAnonymous, anonymousUserId]);
 
   const handleAppearanceChange = async (mode: AppearanceMode) => {
     await setContextAppearanceMode(mode);
@@ -95,6 +140,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     } finally {
       setIsSigningOut(false);
     }
+  };
+
+  const handleCreateAccount = () => {
+    onClose();
+    router.push('/(auth)/register');
   };
 
   const handleDeleteAccount = async () => {
@@ -173,6 +223,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       alignSelf: 'flex-end',
       width: '60%',
       maxWidth: 300,
+      maxHeight: '75%', // Limit height to allow for scrolling
       borderRadius: borderRadius.lg,
       padding: spacing.lg,
       shadowColor: '#000',
@@ -185,6 +236,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       elevation: 5,
       marginBottom: spacing.lg,
     },
+
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -202,12 +254,120 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       fontSize: typography.fontSize.xl,
       fontWeight: 'bold',
       color: colors.text,
-    },
-    backButton: {
-      marginRight: spacing.md,
+      flex: 1,
+      textAlign: 'center',
     },
     closeButton: {
-      padding: spacing.sm,
+      padding: spacing.xs,
+    },
+    backButton: {
+      padding: spacing.xs,
+      marginRight: spacing.md,
+    },
+    userInfoContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+    },
+    anonymousInfoContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.primary + '40',
+    },
+    userImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.primary + '20',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    anonymousIcon: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: colors.secondary + '20',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    userName: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    userEmail: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondary,
+    },
+    anonymousTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    anonymousSubtitle: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondary,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+    },
+    anonymousStats: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      width: '100%',
+    },
+    anonymousStatItem: {
+      alignItems: 'center',
+    },
+    anonymousStatNumber: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      color: colors.primary,
+    },
+    anonymousStatLabel: {
+      fontSize: typography.fontSize.xs,
+      color: colors.secondary,
+    },
+    warningCard: {
+      backgroundColor: colors.primary + '10',
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    warningTitle: {
+      fontSize: typography.fontSize.md,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    warningText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.secondary,
+      lineHeight: typography.fontSize.sm * 1.4,
+    },
+    createAccountButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+      alignItems: 'center',
+    },
+    createAccountButtonText: {
+      color: '#FFFFFF',
+      fontSize: typography.fontSize.md,
+      fontWeight: '600',
     },
     menuItem: {
       flexDirection: 'row',
@@ -216,50 +376,30 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    menuItemText: {
-      marginLeft: spacing.md,
-      fontSize: typography.fontSize.md,
-      color: colors.text,
-    },
     lastMenuItem: {
       borderBottomWidth: 0,
     },
-    userInfoContainer: {
-      alignItems: 'center',
-      marginBottom: spacing.lg,
-    },
-    userImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      backgroundColor: colors.border,
-      marginBottom: spacing.sm,
-      justifyContent: 'center',
-      alignItems: 'center'
-    },
-    userName: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: 'bold',
+    menuItemText: {
+      fontSize: typography.fontSize.md,
       color: colors.text,
-      marginBottom: spacing.xs,
-    },
-    userEmail: {
-      fontSize: typography.fontSize.sm,
-      color: colors.text,
+      marginLeft: spacing.md,
+      flex: 1,
     },
     signOutButton: {
-      opacity: isSigningOut ? 0.7 : 1,
+      marginTop: spacing.sm,
     },
     section: {
-      padding: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      backgroundColor: colors.card,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.md,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
     },
     sectionTitle: {
       fontSize: typography.fontSize.lg,
       fontWeight: '600',
-      marginBottom: spacing.md,
       color: colors.text,
+      marginBottom: spacing.md,
     },
     settingRow: {
       flexDirection: 'row',
@@ -271,28 +411,25 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       fontSize: typography.fontSize.md,
       color: colors.text,
     },
-    settingDescription: {
-      fontSize: typography.fontSize.sm,
-      color: colors.secondary,
-      marginTop: spacing.xs,
-    },
     dangerZone: {
-      marginTop: spacing.xl,
-      padding: spacing.lg,
+      backgroundColor: colors.card,
+      marginHorizontal: spacing.md,
+      marginTop: spacing.md,
       borderRadius: borderRadius.md,
-      backgroundColor: 'rgba(255, 59, 48, 0.1)',
-      opacity: isDeletingAccount ? 0.7 : 1,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: '#FF6B6B20',
     },
     dangerTitle: {
       fontSize: typography.fontSize.lg,
       fontWeight: '600',
-      color: '#FF3B30',
+      color: '#FF6B6B',
       marginBottom: spacing.md,
     },
     dangerButton: {
-      backgroundColor: '#FF3B30',
-      padding: spacing.md,
+      backgroundColor: '#FF6B6B',
       borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
       alignItems: 'center',
     },
     dangerButtonText: {
@@ -340,7 +477,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
     },
   });
 
-  const renderProfileContent = () => (
+  const renderAnonymousProfileContent = () => (
     <TouchableOpacity
       style={styles.modalOverlay}
       activeOpacity={1}
@@ -358,36 +495,119 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           </TouchableOpacity>
         </View>
 
-        {user && (
-          <View style={styles.userInfoContainer}>
-            <View style={styles.userImage}>
-              <Ionicons name="person" size={30} color={colors.text} />
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View style={styles.anonymousInfoContainer}>
+            <View style={styles.anonymousIcon}>
+              <Ionicons name="person" size={30} color={colors.secondary} />
             </View>
-            <Text style={styles.userName}>
-              {user?.email?.split('@')[0] || 'User'}
+            <Text style={styles.anonymousTitle}>👤 Anonymous User</Text>
+            <Text style={styles.anonymousSubtitle}>
+              Your data is stored locally on this device
             </Text>
-            <Text style={styles.userEmail}>
-              {user?.email}
+            <View style={styles.anonymousStats}>
+              <View style={styles.anonymousStatItem}>
+                <Text style={styles.anonymousStatNumber}>{anonymousDataStats.habits}</Text>
+                <Text style={styles.anonymousStatLabel}>Habits</Text>
+              </View>
+              <View style={styles.anonymousStatItem}>
+                <Text style={styles.anonymousStatNumber}>{anonymousDataStats.todos}</Text>
+                <Text style={styles.anonymousStatLabel}>Tasks</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.warningCard}>
+            <Text style={styles.warningTitle}>⚠️ Important</Text>
+            <Text style={styles.warningText}>
+              Without an account, your data won't sync across devices and could be lost if you delete the app.
             </Text>
           </View>
-        )}
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => setShowSettings(true)}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-          <Text style={styles.menuItemText}>Settings</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.createAccountButton}
+            onPress={handleCreateAccount}
+          >
+            <Text style={styles.createAccountButtonText}>
+              Create Account & Backup Data
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton, { opacity: isSigningOut ? 0.7 : 1 }]}
-          onPress={handleSignOut}
-          disabled={isSigningOut}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowSettings(true)}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
+            <Text style={styles.menuItemText}>Settings</Text>
+          </TouchableOpacity>
+          
+          {/* Add some bottom padding */}
+          <View style={{ height: spacing.lg }} />
+        </ScrollView>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
+  const renderAuthenticatedProfileContent = () => (
+    <TouchableOpacity
+      style={styles.modalOverlay}
+      activeOpacity={1}
+      onPress={onClose}
+    >
+      <TouchableOpacity
+        activeOpacity={1}
+        style={styles.profileContent}
+        onPress={e => e.stopPropagation()}
+      >
+        <View style={styles.profileHeader}>
+          <Text style={styles.title}>Profile</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          contentContainerStyle={{ flexGrow: 1 }}
         >
-          <Ionicons name="log-out-outline" size={24} color={colors.text} />
-          <Text style={styles.menuItemText}>{isSigningOut ? 'Signing Out...' : 'Sign Out'}</Text>
-        </TouchableOpacity>
+          {user && (
+            <View style={styles.userInfoContainer}>
+              <View style={styles.userImage}>
+                <Ionicons name="person" size={30} color={colors.text} />
+              </View>
+              <Text style={styles.userName}>
+                {user?.email?.split('@')[0] || 'User'}
+              </Text>
+              <Text style={styles.userEmail}>
+                {user?.email}
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setShowSettings(true)}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
+            <Text style={styles.menuItemText}>Settings</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.lastMenuItem, styles.signOutButton, { opacity: isSigningOut ? 0.7 : 1 }]}
+            onPress={handleSignOut}
+            disabled={isSigningOut}
+          >
+            <Ionicons name="log-out-outline" size={24} color={colors.text} />
+            <Text style={styles.menuItemText}>{isSigningOut ? 'Signing Out...' : 'Sign Out'}</Text>
+          </TouchableOpacity>
+          
+          {/* Add some bottom padding to ensure logout button is fully accessible */}
+          <View style={{ height: spacing.lg }} />
+        </ScrollView>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -402,15 +622,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       </View>
 
       <ScrollView>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Subscription</Text>
-          <View style={styles.settingRow}>
-            <Text style={styles.settingLabel}>Status</Text>
-            <Text style={[styles.settingLabel, { color: isPremium ? colors.primary : colors.secondary }]}>
-              {isPremium ? 'Premium Member' : 'Free Member'}
-            </Text>
+        {!isAnonymous && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Subscription</Text>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>Status</Text>
+              <Text style={[styles.settingLabel, { color: isPremium ? colors.primary : colors.secondary }]}>
+                {isPremium ? 'Premium Member' : 'Free Member'}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
+
+        {isAnonymous && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account</Text>
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>Status</Text>
+              <Text style={[styles.settingLabel, { color: colors.secondary }]}>
+                Anonymous User
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.createAccountButton}
+              onPress={handleCreateAccount}
+            >
+              <Text style={styles.createAccountButtonText}>
+                Create Account
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
@@ -468,21 +710,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
           </TouchableOpacity>
         </View>
 
-        {/* <View style={styles.section}>
-          <Text style={styles.sectionTitle}>RevenueCat Debug</Text>
-          <RevenueCatDebug />
-        </View> */}
-
-        <View style={styles.dangerZone}>
-          <Text style={styles.dangerTitle}>Danger Zone</Text>
-          <TouchableOpacity
-            style={styles.dangerButton}
-            onPress={handleDeleteAccount}
-            disabled={isDeletingAccount}
-          >
-            <Text style={styles.dangerButtonText}>{isDeletingAccount ? 'Deleting...' : 'Delete Account'}</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Only show delete account for authenticated users */}
+        {!isAnonymous && (
+          <View style={styles.dangerZone}>
+            <Text style={styles.dangerTitle}>Danger Zone</Text>
+            <TouchableOpacity
+              style={styles.dangerButton}
+              onPress={handleDeleteAccount}
+              disabled={isDeletingAccount}
+            >
+              <Text style={styles.dangerButtonText}>{isDeletingAccount ? 'Deleting...' : 'Delete Account'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: spacing.xl * 2 }} />
       </ScrollView>
@@ -496,7 +736,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isVisible, onClose }
       animationType="slide"
       onRequestClose={onClose}
     >
-      {showSettings ? renderSettingsContent() : renderProfileContent()}
+      {showSettings ? renderSettingsContent() : (
+        isAnonymous ? renderAnonymousProfileContent() : renderAuthenticatedProfileContent()
+      )}
     </Modal>
   );
 };

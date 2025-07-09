@@ -43,8 +43,8 @@ export default function HomeScreen() {
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
   const [loggingHabits, setLoggingHabits] = useState<Set<string>>(new Set());
 
-  const { user, loading: authLoading } = useAuth();
-  const userId = user?.id;
+  const { user, loading: authLoading, isAnonymous, anonymousUserId } = useAuth();
+  const userId = user?.id || anonymousUserId;
 
   // Check if user has seen the walkthrough
   useEffect(() => {
@@ -107,13 +107,14 @@ export default function HomeScreen() {
   }
 
   const handleAddTodo = async () => {
-    if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) {
+    // Updated check to support anonymous users
+    if (isSubmittingTodo || !newTodoTitle.trim() || (!user && !anonymousUserId)) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[handleAddTodo] Blocked:', { 
           isSubmittingTodo, 
           hasTitle: !!newTodoTitle.trim(), 
           hasUser: !!user, 
-          hasUserId: !!userId,
+          hasAnonymousId: !!anonymousUserId,
           authLoading 
         });
       }
@@ -130,7 +131,8 @@ export default function HomeScreen() {
     try {
       const newTodo = await todosService.createTodo(
         { content: newTodoTitle.trim(), is_completed: false },
-        userId
+        userId!,
+        isAnonymous || userId?.startsWith('anon_')
       );
       setTodos(prevTodos => {
         const newTodos = [newTodo, ...prevTodos];
@@ -146,10 +148,10 @@ export default function HomeScreen() {
   };
 
   const handleDeleteTodo = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     setIsUpdatingItem(true);
     try {
-      await todosService.deleteTodo(id, userId);
+      await todosService.deleteTodo(id, userId, isAnonymous || userId.startsWith('anon_'));
       setTodos(prevTodos => {
         const newTodos = prevTodos.filter(todo => todo.id !== id);
         updateWidgetData(newTodos, habits, theme, isPremium);
@@ -160,13 +162,13 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user, userId, habits, theme, isPremium]);
+  }, [userId, habits, theme, isPremium, isAnonymous]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
     try {
-      await habitsService.deleteHabit(id, userId);
+      await habitsService.deleteHabit(id, userId, isAnonymous || userId.startsWith('anon_'));
       setHabits(prevHabits => {
         const newHabits = prevHabits.filter(habit => habit.id !== id);
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -176,16 +178,16 @@ export default function HomeScreen() {
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [user, userId, todos, theme, isPremium]);
+  }, [userId, todos, theme, isPremium, isAnonymous]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     const todoToToggle = todos.find(t => t.id === id);
     if (!todoToToggle) return;
 
     setIsUpdatingItem(true);
     try {
-      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed, userId);
+      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed, userId, isAnonymous || userId.startsWith('anon_'));
       setTodos(prevTodos => {
         const newTodos = prevTodos.map(todo =>
           todo.id === id ? updatedTodo : todo
@@ -198,7 +200,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user, userId, todos, habits, theme, isPremium]);
+  }, [userId, todos, habits, theme, isPremium, isAnonymous]);
 
   interface HabitModalData {
     title: string;
@@ -207,13 +209,14 @@ export default function HomeScreen() {
   }
 
   const handleAddHabit = async (emoji: string) => {
-    if (isSubmittingHabit || !emoji || !user || !userId) {
+    // Updated check to support anonymous users
+    if (isSubmittingHabit || !emoji || (!user && !anonymousUserId)) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[handleAddHabit] Blocked:', { 
           isSubmittingHabit, 
           hasEmoji: !!emoji, 
           hasUser: !!user, 
-          hasUserId: !!userId,
+          hasAnonymousId: !!anonymousUserId,
           authLoading 
         });
       }
@@ -238,7 +241,7 @@ export default function HomeScreen() {
         emoji: emoji,
         start_date: today,
       };
-      const createdHabit = await habitsService.createHabit(newHabitDetails, userId);
+      const createdHabit = await habitsService.createHabit(newHabitDetails, userId!, isAnonymous || userId?.startsWith('anon_'));
       setHabits(prevHabits => {
         const newHabits = [...prevHabits, createdHabit];
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -253,7 +256,7 @@ export default function HomeScreen() {
   };
 
   const handleHabitLog = async (habitId: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
 
     // Prevent multiple simultaneous calls for the same habit
     if (loggingHabits.has(habitId)) {
@@ -294,27 +297,32 @@ export default function HomeScreen() {
     });
 
     try {
-      // Try the optimized server-side function first
-      const updatedHabit = await habitsService.toggleHabitLog(habitId, userId);
-      
-      // Update with the actual server response
-      setHabits(prevHabits => {
-        const newHabits = prevHabits.map(habit => 
-          habit.id === habitId ? updatedHabit : habit
-        );
-        updateWidgetData(todos, newHabits, theme, isPremium);
-        return newHabits;
-      });
-
-      console.log(`[HomeScreen] Successfully toggled habit log for: ${habitId}`);
-    } catch (error) {
-      console.warn('[HomeScreen] Server-side toggle failed, falling back to client-side method:', error);
-      
-      try {
-        // Fallback to optimized client-side method
-        const updatedHabit = await habitsService.toggleHabitLogFallback(habitId, userId);
+      // For anonymous users, use individual log/unlog methods
+      if (isAnonymous || userId?.startsWith('anon_')) {
+        if (isLoggedToday) {
+          // Unlog the habit
+          await habitsService.deleteHabitLog(habitId, todayStr, userId, true);
+        } else {
+          // Log the habit
+          await habitsService.logHabitCompletion(habitId, todayStr, userId, true);
+        }
         
-        // Update with the actual server response
+        // Update the habit streak manually for anonymous users
+        const newStreak = isLoggedToday 
+          ? Math.max(0, targetHabit.current_streak - 1)
+          : targetHabit.current_streak + 1;
+        
+        const updatedHabit = await habitsService.updateHabit(
+          habitId,
+          { 
+            current_streak: newStreak,
+            last_check_date: isLoggedToday ? null : todayStr
+          },
+          userId,
+          true
+        );
+        
+        // Update with the actual response
         setHabits(prevHabits => {
           const newHabits = prevHabits.map(habit => 
             habit.id === habitId ? updatedHabit : habit
@@ -322,12 +330,57 @@ export default function HomeScreen() {
           updateWidgetData(todos, newHabits, theme, isPremium);
           return newHabits;
         });
+      } else {
+        // For authenticated users, use the optimized toggle method
+        const updatedHabit = await habitsService.toggleHabitLog(habitId, userId);
+      
+              // Update with the actual server response
+        setHabits(prevHabits => {
+          const newHabits = prevHabits.map(habit => 
+            habit.id === habitId ? updatedHabit : habit
+          );
+          updateWidgetData(todos, newHabits, theme, isPremium);
+          return newHabits;
+        });
+      }
 
-        console.log(`[HomeScreen] Successfully toggled habit log (fallback) for: ${habitId}`);
-      } catch (fallbackError) {
-        console.error('[HomeScreen] Error in handleHabitLog (both methods failed):', fallbackError);
+      console.log(`[HomeScreen] Successfully toggled habit log for: ${habitId}`);
+    } catch (error) {
+      if (isAnonymous || userId?.startsWith('anon_')) {
+        console.error('[HomeScreen] Error in anonymous habit logging:', error);
+      } else {
+        console.warn('[HomeScreen] Server-side toggle failed, falling back to client-side method:', error);
         
-        // Revert optimistic update on error
+        try {
+          // Fallback to optimized client-side method
+          const updatedHabit = await habitsService.toggleHabitLogFallback(habitId, userId);
+        
+          // Update with the actual server response
+          setHabits(prevHabits => {
+            const newHabits = prevHabits.map(habit => 
+              habit.id === habitId ? updatedHabit : habit
+            );
+            updateWidgetData(todos, newHabits, theme, isPremium);
+            return newHabits;
+          });
+
+          console.log(`[HomeScreen] Successfully toggled habit log (fallback) for: ${habitId}`);
+        } catch (fallbackError) {
+          console.error('[HomeScreen] Error in handleHabitLog (both methods failed):', fallbackError);
+          
+          // Revert optimistic update on error
+          setHabits(prevHabits => {
+            const revertedHabits = prevHabits.map(habit => 
+              habit.id === habitId ? targetHabit : habit
+            );
+            updateWidgetData(todos, revertedHabits, theme, isPremium);
+            return revertedHabits;
+          });
+        }
+      }
+      
+      // Revert optimistic update on error for anonymous users too
+      if (isAnonymous || userId?.startsWith('anon_')) {
         setHabits(prevHabits => {
           const revertedHabits = prevHabits.map(habit => 
             habit.id === habitId ? targetHabit : habit
@@ -349,11 +402,13 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (user && userId) {
+    if (userId) {
       setIsScreenLoading(true);
+      const useLocalStorage = isAnonymous || userId.startsWith('anon_');
+      
       Promise.all([
-        todosService.getTodos(userId).then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
-        habitsService.getHabits(userId).then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
+        todosService.getTodos(userId, useLocalStorage).then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
+        habitsService.getHabits(userId, useLocalStorage).then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
       ])
         .finally(() => {
           setIsScreenLoading(false);
@@ -363,15 +418,15 @@ export default function HomeScreen() {
       setHabits([]);
       clearWidgetData(); // Clear widget data on sign out
     }
-  }, [user, userId]);
+  }, [userId, isAnonymous]);
 
   // New useEffect to update widget data when todos or habits change from any source (initial fetch, add, delete, etc.)
   useEffect(() => {
-    if (user && userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
+    if (userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
       updateWidgetData(todos, habits, theme, isPremium);
     }
     // Adding theme to dependency array to re-run if theme changes.
-  }, [todos, habits, user, userId, theme, isPremium]);
+  }, [todos, habits, userId, theme, isPremium, isAnonymous]);
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard

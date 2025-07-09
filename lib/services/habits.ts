@@ -1,4 +1,8 @@
 import { supabase } from '../supabase';
+import {
+    getAnonymousData,
+    saveAnonymousData
+} from './localStorage';
 
 export interface Habit {
   id: string;
@@ -25,11 +29,18 @@ const getCurrentUserId = async (): Promise<string> => {
 };
 
 export const habitsService = {
-  async getHabits(userId: string): Promise<Habit[]> {
+  async getHabits(userId: string, useLocalStorage = false): Promise<Habit[]> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.getHabits] Using local storage for user:', userId);
+      return getAnonymousData('habits', userId);
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .select('*')
@@ -46,12 +57,32 @@ export const habitsService = {
 
   async createHabit(
     habit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'>, 
-    userId: string
+    userId: string,
+    useLocalStorage = false
   ): Promise<Habit> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    const newHabit: Habit = {
+      id: `habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      user_id: userId,
+      ...habit,
+      current_streak: 0,
+      last_check_date: null,
+      created_at: new Date().toISOString(),
+    };
+
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.createHabit] Using local storage for user:', userId);
+      const existingHabits = await getAnonymousData('habits', userId) as Habit[];
+      const updatedHabits = [newHabit, ...existingHabits];
+      await saveAnonymousData('habits', userId, updatedHabits);
+      return newHabit;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .insert([{
@@ -70,11 +101,33 @@ export const habitsService = {
     return data;
   },
 
-  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>, userId: string): Promise<Habit> {
+  async updateHabit(
+    id: string, 
+    updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<Habit> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.updateHabit] Using local storage for user:', userId);
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habitIndex = habits.findIndex(h => h.id === id);
+      
+      if (habitIndex === -1) {
+        throw new Error('Habit not found');
+      }
+
+      const updatedHabit = { ...habits[habitIndex], ...updates };
+      habits[habitIndex] = updatedHabit;
+      await saveAnonymousData('habits', userId, habits);
+      return updatedHabit;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .update(updates)
@@ -91,11 +144,21 @@ export const habitsService = {
     return data;
   },
 
-  async deleteHabit(id: string, userId: string): Promise<void> {
+  async deleteHabit(id: string, userId: string, useLocalStorage = false): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.deleteHabit] Using local storage for user:', userId);
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const filteredHabits = habits.filter(h => h.id !== id);
+      await saveAnonymousData('habits', userId, filteredHabits);
+      return;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { error } = await supabase
       .from('habits')
       .delete()
@@ -108,11 +171,42 @@ export const habitsService = {
     }
   },
 
-  async logHabitCompletion(habitId: string, log_date: string, userId: string): Promise<HabitLog> {
+  async logHabitCompletion(
+    habitId: string, 
+    log_date: string, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<HabitLog> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    const newLog: HabitLog = {
+      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      habit_id: habitId,
+      log_date: log_date,
+      created_at: new Date().toISOString(),
+    };
+
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.logHabitCompletion] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Add log
+      const logs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      const updatedLogs = [newLog, ...logs];
+      await saveAnonymousData('habit_logs', userId, updatedLogs);
+      return newLog;
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')
@@ -139,11 +233,34 @@ export const habitsService = {
     return data;
   },
 
-  async getHabitLogs(habitId: string, userId: string, startDate?: string, endDate?: string): Promise<HabitLog[]> {
+  async getHabitLogs(
+    habitId: string, 
+    userId: string, 
+    startDate?: string, 
+    endDate?: string,
+    useLocalStorage = false
+  ): Promise<HabitLog[]> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.getHabitLogs] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Get logs for this habit
+      const allLogs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      return allLogs.filter(log => log.habit_id === habitId);
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')
@@ -169,11 +286,35 @@ export const habitsService = {
     return data || [];
   },
 
-  async deleteHabitLog(habitId: string, logDate: string, userId: string): Promise<void> {
+  async deleteHabitLog(
+    habitId: string, 
+    logDate: string, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.deleteHabitLog] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Remove log
+      const logs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      const filteredLogs = logs.filter(log => !(log.habit_id === habitId && log.log_date === logDate));
+      await saveAnonymousData('habit_logs', userId, filteredLogs);
+      return;
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')

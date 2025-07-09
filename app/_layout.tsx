@@ -38,7 +38,7 @@ function LoadingScreen() {
 }
 
 function RootNavigation() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAnonymous, anonymousUserId } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(null);
@@ -151,6 +151,8 @@ function RootNavigation() {
       onboardingLoading,
       hasUser: !!user,
       userId: user?.id,
+      isAnonymous,
+      anonymousUserId,
       hasSeenOnboarding,
       segments,
       navigationInProgress,
@@ -167,17 +169,23 @@ function RootNavigation() {
     const inTabsGroup = segments[0] === '(tabs)';
     const inOnboarding = segments[0] === 'onboarding';
     
+    // Check if user has an active session (authenticated or anonymous)
+    const hasActiveSession = user || (isAnonymous && anonymousUserId);
+    
     console.log('[RootNavigation] Navigation state:', {
       inAuthGroup,
       inTabsGroup,
       inOnboarding,
       hasUser: !!user,
+      isAnonymous,
+      anonymousUserId,
+      hasActiveSession,
       hasSeenOnboarding,
       currentSegments: segments
     });
 
-    if (!user) {
-      // User is not authenticated
+    if (!hasActiveSession) {
+      // No user and not anonymous - show onboarding or auth
       if (!hasSeenOnboarding && !inOnboarding) {
         // First time user - show onboarding
         console.log('[RootNavigation] First time user, showing onboarding');
@@ -186,24 +194,28 @@ function RootNavigation() {
         // Reset navigation guard after successful navigation
         setTimeout(() => setNavigationInProgress(false), 1000);
       } else if (hasSeenOnboarding && !inAuthGroup && !inOnboarding) {
-        // Returning user who has seen onboarding - go to auth
-        console.log('[RootNavigation] Returning user, redirecting to login');
+        // Returning user who has seen onboarding but has no session - go to auth
+        console.log('[RootNavigation] Returning user with no session, redirecting to login');
         setNavigationInProgress(true);
         router.replace('/(auth)/login');
         // Reset navigation guard after successful navigation
         setTimeout(() => setNavigationInProgress(false), 1000);
       }
     } else {
-      // User is authenticated - go to main app
+      // Has active session (authenticated or anonymous) - go to main app
       if (!inTabsGroup) {
-        console.log('[RootNavigation] User authenticated, redirecting to main app');
+        if (user) {
+          console.log('[RootNavigation] Authenticated user, redirecting to main app');
+        } else {
+          console.log('[RootNavigation] Anonymous user, redirecting to main app');
+        }
         setNavigationInProgress(true);
         router.replace('/(tabs)');
         // Reset navigation guard after successful navigation
         setTimeout(() => setNavigationInProgress(false), 1000);
       }
     }
-  }, [loading, onboardingLoading, user, hasSeenOnboarding, navigationInProgress]);
+  }, [loading, onboardingLoading, user, isAnonymous, anonymousUserId, hasSeenOnboarding, navigationInProgress]);
 
   // Show loading screen while initializing
   if (loading || onboardingLoading) {
