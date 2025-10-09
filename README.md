@@ -1,4 +1,4 @@
-live on app store and web growmoji.app
+live on app store and web search for growmoji.app
 
 # Habit Tracker - Productivity App
 
