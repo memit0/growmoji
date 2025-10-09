@@ -1,3 +1,5 @@
+live on app store and web growmoji.app
+
 # Habit Tracker - Productivity App
 
 A modern productivity app built with React Native and Expo to help users track and maintain their daily habits and tasks.
