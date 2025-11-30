@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Animated, Dimensions, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -14,7 +15,7 @@ interface QuizOption {
 
 interface OnboardingSlide {
   key: string;
-  type: 'welcome' | 'quiz' | 'result' | 'feature' | 'paywall-lead';
+  type: 'welcome' | 'quiz' | 'result' | 'feature' | 'paywall-lead' | 'account-choice';
   title: string;
   description?: string;
   question?: string;
@@ -133,15 +134,16 @@ const onboardingSlides: OnboardingSlide[] = [
   },
   {
     key: '10',
-    type: 'paywall-lead',
-    title: '🚀 Ready to transform your life?',
-    description: 'Join thousands who\'ve already supercharged their productivity and built lasting habits.',
+    type: 'account-choice',
+    title: '🚀 Ready to get started?',
+    description: 'Choose how you\'d like to use Growmoji',
   },
 ];
 
 export default function OnboardingScreen() {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const router = useRouter();
+  const { enableAnonymousMode } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isCompleting, setIsCompleting] = useState(false);
 
@@ -186,8 +188,8 @@ export default function OnboardingScreen() {
     if (currentIndex < onboardingSlides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
-      // On last slide, go to auth
-      handleStartFree();
+      // On last slide, this shouldn't be called since account-choice has its own buttons
+      handleCreateAccount();
     }
   };
 
@@ -200,7 +202,7 @@ export default function OnboardingScreen() {
     }, 800);
   };
 
-  const handleStartFree = async () => {
+  const handleCreateAccount = async () => {
     if (isCompleting) {
       console.log('[OnboardingScreen] Already completing, ignoring duplicate call');
       return;
@@ -208,7 +210,7 @@ export default function OnboardingScreen() {
 
     try {
       setIsCompleting(true);
-      console.log('[OnboardingScreen] Starting completion process...');
+      console.log('[OnboardingScreen] Starting account creation process...');
       await markOnboardingAsSeen();
       console.log('[OnboardingScreen] Onboarding marked as seen, navigating to login');
       
@@ -221,6 +223,34 @@ export default function OnboardingScreen() {
       console.error('[OnboardingScreen] Error completing onboarding:', error);
       // Still navigate even if there's an error to prevent getting stuck
       router.replace('/(auth)/login');
+    }
+  };
+
+  const handleContinueAnonymous = async () => {
+    if (isCompleting) {
+      console.log('[OnboardingScreen] Already completing, ignoring duplicate call');
+      return;
+    }
+
+    try {
+      setIsCompleting(true);
+      console.log('[OnboardingScreen] Starting anonymous mode...');
+      
+      // Enable anonymous mode
+      await enableAnonymousMode();
+      await markOnboardingAsSeen();
+      
+      console.log('[OnboardingScreen] Anonymous mode enabled, navigating to main app');
+      
+      // Small delay to ensure everything is set up
+      setTimeout(() => {
+        console.log('[OnboardingScreen] Navigating to main app');
+        router.replace('/(tabs)');
+      }, 150);
+    } catch (error) {
+      console.error('[OnboardingScreen] Error enabling anonymous mode:', error);
+      // Fallback to main app anyway
+      router.replace('/(tabs)');
     }
   };
 
@@ -348,6 +378,70 @@ export default function OnboardingScreen() {
       fontSize: typography.fontSize.md,
       fontWeight: '600',
     },
+    accountChoiceButtons: {
+      width: '100%',
+      alignItems: 'center',
+      marginTop: spacing.xl,
+    },
+    accountChoiceCard: {
+      backgroundColor: colors.card,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      width: '90%',
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    accountChoiceTitle: {
+      fontSize: typography.fontSize.lg,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: spacing.xs,
+      textAlign: 'center',
+    },
+    accountChoiceDescription: {
+      fontSize: typography.fontSize.md,
+      color: colors.secondary,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+    },
+    accountChoiceBenefits: {
+      marginBottom: spacing.md,
+    },
+    accountChoiceBenefit: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xs,
+    },
+    accountChoiceBenefitText: {
+      fontSize: typography.fontSize.sm,
+      color: colors.text,
+      marginLeft: spacing.xs,
+    },
+    primaryChoiceButton: {
+      backgroundColor: colors.primary,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+    },
+    secondaryChoiceButton: {
+      backgroundColor: 'transparent',
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+    },
+    primaryChoiceButtonText: {
+      color: '#FFFFFF',
+      fontSize: typography.fontSize.md,
+      fontWeight: '600',
+    },
+    secondaryChoiceButtonText: {
+      color: colors.text,
+      fontSize: typography.fontSize.md,
+      fontWeight: '500',
+    },
     paywallLeadButtons: {
       width: '100%',
       alignItems: 'center',
@@ -451,7 +545,7 @@ export default function OnboardingScreen() {
 
   const renderItem = ({ item }: { item: OnboardingSlide }) => (
     <View style={styles.slide}>
-      <TouchableOpacity style={styles.skipButton} onPress={handleStartFree} disabled={isCompleting}>
+      <TouchableOpacity style={styles.skipButton} onPress={handleCreateAccount} disabled={isCompleting}>
         <Text style={[styles.skipButtonText, isCompleting && { opacity: 0.5 }]}>
           {isCompleting ? 'Loading...' : 'Skip'}
         </Text>
@@ -502,11 +596,71 @@ export default function OnboardingScreen() {
         </View>
       )}
 
+      {item.type === 'account-choice' && (
+        <View style={styles.accountChoiceButtons}>
+          <TouchableOpacity 
+            style={[styles.accountChoiceCard, isCompleting && { opacity: 0.7 }]} 
+            onPress={handleCreateAccount}
+            disabled={isCompleting}
+          >
+            <Text style={styles.accountChoiceTitle}>☁️ Create Account</Text>
+            <Text style={styles.accountChoiceDescription}>Sync across devices & backup your data</Text>
+            <View style={styles.accountChoiceBenefits}>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>🔄</Text>
+                <Text style={styles.accountChoiceBenefitText}>Data backup & sync</Text>
+              </View>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>📱</Text>
+                <Text style={styles.accountChoiceBenefitText}>Access on multiple devices</Text>
+              </View>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>⭐</Text>
+                <Text style={styles.accountChoiceBenefitText}>Premium features available</Text>
+              </View>
+            </View>
+            <View style={styles.primaryChoiceButton}>
+              <Text style={styles.primaryChoiceButtonText}>
+                {isCompleting ? 'Setting up...' : 'Create Account'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.accountChoiceCard, isCompleting && { opacity: 0.7 }]} 
+            onPress={handleContinueAnonymous}
+            disabled={isCompleting}
+          >
+            <Text style={styles.accountChoiceTitle}>📱 Continue without Account</Text>
+            <Text style={styles.accountChoiceDescription}>Use locally, create account later</Text>
+            <View style={styles.accountChoiceBenefits}>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>⚡</Text>
+                <Text style={styles.accountChoiceBenefitText}>Start using immediately</Text>
+              </View>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>🔒</Text>
+                <Text style={styles.accountChoiceBenefitText}>No registration required</Text>
+              </View>
+              <View style={styles.accountChoiceBenefit}>
+                <Text>🔄</Text>
+                <Text style={styles.accountChoiceBenefitText}>Upgrade to account anytime</Text>
+              </View>
+            </View>
+            <View style={styles.secondaryChoiceButton}>
+              <Text style={styles.secondaryChoiceButtonText}>
+                {isCompleting ? 'Starting app...' : 'Continue Without Account'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {item.type === 'paywall-lead' && (
         <View style={styles.paywallLeadButtons}>
           <TouchableOpacity 
             style={[styles.premiumButton, isCompleting && { opacity: 0.7 }]} 
-            onPress={handleStartFree}
+            onPress={handleCreateAccount}
             disabled={isCompleting}
           >
             <Text style={styles.premiumButtonText}>
@@ -516,7 +670,7 @@ export default function OnboardingScreen() {
           <Text style={styles.freeSubtext}>or</Text>
           <TouchableOpacity 
             style={[styles.freeButton, isCompleting && { opacity: 0.7 }]} 
-            onPress={handleStartFree}
+            onPress={handleCreateAccount}
             disabled={isCompleting}
           >
             <Text style={styles.freeButtonText}>
@@ -558,7 +712,8 @@ export default function OnboardingScreen() {
       
       {(currentIndex < onboardingSlides.length - 1 && 
         onboardingSlides[currentIndex].type !== 'quiz' && 
-        onboardingSlides[currentIndex].type !== 'paywall-lead') && (
+        onboardingSlides[currentIndex].type !== 'paywall-lead' &&
+        onboardingSlides[currentIndex].type !== 'account-choice') && (
         <View style={styles.footer}>
           <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
             <TouchableOpacity 
