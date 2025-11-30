@@ -76,7 +76,7 @@ BEGIN
       -- Missed one day, maintain streak but update last check date
       UPDATE habits SET last_check_date = NEW.log_date WHERE id = NEW.habit_id;
     ELSE
-      -- Missed multiple days, reset streak
+      -- Missed two or more days, reset streak
       UPDATE habits SET current_streak = 1, last_check_date = NEW.log_date WHERE id = NEW.habit_id;
     END IF;
   END IF;
@@ -260,9 +260,11 @@ BEGIN
     IF habit_record.last_check_date IS NULL THEN
       new_streak := 1;
     ELSIF habit_record.last_check_date = log_date - INTERVAL '1 day' THEN
-      new_streak := habit_record.current_streak + 1;
+      new_streak := habit_record.current_streak + 1; -- Consecutive day
+    ELSIF habit_record.last_check_date = log_date - INTERVAL '2 days' THEN
+      new_streak := habit_record.current_streak; -- Missed 1 day, maintain streak
     ELSE
-      new_streak := 1;
+      new_streak := 1; -- Missed 2+ days in a row, reset streak
     END IF;
     
     new_last_check_date := log_date;
@@ -310,11 +312,15 @@ BEGIN
       prev_date := curr_date;
       curr_date := log_record.log_date;
       
-      -- Check if dates are consecutive
+      -- Check date gap with one-day grace
       IF prev_date - curr_date = 1 THEN
+        -- Consecutive day extends streak
         streak := streak + 1;
+      ELSIF prev_date - curr_date = 2 THEN
+        -- One-day gap: continue chain without increment
+        CONTINUE;
       ELSE
-        -- Break on first gap
+        -- Two or more missed days break the chain
         EXIT;
       END IF;
     END IF;

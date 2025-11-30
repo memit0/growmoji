@@ -1,4 +1,8 @@
 import { supabase } from '../supabase';
+import {
+    getAnonymousData,
+    saveAnonymousData
+} from './localStorage';
 
 export interface Todo {
   id: string;
@@ -10,12 +14,35 @@ export interface Todo {
   completed_at?: string | null;
 }
 
+// Feature limits for todo creation
+const FEATURE_LIMITS = {
+  anonymous: { maxTodos: 3 },
+  free: { maxTodos: 3 },
+  premium: { maxTodos: Infinity }
+};
+
+function getUserType(userId: string, useLocalStorage: boolean): 'anonymous' | 'free' | 'premium' {
+  if (useLocalStorage || userId.startsWith('anon_')) {
+    return 'anonymous';
+  }
+  // For now, assume all authenticated users are free unless we have premium status
+  // This could be enhanced to check actual subscription status
+  return 'free';
+}
+
 export const todosService = {
-  async getTodos(userId: string): Promise<Todo[]> {
+  async getTodos(userId: string, useLocalStorage = false): Promise<Todo[]> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[todosService.getTodos] Using local storage for user:', userId);
+      return getAnonymousData('todos', userId);
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('todos')
       .select('*')
@@ -30,11 +57,46 @@ export const todosService = {
     return data || [];
   },
 
-  async createTodo(todo: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'completed_at'>, userId: string): Promise<Todo> {
+  async createTodo(
+    todo: Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'completed_at'>, 
+    userId: string,
+    useLocalStorage = false,
+    isPremium = false
+  ): Promise<Todo> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Check feature limits before creating
+    const userType = isPremium ? 'premium' : getUserType(userId, useLocalStorage);
+    const maxTodos = FEATURE_LIMITS[userType].maxTodos;
+    
+    if (maxTodos !== Infinity) {
+      const existingTodos = await this.getTodos(userId, useLocalStorage);
+      if (existingTodos.length >= maxTodos) {
+        throw new Error(`Maximum of ${maxTodos} tasks allowed. Upgrade to premium for unlimited tasks.`);
+      }
+    }
+
+    const newTodo: Todo = {
+      id: `todo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      user_id: userId,
+      ...todo,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      completed_at: todo.is_completed ? new Date().toISOString() : null,
+    };
+
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[todosService.createTodo] Using local storage for user:', userId);
+      const existingTodos = await getAnonymousData('todos', userId) as Todo[];
+      const updatedTodos = [newTodo, ...existingTodos];
+      await saveAnonymousData('todos', userId, updatedTodos);
+      return newTodo;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('todos')
       .insert([{ 
@@ -52,11 +114,42 @@ export const todosService = {
     return data;
   },
 
-  async updateTodo(id: string, updates: Partial<Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'>>, userId: string): Promise<Todo> {
+  async updateTodo(
+    id: string, 
+    updates: Partial<Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'>>, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<Todo> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[todosService.updateTodo] Using local storage for user:', userId);
+      const todos = await getAnonymousData('todos', userId) as Todo[];
+      const todoIndex = todos.findIndex(t => t.id === id);
+      
+      if (todoIndex === -1) {
+        throw new Error('Todo not found');
+      }
+
+      const updatesForTodo: Partial<Todo> = { 
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (typeof updates.is_completed === 'boolean' && updates.completed_at === undefined) {
+        updatesForTodo.completed_at = updates.is_completed ? new Date().toISOString() : null;
+      }
+
+      const updatedTodo = { ...todos[todoIndex], ...updatesForTodo };
+      todos[todoIndex] = updatedTodo;
+      await saveAnonymousData('todos', userId, todos);
+      return updatedTodo;
+    }
+
+    // Existing Supabase logic for authenticated users
     const updatesForDb: Partial<Todo> = { ...updates };
     if (typeof updates.is_completed === 'boolean' && updates.completed_at === undefined) {
       updatesForDb.completed_at = updates.is_completed ? new Date().toISOString() : null;
@@ -78,11 +171,21 @@ export const todosService = {
     return data;
   },
 
-  async deleteTodo(id: string, userId: string): Promise<void> {
+  async deleteTodo(id: string, userId: string, useLocalStorage = false): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[todosService.deleteTodo] Using local storage for user:', userId);
+      const todos = await getAnonymousData('todos', userId) as Todo[];
+      const filteredTodos = todos.filter(t => t.id !== id);
+      await saveAnonymousData('todos', userId, filteredTodos);
+      return;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { error } = await supabase
       .from('todos')
       .delete()
@@ -95,11 +198,16 @@ export const todosService = {
     }
   },
 
-  async toggleTodoComplete(id: string, is_completed: boolean, userId: string): Promise<Todo> {
+  async toggleTodoComplete(
+    id: string, 
+    is_completed: boolean, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<Todo> {
     const updates: Partial<Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = {
       is_completed,
       completed_at: is_completed ? new Date().toISOString() : null,
     };
-    return this.updateTodo(id, updates as Partial<Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'>>, userId);
+    return this.updateTodo(id, updates as Partial<Omit<Todo, 'id' | 'user_id' | 'created_at' | 'updated_at'>>, userId, useLocalStorage);
   }
 }; 

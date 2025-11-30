@@ -14,6 +14,7 @@ import { TodoCard } from '@/components/ui/TodoCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useCanCreateHabits, useCanCreateTodos, useFeatureLimits } from '@/hooks/useFeatureLimits';
 import { Habit, habitsService } from '@/lib/services/habits';
 import { Todo, todosService } from '@/lib/services/todos';
 import { clearWidgetData, updateWidgetData } from '@/lib/services/widgetData';
@@ -43,8 +44,13 @@ export default function HomeScreen() {
   const [isUpdatingItem, setIsUpdatingItem] = useState(false);
   const [loggingHabits, setLoggingHabits] = useState<Set<string>>(new Set());
 
-  const { user, loading: authLoading } = useAuth();
-  const userId = user?.id;
+  const { user, loading: authLoading, isAnonymous, anonymousUserId } = useAuth();
+  const userId = user?.id || anonymousUserId;
+
+  // Feature limits for current user type
+  const featureLimits = useFeatureLimits();
+  const canCreateHabits = useCanCreateHabits(habits.length);
+  const canCreateTodos = useCanCreateTodos(todos.length);
 
   // Check if user has seen the walkthrough
   useEffect(() => {
@@ -90,39 +96,47 @@ export default function HomeScreen() {
     }
   };
 
-  // Don't make decisions about limits until subscription is initialized
-  // FIXED: Improved logic to enforce limits for free users even during subscription loading
-  const canCheckLimits = !authLoading && !!user; // Simplified: if user is authenticated, we can check limits
-  const isTaskLimitReached = canCheckLimits && !isPremium && todos.length >= 3;
-  const isHabitLimitReached = canCheckLimits && !isPremium && habits.length >= 3;
+  // Feature limits enforcement for both anonymous and authenticated users
+  const shouldEnforceLimits = !authLoading && (user || isAnonymous);
+  const isTaskLimitReached = shouldEnforceLimits && !canCreateTodos;
+  const isHabitLimitReached = shouldEnforceLimits && !canCreateHabits;
 
-  // Simplified debug logging
+  // Enhanced debug logging
   if (process.env.NODE_ENV === 'development') {
     console.log('[HomeScreen] Status:', {
       userExists: !!user,
+      isAnonymous,
       isPremium,
       habitsCount: habits.length,
-      canCheckLimits
+      todosCount: todos.length,
+      canCreateHabits,
+      canCreateTodos,
+      maxHabits: featureLimits.maxHabits,
+      maxTodos: featureLimits.maxTodos,
+      shouldEnforceLimits
     });
   }
 
   const handleAddTodo = async () => {
-    if (isSubmittingTodo || !newTodoTitle.trim() || !user || !userId) {
+    // Updated check to support anonymous users
+    if (isSubmittingTodo || !newTodoTitle.trim() || (!user && !anonymousUserId)) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[handleAddTodo] Blocked:', { 
           isSubmittingTodo, 
           hasTitle: !!newTodoTitle.trim(), 
           hasUser: !!user, 
-          hasUserId: !!userId,
+          hasAnonymousId: !!anonymousUserId,
           authLoading 
         });
       }
       return;
     }
 
-    // Check task limit for free users (only if we can check limits)
-    if (canCheckLimits && !isPremium && isTaskLimitReached) {
-      setShowPaywall(true);
+    // Check task limit - for anonymous users just block, for authenticated users show paywall
+    if (isTaskLimitReached) {
+      if (!isAnonymous) {
+        setShowPaywall(true);
+      }
       return;
     }
 
@@ -130,7 +144,9 @@ export default function HomeScreen() {
     try {
       const newTodo = await todosService.createTodo(
         { content: newTodoTitle.trim(), is_completed: false },
-        userId
+        userId!,
+        isAnonymous || userId?.startsWith('anon_'),
+        isPremium
       );
       setTodos(prevTodos => {
         const newTodos = [newTodo, ...prevTodos];
@@ -146,10 +162,10 @@ export default function HomeScreen() {
   };
 
   const handleDeleteTodo = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     setIsUpdatingItem(true);
     try {
-      await todosService.deleteTodo(id, userId);
+      await todosService.deleteTodo(id, userId, isAnonymous || userId.startsWith('anon_'));
       setTodos(prevTodos => {
         const newTodos = prevTodos.filter(todo => todo.id !== id);
         updateWidgetData(newTodos, habits, theme, isPremium);
@@ -160,13 +176,13 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user, userId, habits, theme, isPremium]);
+  }, [userId, habits, theme, isPremium, isAnonymous]);
 
   const handleDeleteHabit = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     console.log(`[HomeScreen] Attempting to delete habit: ${id}`);
     try {
-      await habitsService.deleteHabit(id, userId);
+      await habitsService.deleteHabit(id, userId, isAnonymous || userId.startsWith('anon_'));
       setHabits(prevHabits => {
         const newHabits = prevHabits.filter(habit => habit.id !== id);
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -176,16 +192,16 @@ export default function HomeScreen() {
     } catch (error) {
       console.error(`[HomeScreen] Error deleting habit: ${id}`, error);
     }
-  }, [user, userId, todos, theme, isPremium]);
+  }, [userId, todos, theme, isPremium, isAnonymous]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
     const todoToToggle = todos.find(t => t.id === id);
     if (!todoToToggle) return;
 
     setIsUpdatingItem(true);
     try {
-      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed, userId);
+      const updatedTodo = await todosService.toggleTodoComplete(id, !todoToToggle.is_completed, userId, isAnonymous || userId.startsWith('anon_'));
       setTodos(prevTodos => {
         const newTodos = prevTodos.map(todo =>
           todo.id === id ? updatedTodo : todo
@@ -198,7 +214,7 @@ export default function HomeScreen() {
     } finally {
       setIsUpdatingItem(false);
     }
-  }, [user, userId, todos, habits, theme, isPremium]);
+  }, [userId, todos, habits, theme, isPremium, isAnonymous]);
 
   interface HabitModalData {
     title: string;
@@ -207,24 +223,27 @@ export default function HomeScreen() {
   }
 
   const handleAddHabit = async (emoji: string) => {
-    if (isSubmittingHabit || !emoji || !user || !userId) {
+    // Updated check to support anonymous users
+    if (isSubmittingHabit || !emoji || (!user && !anonymousUserId)) {
       if (process.env.NODE_ENV === 'development') {
         console.log('[handleAddHabit] Blocked:', { 
           isSubmittingHabit, 
           hasEmoji: !!emoji, 
           hasUser: !!user, 
-          hasUserId: !!userId,
+          hasAnonymousId: !!anonymousUserId,
           authLoading 
         });
       }
       return;
     }
 
-    // Check habit limit for free users (only if we can check limits)
-    if (canCheckLimits && !isPremium && isHabitLimitReached) {
-      console.log('[handleAddHabit] Free user has reached habit limit. Showing paywall.');
+    // Check habit limit - for anonymous users just block, for authenticated users show paywall
+    if (isHabitLimitReached) {
       setIsHabitModalVisible(false);
-      setShowPaywall(true);
+      if (!isAnonymous) {
+        console.log('[handleAddHabit] User has reached habit limit. Showing paywall.');
+        setShowPaywall(true);
+      }
       return;
     }
 
@@ -238,7 +257,7 @@ export default function HomeScreen() {
         emoji: emoji,
         start_date: today,
       };
-      const createdHabit = await habitsService.createHabit(newHabitDetails, userId);
+      const createdHabit = await habitsService.createHabit(newHabitDetails, userId!, isAnonymous || userId?.startsWith('anon_'), isPremium);
       setHabits(prevHabits => {
         const newHabits = [...prevHabits, createdHabit];
         updateWidgetData(todos, newHabits, theme, isPremium);
@@ -253,7 +272,7 @@ export default function HomeScreen() {
   };
 
   const handleHabitLog = async (habitId: string) => {
-    if (!user || !userId) return;
+    if (!userId) return;
 
     // Prevent multiple simultaneous calls for the same habit
     if (loggingHabits.has(habitId)) {
@@ -294,27 +313,32 @@ export default function HomeScreen() {
     });
 
     try {
-      // Try the optimized server-side function first
-      const updatedHabit = await habitsService.toggleHabitLog(habitId, userId);
-      
-      // Update with the actual server response
-      setHabits(prevHabits => {
-        const newHabits = prevHabits.map(habit => 
-          habit.id === habitId ? updatedHabit : habit
-        );
-        updateWidgetData(todos, newHabits, theme, isPremium);
-        return newHabits;
-      });
-
-      console.log(`[HomeScreen] Successfully toggled habit log for: ${habitId}`);
-    } catch (error) {
-      console.warn('[HomeScreen] Server-side toggle failed, falling back to client-side method:', error);
-      
-      try {
-        // Fallback to optimized client-side method
-        const updatedHabit = await habitsService.toggleHabitLogFallback(habitId, userId);
+      // For anonymous users, use individual log/unlog methods
+      if (isAnonymous || userId?.startsWith('anon_')) {
+        if (isLoggedToday) {
+          // Unlog the habit
+          await habitsService.deleteHabitLog(habitId, todayStr, userId, true);
+        } else {
+          // Log the habit
+          await habitsService.logHabitCompletion(habitId, todayStr, userId, true);
+        }
         
-        // Update with the actual server response
+        // Update the habit streak manually for anonymous users
+        const newStreak = isLoggedToday 
+          ? Math.max(0, targetHabit.current_streak - 1)
+          : targetHabit.current_streak + 1;
+        
+        const updatedHabit = await habitsService.updateHabit(
+          habitId,
+          { 
+            current_streak: newStreak,
+            last_check_date: isLoggedToday ? null : todayStr
+          },
+          userId,
+          true
+        );
+        
+        // Update with the actual response
         setHabits(prevHabits => {
           const newHabits = prevHabits.map(habit => 
             habit.id === habitId ? updatedHabit : habit
@@ -322,12 +346,57 @@ export default function HomeScreen() {
           updateWidgetData(todos, newHabits, theme, isPremium);
           return newHabits;
         });
+      } else {
+        // For authenticated users, use the optimized toggle method
+        const updatedHabit = await habitsService.toggleHabitLog(habitId, userId);
+      
+              // Update with the actual server response
+        setHabits(prevHabits => {
+          const newHabits = prevHabits.map(habit => 
+            habit.id === habitId ? updatedHabit : habit
+          );
+          updateWidgetData(todos, newHabits, theme, isPremium);
+          return newHabits;
+        });
+      }
 
-        console.log(`[HomeScreen] Successfully toggled habit log (fallback) for: ${habitId}`);
-      } catch (fallbackError) {
-        console.error('[HomeScreen] Error in handleHabitLog (both methods failed):', fallbackError);
+      console.log(`[HomeScreen] Successfully toggled habit log for: ${habitId}`);
+    } catch (error) {
+      if (isAnonymous || userId?.startsWith('anon_')) {
+        console.error('[HomeScreen] Error in anonymous habit logging:', error);
+      } else {
+        console.warn('[HomeScreen] Server-side toggle failed, falling back to client-side method:', error);
         
-        // Revert optimistic update on error
+        try {
+          // Fallback to optimized client-side method
+          const updatedHabit = await habitsService.toggleHabitLogFallback(habitId, userId);
+        
+          // Update with the actual server response
+          setHabits(prevHabits => {
+            const newHabits = prevHabits.map(habit => 
+              habit.id === habitId ? updatedHabit : habit
+            );
+            updateWidgetData(todos, newHabits, theme, isPremium);
+            return newHabits;
+          });
+
+          console.log(`[HomeScreen] Successfully toggled habit log (fallback) for: ${habitId}`);
+        } catch (fallbackError) {
+          console.error('[HomeScreen] Error in handleHabitLog (both methods failed):', fallbackError);
+          
+          // Revert optimistic update on error
+          setHabits(prevHabits => {
+            const revertedHabits = prevHabits.map(habit => 
+              habit.id === habitId ? targetHabit : habit
+            );
+            updateWidgetData(todos, revertedHabits, theme, isPremium);
+            return revertedHabits;
+          });
+        }
+      }
+      
+      // Revert optimistic update on error for anonymous users too
+      if (isAnonymous || userId?.startsWith('anon_')) {
         setHabits(prevHabits => {
           const revertedHabits = prevHabits.map(habit => 
             habit.id === habitId ? targetHabit : habit
@@ -349,11 +418,13 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    if (user && userId) {
+    if (userId) {
       setIsScreenLoading(true);
+      const useLocalStorage = isAnonymous || userId.startsWith('anon_');
+      
       Promise.all([
-        todosService.getTodos(userId).then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
-        habitsService.getHabits(userId).then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
+        todosService.getTodos(userId, useLocalStorage).then(data => setTodos(data || [])).catch(err => console.error("Error fetching todos:", err)),
+        habitsService.getHabits(userId, useLocalStorage).then(data => setHabits(data || [])).catch(err => console.error("Error fetching habits:", err))
       ])
         .finally(() => {
           setIsScreenLoading(false);
@@ -363,15 +434,15 @@ export default function HomeScreen() {
       setHabits([]);
       clearWidgetData(); // Clear widget data on sign out
     }
-  }, [user, userId]);
+  }, [userId, isAnonymous]);
 
   // New useEffect to update widget data when todos or habits change from any source (initial fetch, add, delete, etc.)
   useEffect(() => {
-    if (user && userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
+    if (userId && (todos.length > 0 || habits.length > 0)) { // Ensure data is present before updating
       updateWidgetData(todos, habits, theme, isPremium);
     }
     // Adding theme to dependency array to re-run if theme changes.
-  }, [todos, habits, user, userId, theme, isPremium]);
+  }, [todos, habits, userId, theme, isPremium, isAnonymous]);
 
   const renderTodoItem = useCallback(({ item }: { item: Todo }) => (
     <TodoCard
@@ -402,8 +473,8 @@ export default function HomeScreen() {
         {/* Header with upgrade and help buttons */}
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
-          {/* Upgrade to Premium button for free users */}
-          {canCheckLimits && !isPremium && (
+          {/* Upgrade to Premium button for non-premium authenticated users only */}
+          {shouldEnforceLimits && !isPremium && !isAnonymous && (
             <TouchableOpacity
               style={[styles.helpButton, { backgroundColor: colors.primary, borderColor: colors.primary, marginRight: 8 }]}
               onPress={() => {
@@ -429,11 +500,11 @@ export default function HomeScreen() {
         <View style={[styles.cardSection, { backgroundColor: colors.card }]}>
           <View style={styles.sectionHeaderRow}>
             <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Daily Tasks</ThemedText>
-            <ThemedText style={[styles.taskCount, { color: colors.secondary }]}>{todos.length}/3 tasks</ThemedText>
+            <ThemedText style={[styles.taskCount, { color: colors.secondary }]}>{todos.length}/{isPremium ? '∞' : featureLimits.maxTodos} tasks</ThemedText>
           </View>
           <View style={styles.inputRow}>
             <TextInput
-              placeholder={isTaskLimitReached ? "Task limit reached" : "Add task..."}
+              placeholder={isTaskLimitReached ? (isAnonymous ? "3 task limit reached" : "Task limit reached") : "Add task..."}
               style={[styles.input, {
                 backgroundColor: colors.background,
                 borderColor: colors.border,
@@ -455,7 +526,7 @@ export default function HomeScreen() {
               disabled={isTaskLimitReached} // Disable button if limit reached
             >
               <ThemedText style={[styles.addButtonText, { color: '#FFFFFF' }]}>
-                {isTaskLimitReached ? 'Limit' : 'Add'}
+                {isTaskLimitReached ? (isAnonymous ? 'Locked' : 'Limit') : 'Add'}
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -478,30 +549,34 @@ export default function HomeScreen() {
             <View style={styles.habitHeaderLeft}>
               <ThemedText type="title" style={[styles.sectionTitle, { color: colors.text }]}>Habits</ThemedText>
               <ThemedText style={[styles.habitCount, { color: colors.secondary }]}>
-                {habits.length}/{isPremium ? '∞' : '3'} habits
-                {canCheckLimits && !isPremium && isHabitLimitReached && (
-                  <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • Limit reached</ThemedText>
+                {habits.length}/{isPremium ? '∞' : featureLimits.maxHabits} habits
+                {shouldEnforceLimits && !isPremium && isHabitLimitReached && (
+                  <ThemedText style={[styles.limitText, { color: '#EF4444' }]}> • {isAnonymous ? 'Limit reached' : 'Limit reached'}</ThemedText>
                 )}
               </ThemedText>
             </View>
             <TouchableOpacity
               style={[
                 styles.newHabitButton,
-                { backgroundColor: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.border : colors.primary }
+                { backgroundColor: isHabitLimitReached ? colors.border : colors.primary }
               ]}
               onPress={() => {
-                if (canCheckLimits && !isPremium && isHabitLimitReached) {
-                  setShowPaywall(true);
+                if (isHabitLimitReached) {
+                  if (!isAnonymous) {
+                    setShowPaywall(true);
+                  }
+                  // For anonymous users, do nothing (button is disabled)
                 } else {
                   setIsHabitModalVisible(true);
                 }
               }}
+              disabled={isAnonymous && isHabitLimitReached} // Disable for anonymous users when limit reached
             >
               <ThemedText style={[
                 styles.newHabitButtonText,
-                { color: (canCheckLimits && !isPremium && isHabitLimitReached) ? colors.secondary : '#FFFFFF' }
+                { color: isHabitLimitReached ? colors.secondary : '#FFFFFF' }
               ]}>
-                {(canCheckLimits && !isPremium && isHabitLimitReached) ? 'Upgrade' : 'New Habit'}
+                {isHabitLimitReached ? (isAnonymous ? 'Locked' : 'Upgrade') : 'New Habit'}
               </ThemedText>
             </TouchableOpacity>
           </View>

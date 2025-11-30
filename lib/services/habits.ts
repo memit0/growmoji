@@ -1,4 +1,8 @@
 import { supabase } from '../supabase';
+import {
+    getAnonymousData,
+    saveAnonymousData
+} from './localStorage';
 
 export interface Habit {
   id: string;
@@ -17,6 +21,22 @@ export interface HabitLog {
   created_at?: string;
 }
 
+// Feature limits for habit creation
+const FEATURE_LIMITS = {
+  anonymous: { maxHabits: 3 },
+  free: { maxHabits: 3 },
+  premium: { maxHabits: Infinity }
+};
+
+function getUserType(userId: string, useLocalStorage: boolean): 'anonymous' | 'free' | 'premium' {
+  if (useLocalStorage || userId.startsWith('anon_')) {
+    return 'anonymous';
+  }
+  // For now, assume all authenticated users are free unless we have premium status
+  // This could be enhanced to check actual subscription status
+  return 'free';
+}
+
 // Helper function to get current user ID
 const getCurrentUserId = async (): Promise<string> => {
   // This will be called from components that have access to useUser hook
@@ -25,11 +45,18 @@ const getCurrentUserId = async (): Promise<string> => {
 };
 
 export const habitsService = {
-  async getHabits(userId: string): Promise<Habit[]> {
+  async getHabits(userId: string, useLocalStorage = false): Promise<Habit[]> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.getHabits] Using local storage for user:', userId);
+      return getAnonymousData('habits', userId);
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .select('*')
@@ -46,12 +73,44 @@ export const habitsService = {
 
   async createHabit(
     habit: Omit<Habit, 'id' | 'user_id' | 'created_at' | 'current_streak' | 'last_check_date'>, 
-    userId: string
+    userId: string,
+    useLocalStorage = false,
+    isPremium = false
   ): Promise<Habit> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Check feature limits before creating
+    const userType = isPremium ? 'premium' : getUserType(userId, useLocalStorage);
+    const maxHabits = FEATURE_LIMITS[userType].maxHabits;
+    
+    if (maxHabits !== Infinity) {
+      const existingHabits = await this.getHabits(userId, useLocalStorage);
+      if (existingHabits.length >= maxHabits) {
+        throw new Error(`Maximum of ${maxHabits} habits allowed. Upgrade to premium for unlimited habits.`);
+      }
+    }
+
+    const newHabit: Habit = {
+      id: `habit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      user_id: userId,
+      ...habit,
+      current_streak: 0,
+      last_check_date: null,
+      created_at: new Date().toISOString(),
+    };
+
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.createHabit] Using local storage for user:', userId);
+      const existingHabits = await getAnonymousData('habits', userId) as Habit[];
+      const updatedHabits = [newHabit, ...existingHabits];
+      await saveAnonymousData('habits', userId, updatedHabits);
+      return newHabit;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .insert([{
@@ -70,11 +129,33 @@ export const habitsService = {
     return data;
   },
 
-  async updateHabit(id: string, updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>, userId: string): Promise<Habit> {
+  async updateHabit(
+    id: string, 
+    updates: Partial<Omit<Habit, 'id' | 'user_id' | 'created_at'>>, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<Habit> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.updateHabit] Using local storage for user:', userId);
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habitIndex = habits.findIndex(h => h.id === id);
+      
+      if (habitIndex === -1) {
+        throw new Error('Habit not found');
+      }
+
+      const updatedHabit = { ...habits[habitIndex], ...updates };
+      habits[habitIndex] = updatedHabit;
+      await saveAnonymousData('habits', userId, habits);
+      return updatedHabit;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { data, error } = await supabase
       .from('habits')
       .update(updates)
@@ -91,11 +172,21 @@ export const habitsService = {
     return data;
   },
 
-  async deleteHabit(id: string, userId: string): Promise<void> {
+  async deleteHabit(id: string, userId: string, useLocalStorage = false): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.deleteHabit] Using local storage for user:', userId);
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const filteredHabits = habits.filter(h => h.id !== id);
+      await saveAnonymousData('habits', userId, filteredHabits);
+      return;
+    }
+
+    // Existing Supabase logic for authenticated users
     const { error } = await supabase
       .from('habits')
       .delete()
@@ -108,11 +199,42 @@ export const habitsService = {
     }
   },
 
-  async logHabitCompletion(habitId: string, log_date: string, userId: string): Promise<HabitLog> {
+  async logHabitCompletion(
+    habitId: string, 
+    log_date: string, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<HabitLog> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    const newLog: HabitLog = {
+      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      habit_id: habitId,
+      log_date: log_date,
+      created_at: new Date().toISOString(),
+    };
+
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.logHabitCompletion] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Add log
+      const logs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      const updatedLogs = [newLog, ...logs];
+      await saveAnonymousData('habit_logs', userId, updatedLogs);
+      return newLog;
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')
@@ -139,11 +261,34 @@ export const habitsService = {
     return data;
   },
 
-  async getHabitLogs(habitId: string, userId: string, startDate?: string, endDate?: string): Promise<HabitLog[]> {
+  async getHabitLogs(
+    habitId: string, 
+    userId: string, 
+    startDate?: string, 
+    endDate?: string,
+    useLocalStorage = false
+  ): Promise<HabitLog[]> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.getHabitLogs] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Get logs for this habit
+      const allLogs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      return allLogs.filter(log => log.habit_id === habitId);
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')
@@ -169,11 +314,35 @@ export const habitsService = {
     return data || [];
   },
 
-  async deleteHabitLog(habitId: string, logDate: string, userId: string): Promise<void> {
+  async deleteHabitLog(
+    habitId: string, 
+    logDate: string, 
+    userId: string,
+    useLocalStorage = false
+  ): Promise<void> {
     if (!userId) {
       throw new Error('User ID is required');
     }
 
+    // Use local storage for anonymous users
+    if (useLocalStorage || userId.startsWith('anon_')) {
+      console.log('[habitsService.deleteHabitLog] Using local storage for user:', userId);
+      
+      // Verify habit exists
+      const habits = await getAnonymousData('habits', userId) as Habit[];
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) {
+        throw new Error('Habit not found or access denied');
+      }
+
+      // Remove log
+      const logs = await getAnonymousData('habit_logs', userId) as HabitLog[];
+      const filteredLogs = logs.filter(log => !(log.habit_id === habitId && log.log_date === logDate));
+      await saveAnonymousData('habit_logs', userId, filteredLogs);
+      return;
+    }
+
+    // Existing Supabase logic for authenticated users
     // First verify the habit belongs to the user
     const { data: habit } = await supabase
       .from('habits')
@@ -298,17 +467,17 @@ export const habitsService = {
       let newStreak = 0;
       
       if (newLastCheckDate) {
-        // Simple streak calculation for fallback
+        // Simple streak calculation for fallback with one-day grace
         const lastDate = new Date(newLastCheckDate);
         const currentDate = new Date();
         const diffTime = currentDate.getTime() - lastDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
-        
-        if (diffDays <= 1) {
-          // Recent log, calculate streak more accurately
+
+        if (diffDays <= 2) {
+          // Within grace window, calculate streak more accurately
           newStreak = await this.calculateStreakFromDate(habitId, newLastCheckDate, userId);
         } else {
-          newStreak = 1; // Old log, reset to 1
+          newStreak = 1; // Missed 2+ days, reset
         }
       }
       
@@ -343,10 +512,12 @@ export const habitsService = {
 
     if (diffDays === 1) {
       return currentStreak + 1; // Consecutive day
+    } else if (diffDays === 2) {
+      return currentStreak; // Missed 1 day, maintain streak
     } else if (diffDays === 0) {
       return currentStreak; // Same day (shouldn't happen but handle gracefully)
     } else {
-      return 1; // Gap in streak, restart
+      return 1; // Missed 2+ days in a row, reset streak
     }
   },
 
@@ -372,9 +543,15 @@ export const habitsService = {
       const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
 
       if (diffDays === 1) {
+        // Consecutive day extends the streak
         streak++;
         currentDate = prevDate;
+      } else if (diffDays === 2) {
+        // One-day gap: do not increment, but continue the chain
+        currentDate = prevDate;
+        continue;
       } else {
+        // Two or more missed days break the chain
         break;
       }
     }
