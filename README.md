@@ -4,7 +4,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/mehmetbattal/habittracker">
+  <a href="https://github.com/memit0/growmoji">
     <img src="assets/images/icon.png" alt="Growmoji Logo" width="80" height="80">
   </a>
 
@@ -13,12 +13,12 @@
   <p align="center">
     A beautiful, minimalistic habit tracking app with todo management and Pomodoro timer. Built with React Native, Expo, and Supabase.
     <br />
-    <a href="https://github.com/mehmetbattal/habittracker"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/memit0/growmoji"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/mehmetbattal/habittracker/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/memit0/growmoji/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/mehmetbattal/habittracker/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/memit0/growmoji/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
