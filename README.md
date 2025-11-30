@@ -1,5 +1,3 @@
-live on app store and web search for growmoji.app
-
 # Habit Tracker - Productivity App
 
 
@@ -70,6 +68,13 @@ live on app store and web search for growmoji.app
 ## About The Project
 
 Growmoji is a modern, cross-platform habit tracking application designed with a focus on beautiful, minimalistic design. The app helps users build lasting habits, manage todos, and stay focused with a Pomodoro timer without any of the unnecessary complexities.
+
+<img width="1626" height="933" alt="image" src="https://github.com/user-attachments/assets/0bd9d7f4-9163-4352-b674-6093c137e647" />
+
+<img width="1626" height="933" alt="image" src="https://github.com/user-attachments/assets/a38ef503-eadc-4b8b-99c8-20ea3859b7e4" />
+
+<img width="1626" height="933" alt="image" src="https://github.com/user-attachments/assets/955d9e1a-6588-4e01-8cb8-9c804bd334f6" />
+
 
 ### Key Features
 
@@ -310,7 +315,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Mehmet Battal - [@your_twitter](https://twitter.com/your_twitter) - your_email@example.com
+Mehmet Battal - [@mebattll](https://twitter.com/mebattll)
 
 Project Link: [https://github.com/mehmetbattal/habittracker](https://github.com/mehmetbattal/habittracker)
 
