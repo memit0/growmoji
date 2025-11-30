@@ -127,6 +127,9 @@ export default function HabitsPage() {
             const diffDays = diffTime / (1000 * 3600 * 24);
             if (diffDays === 1) {
               newStreak++;
+            } else if (diffDays === 2) {
+              // allow one-day gap without breaking streak chain
+              continue;
             } else {
               break;
             }

@@ -467,17 +467,17 @@ export const habitsService = {
       let newStreak = 0;
       
       if (newLastCheckDate) {
-        // Simple streak calculation for fallback
+        // Simple streak calculation for fallback with one-day grace
         const lastDate = new Date(newLastCheckDate);
         const currentDate = new Date();
         const diffTime = currentDate.getTime() - lastDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
-        
-        if (diffDays <= 1) {
-          // Recent log, calculate streak more accurately
+
+        if (diffDays <= 2) {
+          // Within grace window, calculate streak more accurately
           newStreak = await this.calculateStreakFromDate(habitId, newLastCheckDate, userId);
         } else {
-          newStreak = 1; // Old log, reset to 1
+          newStreak = 1; // Missed 2+ days, reset
         }
       }
       
@@ -512,10 +512,12 @@ export const habitsService = {
 
     if (diffDays === 1) {
       return currentStreak + 1; // Consecutive day
+    } else if (diffDays === 2) {
+      return currentStreak; // Missed 1 day, maintain streak
     } else if (diffDays === 0) {
       return currentStreak; // Same day (shouldn't happen but handle gracefully)
     } else {
-      return 1; // Gap in streak, restart
+      return 1; // Missed 2+ days in a row, reset streak
     }
   },
 
@@ -541,9 +543,15 @@ export const habitsService = {
       const diffDays = Math.floor(diffTime / (1000 * 3600 * 24));
 
       if (diffDays === 1) {
+        // Consecutive day extends the streak
         streak++;
         currentDate = prevDate;
+      } else if (diffDays === 2) {
+        // One-day gap: do not increment, but continue the chain
+        currentDate = prevDate;
+        continue;
       } else {
+        // Two or more missed days break the chain
         break;
       }
     }
